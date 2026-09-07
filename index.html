@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LottoTrack Pro - Retail Lottery POS & Shift Tracking System</title>
+  <meta name="description" content="Modern, touch-friendly Lottery POS system with automated shift closing, ticket activation, dispenser management, and inventory tracking.">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1527">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <!-- Top System Menu Bar -->
+  <header class="pos-top-menu">
+    <div class="menu-left">
+      <div class="brand-badge">
+        <div class="brand-icon-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        </div>
+        <div>
+          <span>LOTTO</span>TRACK <strong>PRO</strong>
+        </div>
+      </div>
+      <nav class="menu-links">
+        <a class="menu-item" id="menuFileBtn">File</a>
+        <a class="menu-item" id="menuEditBtn">Edit</a>
+        <a class="menu-item" id="menuViewBtn">View</a>
+        <a class="menu-item" id="menuHistoryBtn">History</a>
+        <a class="menu-item" id="menuPrintBtn">Print</a>
+        <a class="menu-item" id="menuHelpBtn">Help</a>
+        <a class="menu-item highlight-green" id="menuSignOutBtn">Sign out</a>
+        <a class="menu-item" id="menuSettingsBtn">Settings</a>
+        <a class="menu-item" id="menuClearDataBtn" style="color:#ef4444; font-weight:700;">Clear Data</a>
+      </nav>
+    </div>
+    <div class="menu-right">
+      <button class="theme-toggle-btn" id="themeToggleBtn" title="Switch Light/Dark Mode">
+        <span id="themeToggleIcon">🌙</span>
+        <span id="themeToggleText">Dark Mode</span>
+      </button>
+      <span class="system-tag">LTSYSTEM 2026</span>
+    </div>
+  </header>
+
+  <!-- Shift Operations Control Bar -->
+  <section class="shift-control-bar">
+    <div class="shift-info-box">
+      <div class="shift-badge">
+        <span>Current Shift : <strong id="currentShiftNumber">1</strong></span>
+        <span class="cashier-label" id="currentCashier">[MASTER]</span>
+        <span class="arrow">◀</span>
+      </div>
+      <div class="shift-status-pill" id="shiftStatusBadge">
+        <span class="status-dot"></span>
+        <span id="shiftStatusText">Shift in Progress</span>
+      </div>
+    </div>
+
+    <!-- Main Shift Action Buttons -->
+    <div class="action-buttons-group">
+      <button class="btn btn-end-shift" id="mainShiftActionBtn">End Shift</button>
+      <button class="btn btn-danger" id="cancelActionBtn">Cancel</button>
+      <button class="btn btn-warning" id="undoActionBtn">Undo</button>
+    </div>
+
+    <!-- Scanner Terminal Input Hub -->
+    <div class="scanner-hub">
+      <div class="scanner-input-wrapper">
+        <span class="scanner-mode-label" id="scannerModeLabel">ML</span>
+        <input 
+          type="text" 
+          id="barcodeInput" 
+          class="scanner-field" 
+          placeholder="Scan barcode..." 
+          autocomplete="off" 
+          autofocus
+        >
+      </div>
+      <div class="last-scan-readout">
+        <span class="scan-action-title" id="scanActionTitle">Scanning... Shift in Progress</span>
+        <span class="scan-details" id="lastScanDisplay">Last Scan: Ready for scan</span>
+      </div>
+    </div>
+
+    <!-- Large Stat Counter -->
+    <div class="large-stat-counter">
+      <div class="stat-number" id="largeStatReadout">0</div>
+      <div class="stat-label" id="largeStatLabel">Active Slots</div>
+    </div>
+  </section>
+
+  <!-- Summary Metrics Bar -->
+  <nav class="metrics-tabs-bar">
+    <button class="metric-tab" id="tabSettlement">
+      <span class="tab-name">Settlement</span>
+      <span class="tab-val" id="metricSettlement">$0.00</span>
+    </button>
+    <button class="metric-tab" id="tabThisMonth">
+      <span class="tab-name">This Month</span>
+      <span class="tab-val" id="metricThisMonth">0</span>
+    </button>
+    <button class="metric-tab" id="tabThisWeek">
+      <span class="tab-name">This Week</span>
+      <span class="tab-val" id="metricThisWeek">0</span>
+    </button>
+    <button class="metric-tab" id="tabToday">
+      <span class="tab-name">Today</span>
+      <span class="tab-val" id="metricToday">0</span>
+    </button>
+    <button class="metric-tab" id="tabInactive">
+      <span class="tab-name">Inactive</span>
+      <span class="tab-val" id="metricInactive">20</span>
+    </button>
+    <button class="metric-tab" id="tabInventoryStatus">
+      <span class="tab-name">Inventory Status</span>
+      <span class="tab-val" id="metricInventoryCount">0 Packs</span>
+    </button>
+    <button class="metric-tab update-inventory-tab" id="tabUpdateInventory">
+      <span class="tab-name">⚡ Stock Intake</span>
+      <span class="tab-val">Update Inventory</span>
+    </button>
+  </nav>
+
+  <!-- Main Dispenser Rack Grid -->
+  <main class="main-workspace">
+    <div class="dispensers-grid" id="dispensersGrid">
+      <!-- 20 Acrylic Dispenser Boxes dynamically rendered -->
+    </div>
+
+    <!-- Bottom Status Strip with 1-20 Slot Matrix Ribbon -->
+    <footer class="bottom-status-strip">
+      <div class="legend-and-stats">
+        <div class="legend-group">
+          <span class="legend-item"><span class="color-sample age-1"></span> 1+ Days</span>
+          <span class="legend-item"><span class="color-sample age-7"></span> 7+ Days</span>
+          <span class="legend-item"><span class="color-sample age-21"></span> 21+ Days</span>
+          <span style="color:#64748b; margin-left: 10px;">Copyright 2026 LTSYSTEM · Live POS</span>
+        </div>
+        <div class="slot-counters-summary">
+          <span>Total Slots: <strong id="totalSlotsCountDisplay">20</strong></span>
+          <span class="active-count">Active: <strong id="ribbonActiveCount">0</strong></span>
+          <span class="empty-count">Empty: <strong id="ribbonEmptyCount">20</strong></span>
+          <button class="btn btn-primary" id="btnAddDispenserBoxBtn" style="padding: 3px 10px; font-size: 0.75rem; margin-left: 6px;">
+            + Add Box
+          </button>
+        </div>
+      </div>
+
+      <!-- 1-N Slot Ribbon -->
+      <div class="slots-ribbon" id="slotsRibbon">
+        <!-- Cells rendered dynamically -->
+      </div>
+    </footer>
+  </main>
+
+  <!-- MODAL 1: Keypad & Box Assignment (Ticket Activation - Matching Screenshot 2) -->
+  <dialog id="activationModal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>🎟️ Ticket Activation & Box Assignment</span>
+      </div>
+      <button class="modal-close-btn" id="closeActivationBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="activation-panel">
+        <div class="activation-header-info" id="activationGameTitle">
+          $2 HIT 200......
+        </div>
+        <div style="font-size:0.8rem; color:var(--color-primary); font-weight:700; margin-top:4px; text-align:center;">
+          Ticket Pack starts at #01 (Count: 01)
+        </div>
+        
+        <div class="activation-input-split">
+          <!-- Left: Box Input and Direct Actions -->
+          <div class="box-input-col">
+            <div>
+              <div class="box-input-group">
+                <span class="box-label-red">BOX #</span>
+                <input type="text" id="keypadBoxInput" class="box-num-input" value="5" readonly>
+                <div class="stepper-arrows">
+                  <button class="stepper-btn" id="stepBoxUp">▲</button>
+                  <button class="stepper-btn" id="stepBoxDown">▼</button>
+                </div>
+              </div>
+              <p id="boxInputHint" style="font-size:0.75rem; color:#64748b; margin-top:8px;">
+                Assign to dispenser slot number (1-20 or enter any box number to add new).
+              </p>
+            </div>
+
+            <div class="box-action-buttons">
+              <button class="btn-not-in-box" id="btnNotInBox">Not In Box</button>
+              <button class="btn-add-box" id="btnAddBox">Add</button>
+            </div>
+          </div>
+
+          <!-- Right: Touch Keypad -->
+          <div class="touch-keypad">
+            <div class="keypad-header-row">
+              <button class="key-btn key-fn" id="keyClear">Clear</button>
+              <button class="key-btn key-fn" id="keyBackspace">Backspace</button>
+            </div>
+            <button class="key-btn key-num" data-val="7">7</button>
+            <button class="key-btn key-num" data-val="8">8</button>
+            <button class="key-btn key-num" data-val="9">9</button>
+
+            <button class="key-btn key-num" data-val="4">4</button>
+            <button class="key-btn key-num" data-val="5">5</button>
+            <button class="key-btn key-num" data-val="6">6</button>
+
+            <button class="key-btn key-num" data-val="1">1</button>
+            <button class="key-btn key-num" data-val="2">2</button>
+            <button class="key-btn key-num" data-val="3">3</button>
+
+            <button class="key-btn key-num" data-val="0">0</button>
+            <button class="key-btn key-num" data-val=".">.</button>
+            <button class="key-btn key-enter" id="keyEnter">Enter</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Box Details & Ticket Count Adjust (Set count to 0 -> Box 5) -->
+  <dialog id="boxAdjustModal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span id="adjustModalTitle">📦 Dispenser Box Details</span>
+      </div>
+      <button class="modal-close-btn" id="closeBoxAdjustBtn">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div style="background:var(--bg-surface-elevated, #162444); padding:16px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-weight:700; font-size:1.1rem; color:var(--text-primary);" id="adjustGameName">$2 HIT $200</span>
+          <span class="price-tag p2" id="adjustPriceTag">$2</span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.85rem; color:var(--text-secondary);">
+          <div>Pack #: <strong id="adjustPackNum" style="color:var(--color-primary);">#884901</strong></div>
+          <div>Pack Size: <strong id="adjustPackSize">150</strong> pk</div>
+          <div>Started At: <strong id="adjustStartTicket">#01</strong></div>
+          <div>Days Active: <strong id="adjustDaysActive">1</strong> d</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:8px; color:var(--text-secondary);">
+          Current Ticket Count:
+        </label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-secondary" id="btnCountMinus" style="font-size:1.3rem; width:44px; height:44px; padding:0;">-</button>
+          <input type="number" id="inputAdjustCount" class="box-num-input" style="text-align:center; font-size:1.4rem; font-weight:800; font-family:var(--font-mono); width:110px; height:44px;" min="0" max="999" value="1">
+          <button class="btn btn-secondary" id="btnCountPlus" style="font-size:1.3rem; width:44px; height:44px; padding:0;">+</button>
+          <button class="btn btn-primary" id="btnSellOneTicket" style="margin-left:auto; height:44px;">
+            Sell 1 (+1)
+          </button>
+        </div>
+        <p style="font-size:0.75rem; color:#94a3b8; margin-top:8px;">
+          💡 When count is <strong>0</strong>, the box automatically renders as <strong>Empty (Box 5 style)</strong>.
+        </p>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; gap:10px; padding-top:14px; border-top:1px solid var(--border-color);">
+        <button class="btn btn-danger" id="btnSetCountZero">
+          Set Count 0 (Make Box Empty)
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary" id="cancelBoxAdjustBtn">Cancel</button>
+          <button class="btn btn-primary" id="saveBoxAdjustBtn">Save Count</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL 2: End Shift Confirmation (Matching Screenshot 5) -->
+  <dialog id="endShiftConfirmModal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>📋 End Shift Verification</span>
+      </div>
+      <button class="modal-close-btn" id="closeEndShiftConfirmBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirmation-card">
+        <h3 style="color:#94a3b8; font-size:1rem; margin-bottom:16px;">Calculating End Shift</h3>
+        <div class="conf-split-layout">
+          <!-- Left Stats -->
+          <div class="conf-stats-col">
+            <div class="conf-badge-item">
+              <span class="conf-badge-label">Activation</span>
+              <span class="conf-badge-val" id="confActivationCount">0</span>
+            </div>
+            <div class="conf-badge-item">
+              <span class="conf-badge-label">Empty Slots</span>
+              <span class="conf-badge-val" id="confEmptySlotsCount">14</span>
+            </div>
+          </div>
+
+          <!-- Right: Sold out tickets -->
+          <div class="conf-sold-out-col">
+            <div class="sold-out-header">Sold out tickets</div>
+            <div class="sold-out-list" id="soldOutListContainer">
+              <div style="font-style: italic; color:#64748b;">None</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="conf-total-slots">
+          <span>Total Slots = <strong id="confTotalSlots">20</strong></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="confCancelBtn" style="padding: 10px 24px;">Cancel</button>
+      <button class="btn btn-start-shift" id="confConfirmBtn" style="padding: 10px 28px;">Confirm</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL 3: Shift Audit Report & Settlement -->
+  <dialog id="shiftReportModal" style="width: 720px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>📊 Shift Settlement Audit Report</span>
+      </div>
+      <button class="modal-close-btn" id="closeReportBtn">&times;</button>
+    </div>
+    <div class="modal-body report-content">
+      <div class="report-header-banner">
+        <div class="report-stat-item">
+          <div class="label">Shift Number</div>
+          <div class="value" id="repShiftNum">Shift #1</div>
+        </div>
+        <div class="report-stat-item">
+          <div class="label">Cashier</div>
+          <div class="value" id="repCashier">MASTER</div>
+        </div>
+        <div class="report-stat-item">
+          <div class="label">Tickets Sold</div>
+          <div class="value" id="repTicketsSold">0</div>
+        </div>
+        <div class="report-stat-item">
+          <div class="label">Total Lottery Sales</div>
+          <div class="value" id="repTotalRevenue" style="color: #34d399;">$0.00</div>
+        </div>
+      </div>
+
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Box</th>
+            <th>Game Title</th>
+            <th>Price</th>
+            <th>Start #</th>
+            <th>Close #</th>
+            <th>Sold</th>
+            <th>Amount ($)</th>
+          </tr>
+        </thead>
+        <tbody id="reportBodyRows">
+          <!-- Populated dynamically -->
+        </tbody>
+        <tfoot>
+          <tr class="report-total-row">
+            <td colspan="5">TOTAL LOTTO SHIFT SALES</td>
+            <td id="repSumSold">0</td>
+            <td id="repSumAmount">$0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div style="background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:14px; margin-top:14px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Email Dispatch:</span>
+          <span style="color:var(--color-primary); font-weight:600;" id="repTargetEmails">manager@eltesystemsoftware.com</span>
+        </div>
+        <p style="font-size:0.75rem; color:var(--text-light);">
+          Automatic daily reconciliation reports sent to store owner and accounting per system settings.
+        </p>
+      </div>
+    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-warning" id="reportPrintBtn" title="Optimized for 80mm thermal receipt roll" style="font-weight:700;">
+          🧾 Print 80mm Receipt
+        </button>
+        <button class="btn btn-outline" id="reportPrintFullBtn" title="Full page audit report for office/PDF printers" style="border:1px solid var(--border-color); color:var(--text-secondary); background:var(--bg-app); font-weight:600;">
+          📄 Full Page
+        </button>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" id="reportEmailBtn">📧 Email Report</button>
+        <button class="btn btn-start-shift" id="reportNewShiftBtn">🚀 Start New Shift</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL 4: Update Inventory (Book Intake) -->
+  <dialog id="inventoryModal" style="width: 680px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>📦 Lotto Pack Inventory Intake</span>
+      </div>
+      <button class="modal-close-btn" id="closeInventoryBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+        <h4 style="color:var(--color-primary); margin-bottom:6px;">Scan Pack Barcode to Register New Book</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+          "Scan one ticket from each pack to add it into back-office inventory."
+        </p>
+        <div style="display:flex; gap:10px;">
+          <input 
+            type="text" 
+            id="inventoryBarcodeInput" 
+            class="scanner-field" 
+            placeholder="Scan ticket from new pack..." 
+            style="flex:1; width:auto;"
+          >
+          <button class="btn btn-start-shift" id="inventoryAddManualBtn">Intake Pack</button>
+        </div>
+      </div>
+
+      <h4 style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:8px; text-transform:uppercase;">
+        Packs In Safe / Ready for Dispenser Activation
+      </h4>
+      <div style="max-height:240px; overflow-y:auto;">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Pack #</th>
+              <th>Game</th>
+              <th>Price</th>
+              <th>Pack Size</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-end-shift" id="inventoryDoneBtn">Done</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL 5: Shift History Modal -->
+  <dialog id="historyModal" style="width: 650px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>📜 Past Shifts Audit History</span>
+      </div>
+      <button class="modal-close-btn" id="closeHistoryBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="max-height: 320px; overflow-y: auto;">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Shift</th>
+              <th>Cashier</th>
+              <th>Date / Time</th>
+              <th>Tickets</th>
+              <th>Total Sales</th>
+              <th>Act.</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <!-- Past shifts -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-end-shift" id="closeHistoryBottomBtn">Close</button>
+    </div>
+  </dialog>
+
+  <!-- Floating Quick Simulator / Demo Assistant -->
+  <button class="demo-helper-fab" id="demoFabBtn" title="Open Demo Testing Assistant">
+    <span>⚡ Quick Demo Helper</span>
+  </button>
+
+  <aside class="demo-drawer" id="demoDrawer">
+    <div class="drawer-title">
+      <span>Interactive Demo Tools</span>
+      <button id="closeDemoDrawer" style="background:none; border:none; color:#94a3b8; cursor:pointer;">&times;</button>
+    </div>
+    
+    <button class="drawer-btn" id="simCustomerBuyBtn">
+      <span>🛒</span>
+      <div>
+        <div>Simulate Customer Purchase</div>
+        <small style="color:#94a3b8;">Sells 1-3 scratchers from active boxes</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simScanNewPackBtn">
+      <span>🎟️</span>
+      <div>
+        <div>Scan New $2 HIT 200 Pack</div>
+        <small style="color:#94a3b8;">Triggers Box Assignment Keypad</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simScan$20PackBtn">
+      <span>💎</span>
+      <div>
+        <div>Scan New $20 100X Pack</div>
+        <small style="color:#94a3b8;">Triggers Box Assignment Keypad</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simEndShiftScanAllBtn">
+      <span>🔍</span>
+      <div>
+        <div>Quick-Verify All Active Boxes</div>
+        <small style="color:var(--text-muted);">Scans all boxes during End Shift</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simSetBoxEmptyBtn" style="border-color:#f59e0b; color:#fbbf24;">
+      <span>📦</span>
+      <div>
+        <div>Simulate Count = 0 (Box 5 Style)</div>
+        <small style="color:var(--text-muted);">Empties Box 19: count 0 renders as Box 5</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simScanBoxBarcodeBtn" style="border-color:#10b981; color:#34d399;">
+      <span>🏷️</span>
+      <div>
+        <div>Scan Box Barcode (BOX-05)</div>
+        <small style="color:var(--text-muted);">Simulate scanning dispenser slot barcode</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simAddNewBoxBtn" style="border-color:#38bdf8; color:#38bdf8;">
+      <span>➕</span>
+      <div>
+        <div>+ Add New Dispenser Box</div>
+        <small style="color:var(--text-muted);">Expands capacity (e.g. Box 21, 22...)</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="drawerThemeToggleBtn">
+      <span id="drawerThemeIcon">🌗</span>
+      <div>
+        <div id="drawerThemeTitle">Switch Theme (Light / Dark)</div>
+        <small style="color:var(--text-muted);">Toggle between Medical Light & Dark POS</small>
+      </div>
+    </button>
+
+    <button class="drawer-btn" id="simResetStateBtn" style="border-color:#ef4444; color:#fca5a5;">
+      <span>🗑️</span>
+      <div>Erase All Data / Clean Reset</div>
+    </button>
+  </aside>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Print-Only 80mm Thermal Slip Receipt Layout -->
+  <div class="print-receipt-section" id="printReceiptSection">
+    <div class="receipt-header">
+      <div class="receipt-brand">ELTE LOTTO EXPRESS #402</div>
+      <div class="receipt-subbrand">LOTTERY POS RECONCILIATION</div>
+      <div class="receipt-addr">1044 CENTRAL AVE · SUITE B</div>
+      <div class="receipt-stars">******************************************</div>
+      <div class="receipt-title">SHIFT SETTLEMENT AUDIT</div>
+      <div class="receipt-stars">******************************************</div>
+    </div>
+
+    <div class="receipt-meta-grid">
+      <div><span>DATE: </span><strong id="prDate">09/05/2026</strong></div>
+      <div style="text-align:right;"><span>TIME: </span><strong id="prTime">08:04 PM</strong></div>
+      <div><span>SHIFT: </span><strong id="prShift">#1 (MASTER)</strong></div>
+      <div style="text-align:right;"><span>STATUS: </span><strong>AUDITED</strong></div>
+    </div>
+
+    <div class="receipt-divider-double"></div>
+
+    <div class="receipt-table-header">
+      <span class="col-box">BOX</span>
+      <span class="col-game">GAME TITLE</span>
+      <span class="col-qty">SOLD</span>
+      <span class="col-amt">AMOUNT</span>
+    </div>
+
+    <div class="receipt-divider-dash"></div>
+
+    <div id="prItemsList" class="receipt-items-table">
+      <!-- Populated dynamically with grid rows -->
+    </div>
+
+    <div class="receipt-divider-dash"></div>
+
+    <div class="receipt-totals-section">
+      <div class="receipt-summary-line">
+        <span>TOTAL TICKETS SOLD:</span>
+        <strong id="prTotalTickets">0</strong>
+      </div>
+      <div class="receipt-summary-line highlight-sales">
+        <span>TOTAL LOTTO SALES:</span>
+        <strong id="prTotalSales">$0.00</strong>
+      </div>
+    </div>
+
+    <div class="receipt-divider-double"></div>
+
+    <div class="receipt-audit-box">
+      <div class="audit-row">
+        <span>ACTIVE DISPENSERS:</span>
+        <strong id="prActiveCount">19</strong>
+      </div>
+      <div class="audit-row">
+        <span>EMPTY SLOTS:</span>
+        <strong id="prEmptyCount">1</strong>
+      </div>
+      <div class="audit-row">
+        <span>SHIFT ACTIVATIONS:</span>
+        <strong id="prActivationCount">0</strong>
+      </div>
+    </div>
+
+    <div class="receipt-divider-dash"></div>
+
+    <div class="receipt-footer">
+      <div class="footer-sync">E-DISPATCH ARCHIVE:</div>
+      <div class="footer-email" id="prEmails">manager@eltesystemsoftware.com</div>
+      <div class="receipt-barcode-wrap">
+        <svg class="receipt-barcode-svg" viewBox="0 0 170 32" fill="#000">
+          <rect x="0" y="0" width="3" height="32"/>
+          <rect x="5" y="0" width="1" height="32"/>
+          <rect x="8" y="0" width="4" height="32"/>
+          <rect x="14" y="0" width="2" height="32"/>
+          <rect x="18" y="0" width="1" height="32"/>
+          <rect x="22" y="0" width="3" height="32"/>
+          <rect x="27" y="0" width="2" height="32"/>
+          <rect x="31" y="0" width="5" height="32"/>
+          <rect x="38" y="0" width="1" height="32"/>
+          <rect x="42" y="0" width="4" height="32"/>
+          <rect x="48" y="0" width="2" height="32"/>
+          <rect x="52" y="0" width="1" height="32"/>
+          <rect x="56" y="0" width="3" height="32"/>
+          <rect x="61" y="0" width="2" height="32"/>
+          <rect x="66" y="0" width="4" height="32"/>
+          <rect x="72" y="0" width="1" height="32"/>
+          <rect x="76" y="0" width="3" height="32"/>
+          <rect x="82" y="0" width="2" height="32"/>
+          <rect x="87" y="0" width="5" height="32"/>
+          <rect x="94" y="0" width="1" height="32"/>
+          <rect x="98" y="0" width="3" height="32"/>
+          <rect x="103" y="0" width="2" height="32"/>
+          <rect x="108" y="0" width="4" height="32"/>
+          <rect x="114" y="0" width="1" height="32"/>
+          <rect x="118" y="0" width="3" height="32"/>
+          <rect x="123" y="0" width="2" height="32"/>
+          <rect x="128" y="0" width="4" height="32"/>
+          <rect x="134" y="0" width="1" height="32"/>
+          <rect x="138" y="0" width="5" height="32"/>
+          <rect x="145" y="0" width="2" height="32"/>
+          <rect x="150" y="0" width="1" height="32"/>
+          <rect x="154" y="0" width="3" height="32"/>
+          <rect x="160" y="0" width="2" height="32"/>
+          <rect x="165" y="0" width="4" height="32"/>
+        </svg>
+        <div class="receipt-barcode-num" id="prBarcodeCode">*SHFT-402-0001-REC*</div>
+      </div>
+      <div class="receipt-stars">******************************************</div>
+      <div class="receipt-tagline">KEEP SLIP FOR AUDIT COMPLIANCE</div>
+      <div class="receipt-timestamp" id="prPrintedAt">PRINTED: 09/05/2026 08:04 PM</div>
+      <div class="receipt-stars">*** LOTTO-TRACK PRO ENTERPRISE ***</div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "LottoTrack Pro - Retail Lottery POS",
+  "short_name": "LottoTrack",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1527",
+  "theme_color": "#0d1527",
+  "description": "Retail Lottery Scratch-Off POS & Shift Tracking System",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
