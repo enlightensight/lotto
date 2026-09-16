@@ -123,3 +123,88 @@ class SoundFX {
 }
 
 export const sfx = new SoundFX();
+
+// -------------------------------------------------------------
+// Voice Guidance Speech Engine (HTML5 Web Speech API)
+// -------------------------------------------------------------
+class VoiceGuide {
+  constructor() {
+    this.enabled = true;
+    this.voice = null;
+    this.init();
+  }
+
+  init() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        this.voice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('David') || v.name.includes('Zira'))) || voices.find(v => v.lang.startsWith('en')) || null;
+      };
+      loadVoices();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+    }
+  }
+
+  speak(text, rate = 1.0) {
+    if (!this.enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      if (this.voice) utt.voice = this.voice;
+      utt.rate = rate;
+      utt.pitch = 1.0;
+      window.speechSynthesis.speak(utt);
+    } catch (e) {
+      console.warn('Speech synthesis error:', e);
+    }
+  }
+
+  speakStartScanning() {
+    this.speak("Start scanning barcode", 1.05);
+  }
+
+  speakScanning() {
+    this.speak("Scanning", 1.0);
+  }
+
+  speakRescan() {
+    this.speak("Rescan barcode", 1.05);
+  }
+
+  speakDuplicateError() {
+    this.speak("Technical error. This pack has been scanned.", 1.0);
+  }
+
+  speakInventoryUpdated() {
+    this.speak("Inventory updated", 1.05);
+  }
+
+  speakBoxPrompt() {
+    this.speak("Box number", 1.0);
+  }
+
+  speakBoxNumber(boxNum = 62) {
+    this.speak(`Box number ${boxNum}`, 1.0);
+  }
+
+  speakEmptySlot() {
+    this.speak("Empty slot. Please check the number of empty slots to activation.", 1.0);
+  }
+
+  speakReport() {
+    this.speak("Report", 1.0);
+  }
+
+  speakReadyToSell(boxNum = 63) {
+    this.speak(`Box number ${boxNum} ready to sell.`, 1.05);
+  }
+
+  speakBye() {
+    this.speak("Bye", 1.0);
+  }
+}
+
+export const voice = new VoiceGuide();
+

@@ -32,9 +32,11 @@
         <a class="menu-item" id="menuViewBtn">View</a>
         <a class="menu-item" id="menuHistoryBtn">History</a>
         <a class="menu-item" id="menuPrintBtn">Print</a>
-        <a class="menu-item" id="menuHelpBtn">Help</a>
         <a class="menu-item highlight-green" id="menuSignOutBtn">Sign out</a>
         <a class="menu-item" id="menuSettingsBtn">Settings</a>
+        <span class="menu-divider-v">|</span>
+        <a class="menu-item menu-pill-btn" id="menuDayReportBtn" title="View & Print Official 2-Page Day Report (AMIGO FOOD MART)">📄 Day Report</a>
+        <a class="menu-item menu-pill-btn" id="menuHelpBtn" title="5 Simple Steps: How Everything Works">📖 Worker Guide</a>
         <a class="menu-item" id="menuClearDataBtn" style="color:#ef4444; font-weight:700;">Clear Data</a>
       </nav>
     </div>
@@ -43,58 +45,79 @@
         <span id="themeToggleIcon">🌙</span>
         <span id="themeToggleText">Dark Mode</span>
       </button>
-      <span class="system-tag">LTSYSTEM 2026</span>
+      <span class="system-tag">POS LIVE</span>
     </div>
   </header>
 
-  <!-- Shift Operations Control Bar -->
+  <!-- Shift Operations Control Bar (Proper 2-Column Positioned Layout) -->
   <section class="shift-control-bar">
-    <div class="shift-info-box">
-      <div class="shift-badge">
-        <span>Current Shift : <strong id="currentShiftNumber">1</strong></span>
-        <span class="cashier-label" id="currentCashier">[MASTER]</span>
-        <span class="arrow">◀</span>
+    <!-- LEFT COLUMN: Shift Badge, Cancel/Undo Buttons, ML+Scanner Field -->
+    <div class="shift-panel-left">
+      <!-- Row 1: Current Shift Badge -->
+      <div class="shift-badge-box" id="shiftBadgeBox" style="cursor:pointer;" title="Click to Switch Cashier / Worker">
+        <div class="shift-badge-text">
+          Current Shift : <strong id="currentShiftNumber">1</strong>
+          <span class="cashier-label" id="currentCashier">[MASTER]</span>
+        </div>
+        <div class="shift-badge-arrow">
+          <svg width="34" height="18" viewBox="0 0 50 24" fill="none">
+            <defs>
+              <linearGradient id="arrowGrad" x1="100%" y1="0%" x2="0%" y2="0%">
+                <stop offset="0%" stop-color="#1e3a8a"/>
+                <stop offset="50%" stop-color="#2563eb"/>
+                <stop offset="100%" stop-color="#60a5fa"/>
+              </linearGradient>
+            </defs>
+            <path d="M22 2 L2 12 L22 22 L22 16 L48 16 L48 8 L22 8 Z" fill="url(#arrowGrad)" stroke="#1d4ed8" stroke-width="1.5"/>
+          </svg>
+        </div>
       </div>
-      <div class="shift-status-pill" id="shiftStatusBadge">
-        <span class="status-dot"></span>
-        <span id="shiftStatusText">Shift in Progress</span>
+
+      <!-- Row 2: Cancel and Undo Buttons -->
+      <div class="shift-cancel-undo-row">
+        <button class="btn-lt-pink" id="cancelActionBtn">Cancel</button>
+        <button class="btn-lt-pink" id="undoActionBtn">Undo</button>
       </div>
-    </div>
 
-    <!-- Main Shift Action Buttons -->
-    <div class="action-buttons-group">
-      <button class="btn btn-end-shift" id="mainShiftActionBtn">End Shift</button>
-      <button class="btn btn-danger" id="cancelActionBtn">Cancel</button>
-      <button class="btn btn-warning" id="undoActionBtn">Undo</button>
-    </div>
-
-    <!-- Scanner Terminal Input Hub -->
-    <div class="scanner-hub">
-      <div class="scanner-input-wrapper">
-        <span class="scanner-mode-label" id="scannerModeLabel">ML</span>
+      <!-- Row 3: ML Button & Barcode Input Field -->
+      <div class="shift-scanner-row">
+        <button type="button" class="btn-lt-ml" id="scannerModeLabel" title="Click 'ML' for Manual Pack Entry & Box Activation">ML</button>
         <input 
           type="text" 
           id="barcodeInput" 
-          class="scanner-field" 
+          class="scanner-field-lt" 
           placeholder="Scan barcode..." 
           autocomplete="off" 
           autofocus
         >
       </div>
-      <div class="last-scan-readout">
-        <span class="scan-action-title" id="scanActionTitle">Scanning... Shift in Progress</span>
-        <span class="scan-details" id="lastScanDisplay">Last Scan: Ready for scan</span>
-      </div>
     </div>
 
-    <!-- Large Stat Counter -->
-    <div class="large-stat-counter">
-      <div class="stat-number" id="largeStatReadout">0</div>
-      <div class="stat-label" id="largeStatLabel">Active Slots</div>
+    <!-- RIGHT COLUMN: Shift in Progress (Green) & End Shift (Black) Buttons, Readout & Big Stat -->
+    <div class="shift-panel-right">
+      <!-- Row 1: Wide Action Buttons -->
+      <div class="shift-main-actions-row">
+        <div class="btn-lt-green-progress" id="shiftStatusBadge">
+          <span id="shiftStatusText">Shift in Progress</span>
+        </div>
+        <button class="btn-lt-black-end" id="mainShiftActionBtn">End Shift</button>
+      </div>
+
+      <!-- Row 2: Readout on Left & Big Stat Number on Right -->
+      <div class="shift-status-readout-row">
+        <div class="last-scan-readout-lt">
+          <div class="scan-action-title-lt" id="scanActionTitle">Scanner Ready · Shift in Progress</div>
+          <div class="scan-details-lt" id="lastScanDisplay">Last Scan: Ready for scan</div>
+        </div>
+        <div class="large-stat-counter-lt">
+          <div class="stat-number-lt" id="largeStatReadout">0</div>
+          <div class="stat-label-lt" id="largeStatLabel">Active Slots</div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- Summary Metrics Bar -->
+  <!-- Summary Metrics Bar (Proper 7-Column Positioned Bar) -->
   <nav class="metrics-tabs-bar">
     <button class="metric-tab" id="tabSettlement">
       <span class="tab-name">Settlement</span>
@@ -114,7 +137,7 @@
     </button>
     <button class="metric-tab" id="tabInactive">
       <span class="tab-name">Inactive</span>
-      <span class="tab-val" id="metricInactive">20</span>
+      <span class="tab-val" id="metricInactive">0</span>
     </button>
     <button class="metric-tab" id="tabInventoryStatus">
       <span class="tab-name">Inventory Status</span>
@@ -128,97 +151,165 @@
 
   <!-- Main Dispenser Rack Grid -->
   <main class="main-workspace">
-    <div class="dispensers-grid" id="dispensersGrid">
-      <!-- 20 Acrylic Dispenser Boxes dynamically rendered -->
+    <div class="dispensers-grid-wrapper">
+      <div class="dispensers-grid" id="dispensersGrid">
+        <!-- Acrylic Dispenser Boxes dynamically rendered -->
+      </div>
     </div>
 
-    <!-- Bottom Status Strip with 1-20 Slot Matrix Ribbon -->
+    <!-- Bottom Status Strip with Legend and Rack Controls -->
     <footer class="bottom-status-strip">
       <div class="legend-and-stats">
-        <div class="legend-group">
-          <span class="legend-item"><span class="color-sample age-1"></span> 1+ Days</span>
-          <span class="legend-item"><span class="color-sample age-7"></span> 7+ Days</span>
-          <span class="legend-item"><span class="color-sample age-21"></span> 21+ Days</span>
-          <span style="color:#64748b; margin-left: 10px;">Copyright 2026 LTSYSTEM · Live POS</span>
+        <div class="legend-left-block">
+          <div class="legend-indicators-row">
+            <span class="legend-item"><span class="legend-box box-age-1"></span> 1+ Days</span>
+            <span class="legend-item"><span class="legend-box box-age-7"></span> 7+ Days</span>
+            <span class="legend-item"><span class="legend-box box-age-21"></span> 21+ Days</span>
+          </div>
+          <div class="legend-copyright-row">
+            <span>LottoTrack Pro · Retail POS & Shift Tracking</span>
+          </div>
         </div>
+
         <div class="slot-counters-summary">
-          <span>Total Slots: <strong id="totalSlotsCountDisplay">20</strong></span>
+          <span>Total Slots: <strong id="totalSlotsCountDisplay">65</strong></span>
           <span class="active-count">Active: <strong id="ribbonActiveCount">0</strong></span>
-          <span class="empty-count">Empty: <strong id="ribbonEmptyCount">20</strong></span>
+          <span class="empty-count">Empty: <strong id="ribbonEmptyCount">65</strong></span>
           <button class="btn btn-primary" id="btnAddDispenserBoxBtn" style="padding: 3px 10px; font-size: 0.75rem; margin-left: 6px;">
             + Add Box
+          </button>
+          <button class="btn btn-secondary" id="btnTrimRackBtn" style="padding: 3px 10px; font-size: 0.75rem; margin-left: 6px;" title="Reset extra empty boxes back to standard">
+            🧹 Reset
           </button>
         </div>
       </div>
 
-      <!-- 1-N Slot Ribbon -->
-      <div class="slots-ribbon" id="slotsRibbon">
-        <!-- Cells rendered dynamically -->
+      <!-- Slot Matrix Ribbon -->
+      <div class="slots-ribbon-container">
+        <div class="slots-ribbon" id="slotsRibbon">
+          <!-- Cells rendered dynamically -->
+        </div>
       </div>
     </footer>
   </main>
 
-  <!-- MODAL 1: Keypad & Box Assignment (Ticket Activation - Matching Screenshot 2) -->
-  <dialog id="activationModal">
+  <!-- MODAL 1: Keypad & Box Assignment (Ticket Activation - Matching Screenshot 2 & LT System) -->
+  <dialog id="activationModal" class="activation-dialog">
     <div class="modal-header">
       <div class="modal-title">
         <span>🎟️ Ticket Activation & Box Assignment</span>
       </div>
-      <button class="modal-close-btn" id="closeActivationBtn">&times;</button>
+      <button class="modal-close-btn" id="closeActivationBtn" title="Close Dialog">&times;</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body activation-modal-body">
       <div class="activation-panel">
-        <div class="activation-header-info" id="activationGameTitle">
-          $2 HIT 200......
+        <!-- Compact Header Bar: Game Title + Subtitle + Mode Toggle -->
+        <div class="activation-header-banner">
+          <div class="activation-header-title-box">
+            <div class="activation-game-badge" id="activationGameTitle">$1 5X MONEY</div>
+            <div class="activation-pack-hint">Ticket Pack starts at #01 &bull; Active Count: 01</div>
+          </div>
+          <div class="mode-toggle-pills">
+            <button type="button" class="mode-pill-btn active" id="btnModeDropdown" title="Select from Preset List">📋 Preset List</button>
+            <button type="button" class="mode-pill-btn" id="btnModeManual" title="Manual Entry (ML Mode)">✍️ Manual (ML)</button>
+          </div>
         </div>
-        <div style="font-size:0.8rem; color:var(--color-primary); font-weight:700; margin-top:4px; text-align:center;">
-          Ticket Pack starts at #01 (Count: 01)
+
+        <!-- 1. Preset Dropdown Container -->
+        <div id="activationDropdownContainer" class="activation-preset-row">
+          <div style="flex: 2;">
+            <label class="activation-field-label">CHOOSE LOTTERY GAME:</label>
+            <select id="activationGameDropdown" class="scanner-field activation-select">
+              <!-- Populated dynamically from SAMPLE_GAMES -->
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label class="activation-field-label">PACK #:</label>
+            <input type="text" id="presetPackNumberInput" class="scanner-field activation-input" placeholder="Pack #">
+          </div>
+          <div style="width: 80px;">
+            <label class="activation-field-label">START #:</label>
+            <input type="number" id="presetStartTicketInput" class="scanner-field activation-input text-center" min="0" max="999" value="1">
+          </div>
+        </div>
+
+        <!-- 2. Manual Custom Entry Container (LT System Software ML Mode) -->
+        <div id="activationManualContainer" class="activation-manual-box" style="display: none;">
+          <div class="manual-row-1">
+            <div>
+              <label class="activation-field-label">CUSTOM GAME NAME / TICKET ID:</label>
+              <input type="text" id="manualGameName" class="scanner-field activation-input" placeholder="e.g. $3 CROSSWORD">
+            </div>
+            <div>
+              <label class="activation-field-label">TICKET PRICE ($):</label>
+              <input type="number" id="manualGamePrice" class="scanner-field activation-input" min="1" max="100" value="3">
+            </div>
+          </div>
+          <div class="manual-row-2">
+            <div>
+              <label class="activation-field-label">PACK #:</label>
+              <input type="text" id="manualPackNumber" class="scanner-field activation-input" placeholder="0019425">
+            </div>
+            <div>
+              <label class="activation-field-label">PACK SIZE (PK):</label>
+              <input type="number" id="manualPackSize" class="scanner-field activation-input text-center" min="1" max="500" value="100">
+            </div>
+            <div>
+              <label class="activation-field-label">START TICKET #:</label>
+              <input type="number" id="manualStartTicket" class="scanner-field activation-input text-center" min="0" max="999" value="1">
+            </div>
+          </div>
         </div>
         
+        <!-- Bottom Section: Box Number & Touch Keypad Split -->
         <div class="activation-input-split">
-          <!-- Left: Box Input and Direct Actions -->
+          <!-- Left: Box Input & Action Buttons -->
           <div class="box-input-col">
             <div>
               <div class="box-input-group">
                 <span class="box-label-red">BOX #</span>
-                <input type="text" id="keypadBoxInput" class="box-num-input" value="5" readonly>
+                <input type="number" id="keypadBoxInput" class="box-num-input" value="5" min="1" max="100" autocomplete="off">
                 <div class="stepper-arrows">
-                  <button class="stepper-btn" id="stepBoxUp">▲</button>
-                  <button class="stepper-btn" id="stepBoxDown">▼</button>
+                  <button type="button" class="stepper-btn" id="stepBoxUp" title="Next Box Number">▲</button>
+                  <button type="button" class="stepper-btn" id="stepBoxDown" title="Previous Box Number">▼</button>
                 </div>
               </div>
-              <p id="boxInputHint" style="font-size:0.75rem; color:#64748b; margin-top:8px;">
-                Assign to dispenser slot number (1-20 or enter any box number to add new).
+              <p id="boxInputHint" class="box-input-hint">
+                Assign to dispenser slot (1-65 or enter higher number to add new box).
               </p>
             </div>
 
             <div class="box-action-buttons">
-              <button class="btn-not-in-box" id="btnNotInBox">Not In Box</button>
-              <button class="btn-add-box" id="btnAddBox">Add</button>
+              <button type="button" class="btn btn-primary btn-add-box" id="btnAddBox" title="Assign pack into this box slot">
+                <span>➕</span> <span>Activate into Box (↵)</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-not-in-box" id="btnNotInBox" title="Keep pack in inventory safe without assigning to rack">
+                <span>📦</span> <span>Not In Box (Safe)</span>
+              </button>
             </div>
           </div>
 
           <!-- Right: Touch Keypad -->
           <div class="touch-keypad">
             <div class="keypad-header-row">
-              <button class="key-btn key-fn" id="keyClear">Clear</button>
-              <button class="key-btn key-fn" id="keyBackspace">Backspace</button>
+              <button type="button" class="key-btn key-fn" id="keyClear" title="Clear box input">Clear</button>
+              <button type="button" class="key-btn key-fn" id="keyBackspace" title="Backspace">⌫ Backspace</button>
             </div>
-            <button class="key-btn key-num" data-val="7">7</button>
-            <button class="key-btn key-num" data-val="8">8</button>
-            <button class="key-btn key-num" data-val="9">9</button>
+            <button type="button" class="key-btn key-num" data-val="7">7</button>
+            <button type="button" class="key-btn key-num" data-val="8">8</button>
+            <button type="button" class="key-btn key-num" data-val="9">9</button>
 
-            <button class="key-btn key-num" data-val="4">4</button>
-            <button class="key-btn key-num" data-val="5">5</button>
-            <button class="key-btn key-num" data-val="6">6</button>
+            <button type="button" class="key-btn key-num" data-val="4">4</button>
+            <button type="button" class="key-btn key-num" data-val="5">5</button>
+            <button type="button" class="key-btn key-num" data-val="6">6</button>
 
-            <button class="key-btn key-num" data-val="1">1</button>
-            <button class="key-btn key-num" data-val="2">2</button>
-            <button class="key-btn key-num" data-val="3">3</button>
+            <button type="button" class="key-btn key-num" data-val="1">1</button>
+            <button type="button" class="key-btn key-num" data-val="2">2</button>
+            <button type="button" class="key-btn key-num" data-val="3">3</button>
 
-            <button class="key-btn key-num" data-val="0">0</button>
-            <button class="key-btn key-num" data-val=".">.</button>
-            <button class="key-btn key-enter" id="keyEnter">Enter</button>
+            <button type="button" class="key-btn key-num" data-val="0">0</button>
+            <button type="button" class="key-btn key-num" data-val=".">.</button>
+            <button type="button" class="key-btn key-enter" id="keyEnter" title="Confirm Activation">Enter ↵</button>
           </div>
         </div>
       </div>
@@ -291,12 +382,16 @@
           <!-- Left Stats -->
           <div class="conf-stats-col">
             <div class="conf-badge-item">
+              <span class="conf-badge-label">Active Slots</span>
+              <span class="conf-badge-val" id="confActiveSlotsCount">0</span>
+            </div>
+            <div class="conf-badge-item">
               <span class="conf-badge-label">Activation</span>
               <span class="conf-badge-val" id="confActivationCount">0</span>
             </div>
             <div class="conf-badge-item">
               <span class="conf-badge-label">Empty Slots</span>
-              <span class="conf-badge-val" id="confEmptySlotsCount">14</span>
+              <span class="conf-badge-val" id="confEmptySlotsCount">0</span>
             </div>
           </div>
 
@@ -309,8 +404,21 @@
           </div>
         </div>
 
+        <div style="margin-top: 12px; padding: 12px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 4px;">
+            💵 Cash Counted in Drawer ($):
+          </label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">$</span>
+            <input type="number" id="confDrawerCashInput" step="0.01" min="0" placeholder="0.00" class="scanner-field" style="flex: 1; font-size: 1.1rem; font-weight: 800; padding: 8px 12px;">
+          </div>
+          <small style="color: var(--text-muted); font-size: 0.72rem; margin-top: 4px; display: block;">
+            Enter physical cash collected to verify if your drawer is Balanced, Over, or Short.
+          </small>
+        </div>
+
         <div class="conf-total-slots">
-          <span>Total Slots = <strong id="confTotalSlots">20</strong></span>
+          <span>Total Slots = <strong id="confTotalSlots">32</strong></span>
         </div>
       </div>
     </div>
@@ -348,6 +456,69 @@
         </div>
       </div>
 
+      <!-- Cash Drawer Reconciliation Card - Prominently at Top -->
+      <div class="cash-reconciliation-card" style="background:var(--bg-app); border:2px solid var(--color-primary); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+        <div style="font-size:0.95rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>💵</span> <span>Cash Drawer Balancing & Reconciliation</span>
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Shift Drawer Audit</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:12px; margin-bottom:4px;" class="drawer-reconcile-grid">
+          <!-- Left: Sales (+), Payouts (-), Starting Float (+), Expected Total -->
+          <div style="background:rgba(255,255,255,0.04); padding:12px 14px; border-radius:8px; border:1px solid var(--border-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:6px;">
+              <span style="color:var(--text-secondary);">(+) Scratcher Ticket Sales:</span>
+              <strong id="recLottoSales" style="color:var(--color-success); font-size:0.95rem;">$0.00</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:6px;">
+              <span style="color:var(--text-secondary);" title="Prize cash paid out to customers for winning tickets">(-) Winning Payouts (Cashes):</span>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="color:#ef4444; font-weight:700;">-$</span>
+                <input type="number" id="inputShiftPayouts" step="1" min="0" value="0.00" style="width:80px; text-align:right; font-weight:700; color:#ef4444; background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:4px; padding:2px 6px;">
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; margin-bottom:6px;">
+              <span style="color:var(--text-muted);" title="Starting cash in register at start of shift">(+) Starting Bank Float (Optional):</span>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="color:var(--text-muted); font-weight:700;">+$</span>
+                <input type="number" id="inputDrawerFloat" step="1" min="0" value="0.00" style="width:80px; text-align:right; font-weight:600; color:var(--text-primary); background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:4px; padding:2px 6px;">
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; padding-top:6px; border-top:1px dashed var(--border-color); font-weight:800;">
+              <span style="color:var(--text-primary);">(=) Expected Cash in Drawer:</span>
+              <strong id="recExpectedCash" style="color:var(--color-primary); font-size:1.05rem;">$0.00</strong>
+            </div>
+            <div id="recPayoutNote" style="font-size:0.75rem; color:#f59e0b; margin-top:5px; display:none; line-height:1.3;">
+              ⚠️ <strong>Payouts exceed sales:</strong> Cash drawer paid out more in winning tickets than it took in from sales.
+            </div>
+          </div>
+
+          <!-- Right: Actual Cash Counted & Result -->
+          <div style="background:rgba(255,255,255,0.04); padding:12px 14px; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div>
+                  <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">Physical Cash in Drawer:</span>
+                  <div style="font-size:0.72rem; color:var(--text-muted);">Count all bills & coins</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <span style="font-size:1.1rem; font-weight:800; color:var(--text-primary);">$</span>
+                  <input type="number" id="inputActualCashCounted" step="0.01" placeholder="Enter Cash" class="scanner-field" style="width:115px; font-size:1.05rem; font-weight:800; text-align:right; border:2px solid var(--color-primary); padding:4px 8px;">
+                </div>
+              </div>
+            </div>
+            <div style="padding-top:6px; border-top:1px dashed var(--border-color);">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.95rem;">
+                <span style="color:var(--text-secondary);">Drawer Balance:</span>
+                <span id="repDrawerBalance" style="font-family:var(--font-mono); font-size:1.05rem; color:var(--text-muted);">Enter Counted Cash</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <table class="report-table">
         <thead>
           <tr>
@@ -372,6 +543,7 @@
         </tfoot>
       </table>
 
+
       <div style="background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:14px; margin-top:14px;">
         <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
           <span style="color:var(--text-muted);">Email Dispatch:</span>
@@ -381,13 +553,14 @@
           Automatic daily reconciliation reports sent to store owner and accounting per system settings.
         </p>
       </div>
+    </div>
     <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn btn-warning" id="reportPrintBtn" title="Optimized for 80mm thermal receipt roll" style="font-weight:700;">
           🧾 Print 80mm Receipt
         </button>
-        <button class="btn btn-outline" id="reportPrintFullBtn" title="Full page audit report for office/PDF printers" style="border:1px solid var(--border-color); color:var(--text-secondary); background:var(--bg-app); font-weight:600;">
-          📄 Full Page
+        <button class="btn btn-outline" id="reportPrintFullBtn" title="Full 2-Page Official Day Report (AMIGO FOOD MART)" style="border:1px solid var(--border-color); color:var(--text-secondary); background:var(--bg-app); font-weight:700;">
+          📄 Day Report (2-Page)
         </button>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
@@ -397,55 +570,229 @@
     </div>
   </dialog>
 
-  <!-- MODAL 4: Update Inventory (Book Intake) -->
-  <dialog id="inventoryModal" style="width: 680px;">
-    <div class="modal-header">
-      <div class="modal-title">
-        <span>📦 Lotto Pack Inventory Intake</span>
+  <!-- MODAL 4: Store Inventory (Activated Tickets Only by default) -->
+  <dialog id="inventoryModal" style="width: 860px; max-width: 96vw; border-radius: 14px; overflow: hidden;">
+    <div class="modal-header" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-color); padding: 14px 20px;">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.15rem; font-weight: 800;">📦 Store Lottery Inventory</span>
+        <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; padding: 2px 8px; border-radius: 4px; font-weight: 800;">
+          ⚡ Activated Dispenser Boxes
+        </span>
       </div>
       <button class="modal-close-btn" id="closeInventoryBtn">&times;</button>
     </div>
-    <div class="modal-body">
-      <div style="background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
-        <h4 style="color:var(--color-primary); margin-bottom:6px;">Scan Pack Barcode to Register New Book</h4>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
-          "Scan one ticket from each pack to add it into back-office inventory."
-        </p>
-        <div style="display:flex; gap:10px;">
-          <input 
-            type="text" 
-            id="inventoryBarcodeInput" 
-            class="scanner-field" 
-            placeholder="Scan ticket from new pack..." 
-            style="flex:1; width:auto;"
-          >
-          <button class="btn btn-start-shift" id="inventoryAddManualBtn">Intake Pack</button>
+    <div class="modal-body" style="padding: 18px; max-height: calc(90vh - 120px); overflow-y: auto;">
+      
+      <!-- Top Modal Navigation Tabs -->
+      <div class="inv-mode-toggle" style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <button type="button" class="btn btn-outline active" id="btnTabActiveInventory" style="flex: 1.2; padding: 10px; font-weight: 800; font-size: 0.92rem; border-width: 2px;">
+          ⚡ Activated Tickets Inventory (<span id="invNavActiveCount">0</span>)
+        </button>
+        <button type="button" class="btn btn-outline" id="btnTabIntake" style="flex: 0.8; padding: 10px; font-weight: 800; font-size: 0.92rem; border-width: 2px;">
+          📥 Add Delivery Books to Safe (<span id="invNavSafeCount">0</span>)
+        </button>
+      </div>
+
+      <!-- VIEW 1: ACTIVATED TICKETS INVENTORY (PRIMARY & DEFAULT) -->
+      <div id="invViewActive">
+        <!-- Live Inventory Stat Cards Banner -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px;">
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Activated Dispenser Packs</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #10b981; margin-top: 2px;" id="invActivePacksStat">0 Packs</div>
+          </div>
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Active Retail Value</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: var(--color-primary); margin-top: 2px;" id="invActiveValueStat">$0.00</div>
+          </div>
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Active Tickets Remaining</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;" id="invActiveTicketsStat">0 Tickets</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+          <div style="display: flex; gap: 10px; flex: 1; min-width: 260px;">
+            <input 
+              type="text" 
+              id="invSearchInput" 
+              class="scanner-field" 
+              placeholder="🔍 Search Game Name, Box # (e.g. 1, 5X, $2)..." 
+              style="width: 100%; font-size: 0.92rem; padding: 8px 12px;"
+            >
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700;">
+              ✓ Showing Activated Tickets Only
+            </span>
+          </div>
+        </div>
+
+        <!-- Inventory Table (Only Activated Tickets) -->
+        <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <table class="report-table" style="width: 100%; margin: 0;">
+            <thead id="inventoryTableHead">
+              <tr>
+                <th style="width: 75px;">Box</th>
+                <th>Game / Ticket Name</th>
+                <th style="width: 130px;">Pack #</th>
+                <th style="width: 75px;">Price</th>
+                <th style="width: 110px;">Current Ticket</th>
+                <th style="width: 110px;">Remaining</th>
+                <th style="width: 95px;">Status</th>
+                <th style="width: 100px; text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody">
+              <!-- Populated dynamically with active slots only -->
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <h4 style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:8px; text-transform:uppercase;">
-        Packs In Safe / Ready for Dispenser Activation
-      </h4>
-      <div style="max-height:240px; overflow-y:auto;">
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th>Pack #</th>
-              <th>Game</th>
-              <th>Price</th>
-              <th>Pack Size</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryTableBody">
-            <!-- Populated dynamically -->
-          </tbody>
-        </table>
+      <!-- VIEW 2: BOOK INTAKE (RECEIVE DELIVERY INTO SAFE) -->
+      <div id="invViewIntake" style="display: none;">
+        <!-- Sub-Mode Tabs: Old Ticket vs Brand New Ticket -->
+        <div class="inv-mode-toggle" style="display: flex; gap: 10px; margin-bottom: 14px;">
+          <button type="button" class="btn btn-outline active" id="btnInvModeOld" style="flex: 1; padding: 8px; font-weight: 800; font-size: 0.88rem;">
+            ⚡ Old Ticket (Take Automatically)
+          </button>
+          <button type="button" class="btn btn-outline" id="btnInvModeNew" style="flex: 1; padding: 8px; font-weight: 800; font-size: 0.88rem;">
+            ✨ Brand New Ticket (New Game)
+          </button>
+        </div>
+
+        <!-- Section A: Old Ticket (Automatic Take) -->
+        <div id="invOldTicketSection" style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <h4 style="color: var(--color-primary); margin: 0; font-size: 0.92rem;">
+              ⚡ Old Ticket · Instant Automatic Intake
+            </h4>
+            <span style="font-size: 0.72rem; color: var(--color-success); font-weight: 700;">
+              ✓ Auto-matches Georgia Lottery games
+            </span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">
+            Scan ticket barcode from the pack. System registers the pack directly into the store safe.
+          </p>
+          <div style="display: flex; gap: 10px;">
+            <input 
+              type="text" 
+              id="inventoryBarcodeInput" 
+              class="scanner-field" 
+              placeholder="Scan ticket barcode (e.g. 1410-0759558)..." 
+              style="flex: 1; width: auto; font-size: 1rem;"
+            >
+            <button class="btn btn-primary" id="inventoryAddManualBtn" style="font-weight: 800; min-width: 130px;">
+              ⚡ Auto-Intake
+            </button>
+          </div>
+          <div id="invOldAutoFeedback" style="margin-top: 8px; display: none; padding: 8px 12px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; font-size: 0.82rem; color: var(--color-success); font-weight: 700;">
+          </div>
+        </div>
+
+        <!-- Section B: Brand New Ticket (New Game Catalog) -->
+        <div id="invNewTicketSection" style="display: none; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <h4 style="color: #f59e0b; margin: 0; font-size: 0.92rem;">
+              ✨ Brand New Ticket · Enter Game Details
+            </h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">
+              Saves to store catalog for all future auto-intakes
+            </span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px;">
+            <div>
+              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
+                TICKET NAME *
+              </label>
+              <input type="text" id="newTicketNameInput" class="scanner-field" placeholder="e.g. 2026 HAPPY NEW" style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
+                TICKET VALUE ($) *
+              </label>
+              <select id="newTicketValueSelect" class="scanner-field" style="width: 100%; box-sizing: border-box; cursor: pointer;">
+                <option value="1">$1.00 Ticket</option>
+                <option value="2" selected>$2.00 Ticket</option>
+                <option value="3">$3.00 Ticket</option>
+                <option value="5">$5.00 Ticket</option>
+                <option value="10">$10.00 Ticket</option>
+                <option value="20">$20.00 Ticket</option>
+                <option value="25">$25.00 Ticket</option>
+                <option value="30">$30.00 Ticket</option>
+                <option value="50">$50.00 Ticket</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
+                BOOK VALUE ($) *
+              </label>
+              <input type="number" id="newBookValueInput" class="scanner-field" value="300" style="width: 100%; box-sizing: border-box;">
+              <div style="display: flex; gap: 4px; margin-top: 4px;">
+                <button type="button" class="btn btn-outline btn-book-preset" data-val="300" style="padding: 2px 6px; font-size: 0.7rem;">$300</button>
+                <button type="button" class="btn btn-outline btn-book-preset" data-val="600" style="padding: 2px 6px; font-size: 0.7rem;">$600</button>
+                <button type="button" class="btn btn-outline btn-book-preset" data-val="900" style="padding: 2px 6px; font-size: 0.7rem;">$900</button>
+                <button type="button" class="btn btn-outline btn-book-preset" data-val="1000" style="padding: 2px 6px; font-size: 0.7rem;">$1000</button>
+              </div>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
+                PACK NUMBER *
+              </label>
+              <input type="text" id="newPackNumberInput" class="scanner-field" placeholder="e.g. 1874-0015175" style="width: 100%; box-sizing: border-box;">
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 0.82rem;">
+              <span>Computed Pack Size:</span>
+              <strong id="newComputedPackSize" style="color: var(--color-primary); font-size: 0.95rem; margin-left: 6px;">150 Tickets</strong>
+              <span id="newComputedFormula" style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">($300 Book ÷ $2 Ticket)</span>
+            </div>
+            <button type="button" class="btn btn-warning" id="btnRegisterNewTicket" style="font-weight: 800; padding: 6px 14px;">
+              📥 Register Brand New Ticket
+            </button>
+          </div>
+        </div>
+
+        <!-- Safe Backstock List -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h5 style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
+            📦 Packs Currently in Safe Backstock (<span id="invSafePacksCount">0</span>)
+          </h5>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">
+            Stored in safe until dispenser slot becomes empty
+          </span>
+        </div>
+        <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <table class="report-table" style="width: 100%; margin: 0;">
+            <thead>
+              <tr>
+                <th>Pack #</th>
+                <th>Ticket Name</th>
+                <th style="width: 75px;">Price</th>
+                <th style="width: 90px;">Book Val</th>
+                <th style="width: 80px;">Pack Size</th>
+                <th style="width: 95px;">Status</th>
+                <th style="width: 110px; text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="inventorySafeTableBody">
+              <!-- Populated dynamically with safe packs -->
+            </tbody>
+          </table>
+        </div>
       </div>
+
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-end-shift" id="inventoryDoneBtn">Done</button>
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 0.8rem; color: var(--text-muted);" id="invFooterHint">
+        💡 Showing all live lottery tickets currently activated in dispenser boxes.
+      </span>
+      <button class="btn btn-secondary" id="inventoryDoneBtn">Close</button>
     </div>
   </dialog>
 
@@ -476,17 +823,565 @@
         </table>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+      <button class="btn btn-secondary" id="exportHistoryCsvBtn" style="font-weight:600;">📥 Export CSV</button>
       <button class="btn btn-end-shift" id="closeHistoryBottomBtn">Close</button>
     </div>
   </dialog>
 
-  <!-- Floating Quick Simulator / Demo Assistant -->
-  <button class="demo-helper-fab" id="demoFabBtn" title="Open Demo Testing Assistant">
+  <!-- MODAL 6: Real Settings Dialog -->
+  <dialog id="settingsModal" style="width: 500px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>⚙️ Store & System Settings</span>
+      </div>
+      <button class="modal-close-btn" id="closeSettingsBtn">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div style="margin-bottom: 14px;">
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Store Name (Printed on Receipts):</label>
+        <input type="text" id="settingStoreName" class="scanner-field" style="width:100%; font-size:0.95rem; font-weight:600;">
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Active Cashier Name / ID:</label>
+        <input type="text" id="settingCashierName" class="scanner-field" style="width:100%; font-size:0.95rem; font-weight:600;">
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Target Email for Shift Reports:</label>
+        <input type="email" id="settingTargetEmail" class="scanner-field" style="width:100%; font-size:0.95rem; font-weight:600;">
+      </div>
+      <div style="margin-bottom: 14px; display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="settingSoundToggle" style="width:18px; height:18px; cursor:pointer;">
+        <label for="settingSoundToggle" style="font-size:0.9rem; font-weight:600; color:var(--text-primary); cursor:pointer;">Enable POS Sound Effects (Beeps, Chimes)</label>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Quick Switch Cashier / Worker -->
+  <dialog id="cashierModal" style="width: 440px; border-radius: 12px; overflow: hidden; padding: 0;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; padding: 14px 20px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 8px; font-weight:800;">
+        <span style="font-size:1.2rem;">👤</span> <span>Switch Cashier / Worker</span>
+      </div>
+      <button class="modal-close-btn" id="closeCashierModalBtn" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer;">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:8px 12px; border-radius:6px; border:1px solid var(--border-color);">
+        <span style="font-size:0.85rem; color:var(--text-secondary);">Active Shift:</span>
+        <strong id="cashierModalShiftInfo" style="font-size:0.95rem; color:var(--color-primary);">Shift #1</strong>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Worker / Cashier Name:</label>
+        <input type="text" id="inputCashierModalName" class="scanner-field" placeholder="e.g. Sarah, Alex, John" style="width:100%; font-size:1.05rem; font-weight:700; padding:8px 12px;">
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.4;">
+        💡 The cashier name appears on printed 80mm receipts, shift settlement sheets, and the official Georgia Lottery Day Report.
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
+      <button class="btn btn-secondary" id="cancelCashierModalBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveCashierModalBtn">✓ Switch Cashier</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Start New Shift Handover -->
+  <dialog id="startShiftConfirmModal" style="width: 480px; border-radius: 12px; overflow: hidden; padding: 0;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; padding: 14px 20px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 8px; font-weight:800;">
+        <span style="font-size:1.2rem;">🚀</span> <span id="startShiftModalTitle">Start New Shift #2</span>
+      </div>
+      <button class="modal-close-btn" id="closeStartShiftConfirmBtn" style="background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer;">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.3); border-radius:8px; padding:12px; margin-bottom:16px;">
+        <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Shift Handover & Rollover:</div>
+        <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4;">
+          ✓ Closing ticket numbers from previous shift automatically become new opening numbers.<br>
+          ✓ Previous shift sales and payouts logged into history.<br>
+          ✓ New shift starts with fresh $0.00 sales and payouts.
+        </div>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Worker / Cashier Name for this Shift:</label>
+        <input type="text" id="inputNewShiftCashierName" class="scanner-field" placeholder="e.g. Sarah, Alex, John" style="width:100%; font-size:1.05rem; font-weight:700; padding:8px 12px;">
+      </div>
+      <div style="margin-bottom: 8px;">
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Opening Cash Drawer Float (Optional):</label>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-weight:700; color:var(--text-muted);">$</span>
+          <input type="number" id="inputNewShiftDrawerFloat" step="1" min="0" value="0.00" class="scanner-field" style="width:120px; font-size:1rem; font-weight:700; padding:6px 10px;">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
+      <button class="btn btn-secondary" id="cancelStartShiftConfirmBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmStartShiftBtn" style="background:var(--color-primary); font-weight:800;">🚀 Start Shift Now</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Worker Quick Guide / Help -->
+  <dialog id="helpModal" style="width: 720px; max-width: 95vw; max-height: 90vh; border-radius: 12px; overflow: hidden; padding: 0;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; padding: 14px 20px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 8px; font-weight:800; font-size:1.1rem;">
+        <span>🏪</span> <span>Store Worker Quick Guide — 5 Simple Steps</span>
+      </div>
+      <button class="modal-close-btn" id="closeHelpModalBtn" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px; max-height: calc(85vh - 120px); overflow-y: auto;">
+      
+      <!-- Step 1 Card -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-left:4px solid #38bdf8; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="font-weight:800; font-size:1rem; color:var(--text-primary); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+          <span>📦</span> <span>1. When Lottery Delivery Comes to Store</span>
+        </div>
+        <div style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">
+          Click the blue <strong>"Stock Intake / Update Inventory"</strong> button on the right side.<br>
+          Scan the barcode on the back of the lottery pack. The system automatically reads the game title, ticket price, and adds it to your inventory!
+        </div>
+      </div>
+
+      <!-- Step 2 Card -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-left:4px solid #10b981; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="font-weight:800; font-size:1rem; color:var(--text-primary); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+          <span>🎟️</span> <span>2. Putting Tickets into a Box (e.g. Box 62 or 63)</span>
+        </div>
+        <div style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">
+          Click on any empty dispenser box (or scan the box barcode).<br>
+          Select the pack from inventory, enter the starting ticket number, and click <strong>Activate</strong>. The system will announce: <em>"Box ready to sell"</em>!
+        </div>
+      </div>
+
+      <!-- Step 3 Card -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-left:4px solid #f59e0b; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="font-weight:800; font-size:1rem; color:var(--text-primary); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+          <span>🛒</span> <span>3. Selling Tickets to Customers</span>
+        </div>
+        <div style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">
+          When a customer buys tickets, simply point your scanner at the ticket barcode, or click the <strong>+1</strong> button on that box.<br>
+          The system advances the ticket count and calculates sales revenue automatically.
+        </div>
+      </div>
+
+      <!-- Step 4 Card -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-left:4px solid #a855f7; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="font-weight:800; font-size:1rem; color:var(--text-primary); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+          <span>💵</span> <span>4. Ending Shift & Balancing Cash Drawer</span>
+        </div>
+        <div style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">
+          Click <strong>"End Shift"</strong> or <strong>"Settlement"</strong> at the top.<br>
+          Type any <strong>Winning Payouts (Cashes)</strong> paid to customers, enter your drawer starting cash float, and count your physical cash.<br>
+          The system verifies if your drawer is <strong>Balanced, Over, or Short</strong>. Then click <strong>"Start New Shift"</strong> for the next worker!
+        </div>
+      </div>
+
+      <!-- Step 5 Card -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-left:4px solid #0284c7; border-radius:8px; padding:14px;">
+        <div style="font-weight:800; font-size:1rem; color:var(--text-primary); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+          <span>📄</span> <span>5. Official Georgia Lottery Day Report</span>
+        </div>
+        <div style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">
+          Click <strong>"Day Report"</strong> in the top menu to view and print the official 2-page Georgia Lottery retail report matching the lottery terminal layout.
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:flex-end; padding:12px 20px; border-top:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
+      <button class="btn btn-primary" id="closeHelpModalBottomBtn">Got it, Close Guide</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL 7: 5-Step Voice-Guided Pack Intake & Shift Workflow (AMIGO FOOD MART) -->
+  <dialog id="guidedWorkflowModal" class="guided-modal" style="width: 900px; max-width: 95vw; max-height: 92vh; border-radius: 14px; overflow: hidden; padding: 0;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 14px 20px;">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">🎙️</span>
+        <div>
+          <div style="font-size: 1.05rem; font-weight: 800; letter-spacing: -0.2px; color: #f8fafc;">Georgia Lottery Voice-Guided Session</div>
+          <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 500;">AMIGO FOOD MART &bull; Exact Video Protocol Workflow</div>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="closeGuidedWorkflowBtn" style="color: #94a3b8; font-size: 1.5rem; background: none; border: none; cursor: pointer;">&times;</button>
+    </div>
+
+    <!-- Stepper Ribbon (Steps 1 to 5) -->
+    <div class="guided-stepper-ribbon">
+      <div class="guided-step-item active" id="stepBadge1" data-step="1">
+        <span class="step-num">1</span>
+        <span class="step-lbl">Scan Pack (000-029)</span>
+      </div>
+      <div class="guided-step-item" id="stepBadge2" data-step="2">
+        <span class="step-num">2</span>
+        <span class="step-lbl">Audio Feedback</span>
+      </div>
+      <div class="guided-step-item" id="stepBadge3" data-step="3">
+        <span class="step-num">3</span>
+        <span class="step-lbl">Box 62 (1-65)</span>
+      </div>
+      <div class="guided-step-item" id="stepBadge4" data-step="4">
+        <span class="step-num">4</span>
+        <span class="step-lbl">Empty Slots & Activate</span>
+      </div>
+      <div class="guided-step-item" id="stepBadge5" data-step="5">
+        <span class="step-num">5</span>
+        <span class="step-lbl">Report ($984)</span>
+      </div>
+    </div>
+
+    <!-- Live Voice Announcer Banner -->
+    <div class="guided-voice-banner" id="guidedVoiceBanner">
+      <div class="voice-speaker-icon pulse-animation">🔊</div>
+      <div class="voice-content">
+        <span class="voice-title">LIVE SYSTEM VOICE PROMPT:</span>
+        <div class="voice-text" id="guidedVoiceText">"Start scanning barcode"</div>
+      </div>
+      <button class="btn btn-replay-voice" id="btnReplayVoice" title="Replay voice instruction with Speech Synthesis">
+        <span>🔁 Replay Voice</span>
+      </button>
+    </div>
+
+    <!-- Modal Body: Step Panes -->
+    <div class="guided-modal-body" style="padding: 18px 22px; max-height: calc(88vh - 200px); overflow-y: auto;">
+      
+      <!-- STEP 1: START SCANNING & YELLOW TICKETS -->
+      <div class="guided-step-pane active" id="stepContainer1">
+        <div class="step-guidance-box">
+          <div class="guidance-icon">ℹ️</div>
+          <div>
+            <strong>Step 1 Protocol:</strong> Wait for voice prompt <em>"Start scanning barcode"</em> or <em>"Scanning"</em>. Scan or enter the pack barcode. The screen will display the pack's yellow scratcher tickets numbered <strong>000-029</strong>.
+          </div>
+        </div>
+
+        <div class="guided-scan-action-row">
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+              Pack Barcode (Scan / Enter):
+            </label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="guidedBarcodeInput" class="scanner-field" style="flex: 1; font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700;" placeholder="Scan or enter e.g. 1898-0019425-058" value="1898-0019425-058">
+              <button class="btn btn-primary" id="btnGuidedSimulateScan" style="display: flex; align-items: center; gap: 6px;">
+                <span>📷 Scan Pack</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Yellow Tickets Preview Card (000-029) -->
+        <div class="yellow-pack-display">
+          <div class="yellow-pack-header">
+            <div class="game-badge">GEORGIA LOTTERY &bull; GAME 1898</div>
+            <div class="pack-title">$3 CROSSWORD &bull; 30 TICKETS ($90 PACK)</div>
+            <div class="pack-serial">PACK #0019425 &bull; TICKET SEQUENCE: 000 - 029</div>
+          </div>
+          
+          <div class="yellow-tickets-grid" id="yellowTicketsGrid">
+            <!-- 30 Yellow Tickets 000 to 029 generated dynamically -->
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+          <button class="btn btn-primary" id="btnStep1Next" style="padding: 10px 24px; font-weight: 700; font-size: 0.95rem;">
+            Proceed to Step 2: Audio Feedback Check ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: HANDLE SCAN FEEDBACK -->
+      <div class="guided-step-pane" id="stepContainer2" style="display: none;">
+        <div class="step-guidance-box">
+          <div class="guidance-icon">🎧</div>
+          <div>
+            <strong>Step 2 Protocol - Audio Feedback Handling:</strong>
+            Listen to the POS voice response. In the video, various audio feedbacks occur. Click any scenario below to test or handle the scanner condition:
+          </div>
+        </div>
+
+        <div class="feedback-options-grid">
+          <!-- Option A: Rescan Barcode -->
+          <div class="feedback-card" id="cardFeedbackRescan">
+            <div class="feedback-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">🔄</div>
+            <div class="feedback-details">
+              <div class="feedback-title">"Rescan barcode"</div>
+              <div class="feedback-desc">The barcode was not read clearly. Operator rescans the <strong>SAME</strong> pack again (occurs at 0:10, 0:14, 0:39, 1:35, 1:43 in video).</div>
+            </div>
+            <button class="btn btn-warning btn-feedback-act" id="btnFeedbackRescan">
+              🔊 Trigger Rescan
+            </button>
+          </div>
+
+          <!-- Option B: Duplicate Scan / Technical Error -->
+          <div class="feedback-card" id="cardFeedbackDuplicate">
+            <div class="feedback-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">⚠️</div>
+            <div class="feedback-details">
+              <div class="feedback-title">"Technical error. This pack has been scanned."</div>
+              <div class="feedback-desc">Pack is already registered in inventory or rack. Skip it and log as duplicate.</div>
+            </div>
+            <button class="btn btn-danger btn-feedback-act" id="btnFeedbackDuplicate">
+              🔊 Trigger Duplicate Error
+            </button>
+          </div>
+
+          <!-- Option C: Scanning Wait -->
+          <div class="feedback-card" id="cardFeedbackScanning">
+            <div class="feedback-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">⏳</div>
+            <div class="feedback-details">
+              <div class="feedback-title">"Scanning"</div>
+              <div class="feedback-desc">System processing barcode. Wait 2 seconds, do not input anything while processing.</div>
+            </div>
+            <button class="btn btn-secondary btn-feedback-act" id="btnFeedbackScanning">
+              🔊 Trigger 2s Wait
+            </button>
+          </div>
+
+          <!-- Option D: Inventory Updated (Success) -->
+          <div class="feedback-card highlight-success" id="cardFeedbackSuccess">
+            <div class="feedback-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">✅</div>
+            <div class="feedback-details">
+              <div class="feedback-title">"Inventory updated"</div>
+              <div class="feedback-desc">Pack barcode read successfully! Inventory is verified. Advances directly to Box Entry.</div>
+            </div>
+            <button class="btn btn-primary btn-feedback-act" id="btnFeedbackSuccess" style="background: #10b981; border-color: #059669;">
+              🔊 Inventory Updated (Proceed)
+            </button>
+          </div>
+        </div>
+
+        <div class="feedback-log-box" style="margin-top: 14px;">
+          <div class="log-header">Audio Feedback Event Stream:</div>
+          <div class="feedback-log-feed" id="guidedFeedbackLog">
+            <div class="log-entry system"><span class="time">Just now</span> System initialized voice stream for Pack #0019425</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 16px;">
+          <button class="btn btn-secondary" id="btnStep2Back">⬅ Back to Step 1</button>
+          <button class="btn btn-primary" id="btnStep2Next">Proceed to Step 3: Box Number ➔</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: BOX NUMBER ENTRY (BOX 62 & 1-65 MATRIX) -->
+      <div class="guided-step-pane" id="stepContainer3" style="display: none;">
+        <div class="step-guidance-box">
+          <div class="guidance-icon">📦</div>
+          <div>
+            <strong>Step 3 Protocol - Box Number Entry:</strong>
+            The system speaks: <em>"Box number. 62 bucks or enter. Box number sixty-two."</em> Type <strong>62</strong> into the Box Number field and press Enter or select from the 1-65 dispenser matrix below.
+          </div>
+        </div>
+
+        <div class="box-entry-control-panel">
+          <div class="box-input-group">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+              Target Box Number:
+            </label>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <input type="number" id="guidedBoxInput" class="scanner-field" style="width: 130px; font-size: 1.4rem; font-weight: 900; text-align: center; color: var(--color-primary);" value="62" min="1" max="65">
+              <button class="btn btn-primary" id="btnConfirmBoxNum" style="padding: 10px 20px; font-weight: 700;">
+                Confirm Box & Enter ↵
+              </button>
+              <div class="quick-box-chips">
+                <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 4px;">Suggestions:</span>
+                <button type="button" class="box-chip active" data-box="62">Box 62 (Video)</button>
+                <button type="button" class="box-chip" data-box="5">Box 5 (Empty)</button>
+                <button type="button" class="box-chip" data-box="14">Box 14</button>
+                <button type="button" class="box-chip" data-box="65">Box 65</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">
+              Dispenser Rack Matrix (Boxes 1 to 65) &bull; Select slot:
+            </span>
+            <span style="font-size: 0.75rem; color: #10b981; font-weight: 600;">
+              ⭐ Box #62 Targeted
+            </span>
+          </div>
+          
+          <div class="boxes-matrix-65" id="boxesMatrix65">
+            <!-- 65 Box Buttons rendered dynamically -->
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 18px;">
+          <button class="btn btn-secondary" id="btnStep3Back">⬅ Back to Step 2</button>
+          <button class="btn btn-primary" id="btnStep3Next">Proceed to Step 4: Empty Slots & Activate ➔</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: EMPTY SLOT & ACTIVATION -->
+      <div class="guided-step-pane" id="stepContainer4" style="display: none;">
+        <div class="step-guidance-box">
+          <div class="guidance-icon">⚡</div>
+          <div>
+            <strong>Step 4 Protocol - Empty Slot & Activation:</strong>
+            The system speaks: <em>"Empty slot. Please check the number of empty slots to activation..."</em>. Enter the empty slot count (e.g. 5) and confirm activation for <strong>Box #62</strong>.
+          </div>
+        </div>
+
+        <div class="activation-review-panel">
+          <div class="target-box-card">
+            <div class="box-big-badge">BOX 62</div>
+            <div class="box-assign-info">
+              <div class="box-game-name" id="guidedTargetBoxGame">Georgia Lottery $3 Crossword (Game 1898)</div>
+              <div class="box-game-meta">Pack #0019425 &bull; 30 Tickets (000 - 029) &bull; Value: $90.00</div>
+              <div class="box-status-tag active">Status: READY FOR ACTIVATION</div>
+            </div>
+          </div>
+
+          <div class="empty-slots-counter-card">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 8px;">
+              Number of Empty Slots Counted in Rack:
+            </label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn-step-counter" id="btnStepEmptyDown">-</button>
+              <input type="number" id="guidedEmptySlotsCount" class="scanner-field" style="width: 90px; font-size: 1.4rem; font-weight: 800; text-align: center;" value="5" min="0" max="65">
+              <button type="button" class="btn-step-counter" id="btnStepEmptyUp">+</button>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">empty slots found (e.g., Boxes 5, 19, 33, 51, 62)</span>
+            </div>
+          </div>
+
+          <div class="activation-summary-box">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="font-size: 1.6rem;">✨</span>
+              <div>
+                <div style="font-weight: 700; color: var(--text-primary);">Activating Box #62 in Live POS Rack</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">This pack will immediately be loaded into Box 62, tickets 000-029 become sellable, and opening shift inventory is adjusted.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 18px;">
+          <button class="btn btn-secondary" id="btnStep4Back">⬅ Back to Step 3</button>
+          <button class="btn btn-primary" id="btnProceedActivation" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #047857; padding: 10px 24px; font-size: 0.95rem; font-weight: 800;">
+            ⚡ Confirm & Activate Box #62 ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 5: REPORT GENERATION ($984, AMIGO FOOD MART) -->
+      <div class="guided-step-pane" id="stepContainer5" style="display: none;">
+        <div class="step-guidance-box">
+          <div class="guidance-icon">📊</div>
+          <div>
+            <strong>Step 5 Protocol - Report Generation:</strong>
+            The system speaks <em>"Report"</em>. Final retail shift reconciliation generated for <strong>AMIGO FOOD MART</strong> matching lottery documentation. When the system says <em>"Bye"</em>, session is complete.
+          </div>
+        </div>
+
+        <!-- AMIGO FOOD MART Official Report Card -->
+        <div class="final-report-card">
+          <div class="report-header-banner">
+            <div class="store-badge">GEORGIA LOTTERY RETAILER &bull; STORE #2300</div>
+            <div class="store-name">AMIGO FOOD MART</div>
+            <div class="store-addr">2300 MOODY RD, WARNER ROBINS, GA 31088</div>
+            <div class="report-date-time" id="voiceReportDateTime">Shift Reconciliation &bull; Verified</div>
+          </div>
+
+          <div class="report-stats-grid">
+            <div class="rep-stat-item highlight-green">
+              <span class="lbl">TOTAL LOTTERY SALE</span>
+              <span class="val" id="voiceReportTotalSale">$984.00</span>
+              <span class="sub">Reconciled Shift Total</span>
+            </div>
+            <div class="rep-stat-item">
+              <span class="lbl">TOTAL TICKETS SOLD</span>
+              <span class="val" id="voiceReportSoldTickets">3</span>
+              <span class="sub">From Active Dispensers</span>
+            </div>
+            <div class="rep-stat-item">
+              <span class="lbl">ACTIVE RACK TICKETS</span>
+              <span class="val" id="voiceReportActiveTickets">66</span>
+              <span class="sub">65 Display Slots</span>
+            </div>
+            <div class="rep-stat-item">
+              <span class="lbl">TOTAL INVENTORY</span>
+              <span class="val" id="voiceReportTotalInv">152</span>
+              <span class="sub">Rack (63) + Backstock (89)</span>
+            </div>
+          </div>
+
+          <div class="reconciliation-table-wrapper" style="margin-top: 14px;">
+            <table class="report-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Opening</th>
+                  <th>Activations</th>
+                  <th>Sold</th>
+                  <th>Ending Inventory</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Dispenser Rack (Boxes 1-65)</strong></td>
+                  <td>66</td>
+                  <td>+1 (Box 62)</td>
+                  <td>3</td>
+                  <td>63 tickets</td>
+                  <td>$12.00</td>
+                </tr>
+                <tr>
+                  <td><strong>Back Room Reserve Packs</strong></td>
+                  <td>90 packs</td>
+                  <td>-1 pack (Box 62)</td>
+                  <td>0</td>
+                  <td>89 packs</td>
+                  <td>$890.00</td>
+                </tr>
+                <tr>
+                  <td><strong>Online / Cash Drawer Adjustment</strong></td>
+                  <td>--</td>
+                  <td>--</td>
+                  <td>--</td>
+                  <td>Reconciled</td>
+                  <td>$82.00</td>
+                </tr>
+                <tr style="background: rgba(16,185,129,0.08); font-weight: 800;">
+                  <td><strong>Grand Total Sales & Settlement</strong></td>
+                  <td><strong>66 Units</strong></td>
+                  <td><strong>1 Pack</strong></td>
+                  <td><strong>3 Sold</strong></td>
+                  <td><strong>152 Units Total</strong></td>
+                  <td style="color: #10b981; font-size: 1.05rem;"><strong>$984.00</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; flex-wrap: wrap; gap: 10px;">
+          <button class="btn btn-secondary" id="btnStep5Back">⬅ Back to Step 4</button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" id="btnVoicePrintReport">
+              🖨️ Print Slip
+            </button>
+            <button class="btn btn-primary" id="btnSaveVoiceReport" style="background: #0284c7; border-color: #0369a1;">
+              💾 Apply & Sync to POS
+            </button>
+            <button class="btn btn-end-shift" id="btnFinishVoiceSession" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 800;">
+              👋 Finish Session ("Bye")
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </dialog>
+
+  <!-- Floating Quick Simulator / Demo Assistant (Hidden in Live Store Mode) -->
+  <button class="demo-helper-fab" id="demoFabBtn" style="display:none;" title="Open Demo Testing Assistant">
     <span>⚡ Quick Demo Helper</span>
   </button>
 
-  <aside class="demo-drawer" id="demoDrawer">
+  <aside class="demo-drawer" id="demoDrawer" style="display:none;">
     <div class="drawer-title">
       <span>Interactive Demo Tools</span>
       <button id="closeDemoDrawer" style="background:none; border:none; color:#94a3b8; cursor:pointer;">&times;</button>
@@ -609,6 +1504,14 @@
         <span>TOTAL LOTTO SALES:</span>
         <strong id="prTotalSales">$0.00</strong>
       </div>
+      <div class="receipt-summary-line" style="color:#ef4444;" id="prPayoutsLine">
+        <span>WINNING CASHOUTS (PAID):</span>
+        <strong id="prTotalPayouts">-$0.00</strong>
+      </div>
+      <div class="receipt-summary-line highlight-sales" id="prExpectedCashLine">
+        <span>EXPECTED CASH IN DRAWER:</span>
+        <strong id="prExpectedCash">$0.00</strong>
+      </div>
     </div>
 
     <div class="receipt-divider-double"></div>
@@ -625,6 +1528,10 @@
       <div class="audit-row">
         <span>SHIFT ACTIVATIONS:</span>
         <strong id="prActivationCount">0</strong>
+      </div>
+      <div class="audit-row" id="prDrawerBalanceRow">
+        <span>DRAWER OVER/SHORT:</span>
+        <strong id="prDrawerBalance">$0.00 (Balanced)</strong>
       </div>
     </div>
 
@@ -675,9 +1582,188 @@
       <div class="receipt-stars">******************************************</div>
       <div class="receipt-tagline">KEEP SLIP FOR AUDIT COMPLIANCE</div>
       <div class="receipt-timestamp" id="prPrintedAt">PRINTED: 09/05/2026 08:04 PM</div>
-      <div class="receipt-stars">*** LOTTO-TRACK PRO ENTERPRISE ***</div>
     </div>
   </div>
+
+  <!-- ============================================================= -->
+  <!-- OFFICIAL GEORGIA LOTTERY 2-PAGE DAY REPORT PRINT SECTION      -->
+  <!-- Matching AMIGO FOOD MART LT System Software PDF Specification -->
+  <!-- ============================================================= -->
+  <div class="day-report-print-section" id="dayReportPrintSection">
+    <!-- PAGE 1: Boxes 1 to 53 -->
+    <div class="day-report-sheet page-1" id="dayReportSheetPage1">
+      <div class="dr-header">
+        <div class="dr-header-left">
+          <div class="dr-total-title" id="drP1TotalTitle">Total $1,078.00</div>
+          <div class="dr-store-name" id="drP1StoreName">AMIGO FOOD MART</div>
+          <div class="dr-store-addr" id="drP1StoreAddr">2300 MOODY RD WARNER ROBINS, GA, 31088</div>
+          <div class="dr-user-id" id="drP1UserId">User ID: master</div>
+        </div>
+        <div class="dr-header-right">
+          <div class="dr-report-heading">Day Report</div>
+        </div>
+      </div>
+      <div class="dr-timestamp-line" id="drP1Timestamp">
+        08/04/2026 &nbsp;&nbsp;&nbsp;&nbsp; 10:10 AM
+      </div>
+
+      <table class="dr-table">
+        <thead>
+          <tr>
+            <th style="width: 42px;">Box</th>
+            <th style="width: 130px;">Pack Number</th>
+            <th style="width: 170px;">Name</th>
+            <th style="width: 55px;">Open</th>
+            <th style="width: 55px;">Close</th>
+            <th style="width: 50px;">Price</th>
+            <th style="width: 55px;">Total</th>
+          </tr>
+        </thead>
+        <tbody id="drP1TableBody">
+          <!-- Boxes 1 to 53 populated dynamically -->
+        </tbody>
+      </table>
+
+      <div class="dr-page-footer">
+        Page: 1
+      </div>
+    </div>
+
+    <!-- PAGE 2: Boxes 54 to 70 + Financial Summary + Inventory Stats + Activations + Sold -->
+    <div class="day-report-sheet page-2" id="dayReportSheetPage2">
+      <table class="dr-table">
+        <thead>
+          <tr>
+            <th style="width: 42px;">Box</th>
+            <th style="width: 130px;">Pack Number</th>
+            <th style="width: 170px;">Name</th>
+            <th style="width: 55px;">Open</th>
+            <th style="width: 55px;">Close</th>
+            <th style="width: 50px;">Price</th>
+            <th style="width: 55px;">Total</th>
+          </tr>
+        </thead>
+        <tbody id="drP2TableBody">
+          <!-- Boxes 54 to 70 populated dynamically -->
+        </tbody>
+      </table>
+
+      <!-- Financial Totals Summary Table (Right-Aligned below Box 70) -->
+      <div class="dr-financial-wrapper">
+        <table class="dr-financial-table">
+          <tr title="Total Instant Scratcher Ticket Sales across Boxes 1-70">
+            <td>Total</td>
+            <td class="dr-val" id="drFinTotal">$1,078.00</td>
+          </tr>
+          <tr title="Scratcher Winning Ticket Payouts Paid Out to Customers">
+            <td>Cashes</td>
+            <td class="dr-val" id="drFinCashes">$316.00</td>
+          </tr>
+          <tr title="Terminal Draw Game Sales (Powerball, Mega Millions, Cash 3, Cash 4, Fantasy 5)">
+            <td>Online</td>
+            <td class="dr-val" id="drFinOnline">$167.00</td>
+          </tr>
+          <tr title="Terminal Draw Game Winning Payouts Paid Out to Customers">
+            <td>Online Cashes</td>
+            <td class="dr-val" id="drFinOnlineCashes">$330.00</td>
+          </tr>
+          <tr class="dr-sum-row" title="Total Store Lottery Sales = Instant Scratchers + Online Terminal Draw Games">
+            <td>Total Sales</td>
+            <td class="dr-val" id="drFinTotalSales">$1,245.00</td>
+          </tr>
+          <tr class="dr-sum-row dr-double-underline" title="Total Customer Payouts = Scratcher Cashes + Online Cashes">
+            <td>Total Cashes</td>
+            <td class="dr-val" id="drFinTotalCashes">$646.00</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Inventory Stats Block -->
+      <div class="dr-inventory-stats-box">
+        <div class="dr-stats-heading">Inventory Stats</div>
+        <div class="dr-stat-row"><span>Opening Count</span><strong id="drStatOpening">66</strong></div>
+        <div class="dr-stat-row"><span>Ending Count</span><strong id="drStatEnding">63</strong></div>
+        <div class="dr-stat-divider"></div>
+        <div class="dr-stat-row"><span>Activations</span><strong id="drStatActivations">1</strong></div>
+        <div class="dr-stat-row"><span>Sold</span><strong id="drStatSold">3</strong></div>
+        <div class="dr-stat-row"><span>Discontinued</span><strong id="drStatDiscontinued">0</strong></div>
+        <div class="dr-stat-row"><span>Removed</span><strong id="drStatRemoved">-</strong></div>
+        <div class="dr-stat-divider"></div>
+        <div class="dr-stat-row"><span>Back Inventory</span><strong id="drStatBackInv">89</strong></div>
+        <div class="dr-stat-row"><span>Total Inventory</span><strong id="drStatTotalInv">152</strong></div>
+        <div class="dr-stat-divider"></div>
+        <div class="dr-stat-row active-val-row" title="Total retail dollar value of unsold tickets currently inside all active dispenser boxes (Remaining inventory value, NOT sales)"><span>Active Value</span><strong id="drStatActiveVal">$12,898.00</strong></div>
+      </div>
+
+      <!-- Activations Table -->
+      <div class="dr-subtable-block">
+        <div class="dr-subtable-heading">Activations</div>
+        <table class="dr-subtable">
+          <thead>
+            <tr>
+              <th style="width: 42px;">Box</th>
+              <th style="width: 110px;">Time</th>
+              <th style="width: 150px;">Pack Number</th>
+              <th style="width: 80px;">Price</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody id="drActivationsTableBody">
+            <tr><td colspan="5" style="padding: 6px 8px; color: #64748b; font-style: italic; font-size: 10px; text-align: center;">None (No new activations today)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sold Out Table -->
+      <div class="dr-subtable-block">
+        <div class="dr-subtable-heading">Sold</div>
+        <table class="dr-subtable">
+          <thead>
+            <tr>
+              <th style="width: 42px;">Box</th>
+              <th style="width: 150px;">Pack Number</th>
+              <th style="width: 80px;">Price</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody id="drSoldTableBody">
+            <tr><td colspan="4" style="padding: 6px 8px; color: #64748b; font-style: italic; font-size: 10px; text-align: center;">None (No packs sold out today)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="dr-page-footer">
+        Page: 2
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Official 2-Page Day Report Screen Preview -->
+  <dialog id="dayReportModal" class="day-report-dialog" style="width: 880px; max-width: 96vw; max-height: 94vh; border-radius: 12px; overflow: hidden;">
+    <div class="modal-header" style="background: #0f172a; color: #fff; padding: 12px 20px;">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+        <span>📄 Official Georgia Lottery Day Report</span>
+        <span style="font-size: 0.75rem; background: #0284c7; padding: 2px 8px; border-radius: 4px; color: #fff;">Georgia Lottery Retailer &bull; 70 Boxes</span>
+      </div>
+      <button class="modal-close-btn" id="closeDayReportModalBtn" style="color:#94a3b8;">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 16px; background: #cbd5e1; overflow-y: auto; max-height: calc(94vh - 120px);">
+      <div class="dr-preview-wrapper" id="dayReportPreviewContainer">
+        <!-- Rendered duplicate of sheets Page 1 & Page 2 for screen viewing -->
+      </div>
+    </div>
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f8fafc;">
+      <span style="font-size: 0.8rem; color: #64748b;">
+        🖨️ Formatted for US Letter (8.5 &times; 11") 2-Page Portrait Print
+      </span>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-secondary" id="closeDayReportBottomBtn">Close</button>
+        <button type="button" class="btn btn-primary" id="btnPrintDayReportModalBtn" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: 800;">
+          🖨️ Print Day Report (2-Page)
+        </button>
+      </div>
+    </div>
+  </dialog>
 
   <script type="module" src="/src/main.js"></script>
 </body>
