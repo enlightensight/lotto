@@ -208,6 +208,8 @@ export function cleanGameTitle(name) {
 
 // Seed full Georgia Lottery store dispenser boxes (from AMIGO FOOD MART reference) if slots are empty
 export function seedInitialActiveSlotsIfEmpty() {
+  // If user deliberately cleared data, do not re-seed
+  if (state.dataCleared) return false;
   const activeCount = (state.slots || []).filter(isBoxActive).length;
   if (activeCount === 0 && AMIGO_DAY_REPORT_REFERENCE && Array.isArray(AMIGO_DAY_REPORT_REFERENCE.boxes)) {
     const newSlots = [];
@@ -315,6 +317,8 @@ function sanitizeAndMigrateSlots() {
   }
 }
 
+let _eventListenersInitialized = false;
+
 // Initialize System
 function initPOS() {
   initTheme();
@@ -327,9 +331,12 @@ function initPOS() {
   renderHeaderAndMetrics();
   renderDispenserRack();
   renderSlotsRibbon();
-  setupEventListeners();
-  setupKeypad();
-  setupHardwareScannerListener();
+  if (!_eventListenersInitialized) {
+    setupEventListeners();
+    setupKeypad();
+    setupHardwareScannerListener();
+    _eventListenersInitialized = true;
+  }
 }
 
 // -------------------------------------------------------------
@@ -1024,6 +1031,9 @@ function commitBoxActivation() {
   state.lastScannedSlot = boxNum;
   state.lastScannedBarcode = `Box #${boxNum} Activated: $${Number(chosenPrice).toFixed(2)} · ${cleanName} (Pack #${chosenPack})`;
 
+  // Clear the dataCleared flag since user is now actively using the system
+  if (state.dataCleared) delete state.dataCleared;
+
   recordUndoAction({
     type: 'ACTIVATION',
     boxNumber: boxNum
@@ -1150,23 +1160,34 @@ function handleUndoAction() {
 }
 
 function trimRackToStandard() {
-  let highestActive = 20;
-  state.slots.forEach(s => {
-    if (s.status === 'ACTIVE' && s.packNumber && s.boxNumber > highestActive) {
-      highestActive = s.boxNumber;
-    }
-  });
+  // Check if any boxes have active packs
+  const hasActivePacks = (state.slots || []).some(s => s.status === 'ACTIVE' && s.packNumber);
+  if (hasActivePacks) {
+    sfx.alert();
+    showToast('⚠ Cannot reset: Some boxes still have active packs. Clear all boxes first, then reset.', 'error');
+    return;
+  }
 
-  const newTotal = Math.max(20, highestActive);
-  state.slots = state.slots.slice(0, newTotal);
-  state.totalSlots = newTotal;
+  const MIN_SLOTS = 20;
+  if (state.totalSlots <= MIN_SLOTS) {
+    sfx.alert();
+    showToast(`Rack is already at minimum ${MIN_SLOTS} boxes. Nothing to trim.`, 'info');
+    return;
+  }
+
+  if (!confirm(`Trim rack from ${state.totalSlots} boxes down to ${MIN_SLOTS} boxes? All extra empty boxes will be removed.`)) {
+    return;
+  }
+
+  state.slots = state.slots.slice(0, MIN_SLOTS);
+  state.totalSlots = MIN_SLOTS;
 
   saveState(state);
   sfx.chime();
   renderHeaderAndMetrics();
   renderDispenserRack();
   renderSlotsRibbon();
-  showToast(`✓ Cleaned rack capacity to ${state.totalSlots} boxes!`, 'success');
+  showToast(`✓ Rack trimmed to ${MIN_SLOTS} boxes!`, 'success');
 }
 
 // Dedicated function to add a new dispenser box directly to the store rack
@@ -3131,20 +3152,26 @@ function setupEventListeners() {
     simAddNewBoxBtn.addEventListener('click', addNewBox);
   }
 
-  simResetStateBtn.addEventListener('click', () => {
-    if (confirm('Erase all mock data and reset the POS to a clean slate?')) {
-      state = resetToCleanState();
-      initPOS();
-      sfx.alert();
-      showToast('All fake data erased! Clean POS ready.', 'info');
-    }
-  });
+  if (simResetStateBtn) {
+    simResetStateBtn.addEventListener('click', () => {
+      if (confirm('Erase all mock data and reset the POS to a clean slate?')) {
+        state = resetToCleanState();
+        state.dataCleared = true;
+        saveState(state);
+        initPOS();
+        sfx.alert();
+        showToast('All fake data erased! Clean POS ready.', 'info');
+      }
+    });
+  }
 
   const menuClearDataBtn = document.getElementById('menuClearDataBtn');
   if (menuClearDataBtn) {
     menuClearDataBtn.addEventListener('click', () => {
       if (confirm('Erase all POS lottery data and reset to a fresh blank start?')) {
         state = resetToCleanState();
+        state.dataCleared = true;
+        saveState(state);
         initPOS();
         sfx.alert();
         showToast('All POS data wiped. Clean start ready.', 'info');
