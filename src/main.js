@@ -373,13 +373,21 @@ function sanitizeAndMigrateSlots() {
     modified = true;
   }
 
-  // Also clean stale lastScannedBarcode string in state if it contained duplicated prices
+  // Also clean stale lastScannedBarcode and lastScanData string in state if it contained duplicated prices
   if (state.lastScannedBarcode) {
     const cleanedBarcode = state.lastScannedBarcode
       .replace(/\$\s*(\d+)\s+\$\s*\1/g, '$$$1')
       .replace(/\$+\s*\$+/g, '$');
     if (cleanedBarcode !== state.lastScannedBarcode) {
       state.lastScannedBarcode = cleanedBarcode;
+      modified = true;
+    }
+  }
+
+  if (state.lastScanData && state.lastScanData.gameName) {
+    const cleanedGameName = cleanGameTitle(state.lastScanData.gameName);
+    if (cleanedGameName !== state.lastScanData.gameName) {
+      state.lastScanData.gameName = cleanedGameName;
       modified = true;
     }
   }
@@ -448,7 +456,9 @@ function renderHeaderAndMetrics() {
 
     if (state.lastScanData) {
       const d = state.lastScanData;
-      lastScanDisplay.textContent = `Last Scan: $${Number(d.price)} ${cleanGameTitle(d.gameName)} (#${String(d.ticketNumber).padStart(2, '0')})`;
+      const cleanName = cleanGameTitle(d.gameName);
+      const priceFmt = `$${Number(d.price || 1).toFixed(2)}`;
+      lastScanDisplay.textContent = `Last Scan: ${priceFmt} · ${cleanName} (#${String(d.ticketNumber).padStart(2, '0')})`;
     } else if (state.lastScannedBarcode) {
       lastScanDisplay.textContent = `Last Scan: ${state.lastScannedBarcode}`;
     } else {
@@ -1306,7 +1316,7 @@ function setupDiscrepancyAndInventoryGatekeeperModals() {
 export function formatGameTitle(price, name) {
   const clean = cleanGameTitle(name);
   if (!clean) return price ? `$${price}` : '';
-  return price ? `$${price} ${clean}` : clean;
+  return price ? `$${price} · ${clean}` : clean;
 }
 
 
