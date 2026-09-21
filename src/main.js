@@ -2370,7 +2370,7 @@ function renderInventoryTable() {
   if (filtered.length === 0) {
     const emptyRow = document.createElement('tr');
     emptyRow.innerHTML = `
-      <td colspan="10" style="text-align:center; color:var(--text-muted); padding:28px; font-size:0.9rem;">
+      <td colspan="9" style="text-align:center; color:var(--text-muted); padding:28px; font-size:0.9rem;">
         ${activeSlots.length === 0 ? 'No activated tickets in dispensers. Tap any empty box to activate a ticket pack.' : `No activated tickets match "${query}".`}
       </td>
     `;
@@ -2386,7 +2386,6 @@ function renderInventoryTable() {
     const remaining = Math.max(0, totalPackSize - current);
     const remainingVal = remaining * (slot.price || 1);
     const scannedCount = (slot.scannedBarcodes || []).length;
-    const ticketsInBox = slot.ticketsInBox !== undefined ? slot.ticketsInBox : scannedCount;
     const pct = Math.min(100, Math.round((current / totalPackSize) * 100));
     const cleanPack = String(slot.packNumber || '---').replace(/[^0-9]/g, '') || '884901';
 
@@ -2395,12 +2394,7 @@ function renderInventoryTable() {
       <td><span class="inv-game-title">${cleanName}</span></td>
       <td><span class="inv-pack-pill">#${cleanPack}</span></td>
       <td><span class="inv-price-badge">$${slot.price}.00</span></td>
-      <td>
-        <span class="inv-tix-in-box">
-          <span>🎟️</span> ${ticketsInBox} tix
-        </span>
-      </td>
-      <td>
+      <td style="text-align: center;">
         <button type="button" class="inv-barcodes-btn btn-view-box-barcodes" data-box="${slot.boxNumber}" title="View all ${scannedCount} scanned barcodes for Box #${slot.boxNumber}">
           <span>🏷️</span> ${scannedCount} Barcodes 🔍
         </button>
@@ -2419,7 +2413,7 @@ function renderInventoryTable() {
           <span class="inv-remaining-val">$${remainingVal.toFixed(2)}</span>
         </div>
       </td>
-      <td>
+      <td style="text-align: center;">
         <span class="inv-status-active">
           <span class="inv-status-dot"></span> ACTIVE
         </span>

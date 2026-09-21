@@ -4264,9 +4264,9 @@ body.dark-mode .scan-chip.chip-action.verified {
    ============================================================ */
 
 #inventoryModal {
-  width: 980px;
+  width: 1180px;
   max-width: 96vw;
-  max-height: 92vh;
+  max-height: 94vh;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(56, 189, 248, 0.25);
@@ -4348,11 +4348,11 @@ body.dark-mode .scan-chip.chip-action.verified {
 
 /* Modal Body */
 .inv-modal-body {
-  padding: 18px 22px;
+  padding: 16px 22px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  overflow: hidden;
+  gap: 12px;
+  overflow-y: auto;
   flex: 1;
 }
 
@@ -4611,9 +4611,9 @@ body.dark-mode .scan-chip.chip-action.verified {
 /* Inventory Table Container & Styling */
 .inv-table-container {
   flex: 1;
-  min-height: 240px;
-  max-height: 400px;
-  overflow-y: auto;
+  min-height: 280px;
+  max-height: 480px;
+  overflow: auto;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   background: var(--bg-surface);
@@ -4676,9 +4676,9 @@ body.dark-mode .scan-chip.chip-action.verified {
 }
 
 .inv-table tbody td {
-  padding: 12px 14px;
+  padding: 9px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   vertical-align: middle;
 }
 
