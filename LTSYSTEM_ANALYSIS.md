@@ -4,14 +4,15 @@ This guide explains how this lottery system works in very simple words that anyo
 
 ---
 
-## 🎨 What the Colors on the Screen Mean
+## 🎨 What the Boxes on the Screen Mean
 
-Think of the boxes on the screen like real boxes on the store counter:
+Think of the boxes on the screen like real dispenser boxes on the store counter:
 
-* 🟨 **Yellow Box:** A game is inside this box, and tickets are ready to be sold.
-* 🟩 **Green Box:** This box was checked and verified during shift closing.
-* ⬜ **White Box:** A brand-new pack was just opened and put in this box today (`New Activation`).
-* 🟧 **Orange Box:** You are changing or moving this pack to a different box number.
+* ⬜ **White Card with Game Name & Numbers:** An active dispenser box with tickets ready to sell (like Box 1 and Box 3).
+* 🏷️ **"New Activation" Badge:** Appears under the game name when a pack was opened and activated during the current shift (like on Box 1).
+* ⬛ **Grey Dashed Card (`+ Tap to Activate`):** An empty dispenser box waiting for a new lottery pack.
+* 🟩 **Green Card:** This box was scanned and verified during End Shift closing audit.
+* 🟦 **Blue Border / Glow:** The currently selected or last-scanned box.
 
 ---
 
@@ -23,11 +24,11 @@ Think of the boxes on the screen like real boxes on the store counter:
 > **Simple Rule:** You cannot sell a pack if the system doesn't know you have it!
 
 1. If you try to scan a brand-new pack into a box right away, the computer stops you:
-   * A yellow warning pops up saying: **"Ticket must be updated in the inventory first!"**
-2. To fix this, you click the orange **"Updating Inventory"** button.
-3. You scan the new pack once.
-4. The computer says: **"Pack saved! Count = 1"**.
-5. Now the pack is safely in the system and ready to be put in a box.
+   * A solid yellow warning banner appears saying: **"THIS TICKET IS NOT IN THE INVENTORY OR NOT IN DATABASE"**
+2. To fix this, you click the blue/orange **"⚡ Stock Intake / Update Inventory"** button.
+3. You scan the new pack barcode.
+4. The computer adds the pack to inventory (e.g. `Inventory Status: 1 Packs`).
+5. Now the pack is safely in the store system and ready to be activated into a dispenser box!
 
 ---
 
