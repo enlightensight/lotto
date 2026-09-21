@@ -357,10 +357,8 @@ function renderHeaderAndMetrics() {
   } else {
     lastScanDisplay.innerHTML = `<span class="scan-chip chip-idle">⚡ Scanner Ready · Point scanner at ticket barcode or enter box number</span>`;
   }
-  if (state.recentScans && state.recentScans.length > 0) {
-    lastScanDisplay.title = 'Recent Scans (Hover to View):\n' + state.recentScans.slice(0, 10).map(s => `• ${s.time} - [${s.barcode}] Box #${s.boxNumber} (${s.gameName}) → Ticket #${String(s.ticketNumber).padStart(2, '0')}`).join('\n');
-  } else {
-    lastScanDisplay.title = 'Point scanner at any ticket or enter box number';
+  if (lastScanDisplay) {
+    lastScanDisplay.removeAttribute('title');
   }
 
   const remainingPacksCount = document.getElementById('remainingPacksCount');

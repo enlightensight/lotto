@@ -150,10 +150,25 @@
   color: #f8fafc;
 }
 
+[data-theme="dark"] .btn-lt-ml:hover {
+  background: #24345d;
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+[data-theme="dark"] .btn-lt-ml:active {
+  background: #1a2745;
+  transform: translateY(1px);
+}
+
 [data-theme="dark"] .scanner-field-lt {
   background: #0d1527;
   border-color: #2b3d66;
   color: #f8fafc;
+}
+
+[data-theme="dark"] .scanner-field-lt:hover {
+  border-color: #3b5284;
 }
 
 [data-theme="dark"] .scanner-field-lt:focus {
@@ -709,10 +724,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
 .btn-lt-ml:hover {
-  background: #f1f5f9;
+  background: #e2e8f0;
+  border-color: #64748b;
+  color: #0f172a;
+}
+
+.btn-lt-ml:active {
+  transform: translateY(1px);
 }
 
 .scanner-field-lt {
@@ -727,6 +749,11 @@ body {
   font-weight: 700;
   color: #0f172a;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scanner-field-lt:hover {
+  border-color: #64748b;
 }
 
 .scanner-field-lt:focus {
