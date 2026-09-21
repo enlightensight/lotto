@@ -7,6 +7,40 @@ import { getDayReportData } from './dayReportData.js';
 let state = loadState();
 let undoHistory = [];
 
+// Auto-sanitize existing state to purge any invalid pack numbers (e.g. emojis or non-digits)
+function sanitizeStatePacks(appState) {
+  if (!appState || !Array.isArray(appState.slots)) return;
+  let changed = false;
+  appState.slots.forEach(s => {
+    if (s.packNumber) {
+      const clean = String(s.packNumber).replace(/[^0-9]/g, '');
+      if (clean.length === 0) {
+        s.packNumber = String(Math.floor(100000 + Math.random() * 900000));
+        changed = true;
+      } else if (clean !== String(s.packNumber)) {
+        s.packNumber = clean;
+        changed = true;
+      }
+    }
+  });
+  if (Array.isArray(appState.inventory)) {
+    appState.inventory.forEach(p => {
+      if (p.packNumber) {
+        const clean = String(p.packNumber).replace(/[^0-9]/g, '');
+        if (clean.length === 0) {
+          p.packNumber = String(Math.floor(100000 + Math.random() * 900000));
+          changed = true;
+        } else if (clean !== String(p.packNumber)) {
+          p.packNumber = clean;
+          changed = true;
+        }
+      }
+    });
+  }
+  if (changed) saveState(appState);
+}
+sanitizeStatePacks(state);
+
 export const isBoxActive = s => Boolean(s && s.status === 'ACTIVE' && s.packNumber);
 
 export function getShiftSalesTotals() {
@@ -1273,6 +1307,16 @@ function setupKeypad() {
     }
   });
 
+  const presetPackNumberInput = document.getElementById('presetPackNumberInput');
+  if (presetPackNumberInput) {
+    presetPackNumberInput.addEventListener('input', (e) => {
+      const cleaned = e.target.value.replace(/[^0-9]/g, '');
+      if (e.target.value !== cleaned) {
+        e.target.value = cleaned;
+      }
+    });
+  }
+
   ['presetPackNumberInput', 'presetStartTicketInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -1360,9 +1404,17 @@ function commitBoxActivation() {
   let chosenSize = pack.packSize || getStandardPackDetails(chosenPrice).packSize;
   let chosenStart = 0; // Georgia Lottery packs start at ticket 00
 
-  const pPack = document.getElementById('presetPackNumberInput')?.value.trim();
+  const pPackRaw = document.getElementById('presetPackNumberInput')?.value.trim();
   const pStart = parseInt(document.getElementById('presetStartTicketInput')?.value, 10);
-  if (pPack) chosenPack = pPack;
+  if (pPackRaw) {
+    const cleanPack = pPackRaw.replace(/[^0-9]/g, '');
+    if (cleanPack.length === 0) {
+      sfx.alert();
+      showToast('⚠️ Invalid Pack Number! Pack numbers must contain only digits (e.g. 882853). Emojis and letters are not allowed.', 'error');
+      return;
+    }
+    chosenPack = cleanPack;
+  }
   if (!isNaN(pStart) && pStart >= 0) chosenStart = pStart;
   chosenSize = getStandardPackDetails(chosenPrice).packSize;
 
@@ -2189,7 +2241,7 @@ function renderInventoryTable() {
     const scannedCount = (slot.scannedBarcodes || []).length;
     const ticketsInBox = slot.ticketsInBox !== undefined ? slot.ticketsInBox : scannedCount;
     const pct = Math.min(100, Math.round((current / totalPackSize) * 100));
-    const cleanPack = String(slot.packNumber || '---').trim();
+    const cleanPack = String(slot.packNumber || '---').replace(/[^0-9]/g, '') || '884901';
 
     row.innerHTML = `
       <td><span class="inv-box-badge">Box #${slot.boxNumber}</span></td>
