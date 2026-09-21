@@ -491,7 +491,7 @@ function renderDispenserRack() {
       card.innerHTML = `
         <div class="empty-slot-plus">+</div>
         <div class="empty-slot-title">Box ${slot.boxNumber} · Empty</div>
-        <span style="font-size:0.8rem; font-weight:600; color:#94a3b8;">Tap to Activate</span>
+        <span class="empty-slot-sub">Tap to Activate</span>
       `;
       card.addEventListener('click', () => {
         openActivationForBox(slot.boxNumber);
@@ -508,7 +508,7 @@ function renderDispenserRack() {
   addCard.innerHTML = `
     <div class="empty-slot-plus">+</div>
     <div class="empty-slot-title">Add Box #${state.totalSlots + 1}</div>
-    <span style="font-size:0.8rem; font-weight:600; color:#94a3b8;">Expand Store Rack</span>
+    <span class="empty-slot-sub">Expand Store Rack</span>
   `;
   addCard.addEventListener('click', () => {
     addNewBox();

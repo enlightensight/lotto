@@ -1019,8 +1019,8 @@ body {
 .dispensers-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
   align-content: start;
 }
 
@@ -1029,8 +1029,8 @@ body {
   background: #ffffff;
   border: 1.5px solid #1e293b;
   border-radius: 0; /* Sharp acrylic box edges! */
-  height: 188px;
-  padding: 6px 8px;
+  height: 240px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1065,7 +1065,7 @@ body {
 }
 
 .price-tag {
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   font-weight: 900;
   color: #16a34a !important;
   background: transparent !important;
@@ -1089,7 +1089,7 @@ body {
 }
 
 .box-main-number {
-  font-size: 2.85rem;
+  font-size: 3.4rem;
   font-weight: 900;
   line-height: 1;
   color: #000000;
@@ -1098,14 +1098,14 @@ body {
 }
 
 .new-activation-text {
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #000000;
   margin-top: 2px;
 }
 
 .game-title-strip {
-  font-size: 0.76rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: #475569;
   white-space: nowrap;
@@ -1118,7 +1118,7 @@ body {
 .card-dashed-line {
   border-bottom: 1.5px dashed #94a3b8;
   width: 100%;
-  margin: 3px 0;
+  margin: 4px 0;
 }
 
 /* Card Footer: Large Bold Blue Ticket Number */
@@ -1129,7 +1129,7 @@ body {
   border-top: none;
   padding-top: 0;
   width: 100%;
-  min-height: 32px;
+  min-height: 38px;
   box-sizing: border-box;
 }
 
@@ -1141,14 +1141,14 @@ body {
 
 .ticket-number-display {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 2.15rem;
+  font-size: 2.5rem;
   font-weight: 900;
   color: #2563eb;
   line-height: 1;
 }
 
 .ticket-number-display.scanning-num {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: -0.5px;
   flex-shrink: 0;
@@ -1159,10 +1159,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
-  padding: 3px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
   white-space: nowrap;
   letter-spacing: -0.2px;
@@ -1187,9 +1187,9 @@ body {
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 4px 10px;
   margin-left: 6px;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -1218,7 +1218,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .box-card.add-new-box-card {
@@ -1226,23 +1226,48 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   border: 1.5px dashed #94a3b8;
   background: #ffffff;
 }
 
 .empty-slot-plus {
-  font-size: 2.2rem;
+  font-size: 3.2rem;
   font-weight: 300;
   color: #94a3b8;
   line-height: 1;
 }
 
 .empty-slot-title {
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #64748b;
   text-align: center;
+}
+
+.empty-slot-sub {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+}
+
+@media (max-height: 720px) {
+  .box-card {
+    height: 195px;
+  }
+  .box-main-number {
+    font-size: 2.85rem;
+  }
+  .ticket-number-display {
+    font-size: 2.15rem;
+  }
+  .empty-slot-plus {
+    font-size: 2.4rem;
+  }
+  .empty-slot-title {
+    font-size: 0.95rem;
+  }
 }
 
 /* Scanning in progress targets */
