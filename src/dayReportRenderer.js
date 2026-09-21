@@ -3,10 +3,8 @@
 // Exact Match to AMIGO FOOD MART LT System Software Specification
 // =============================================================
 
-import { getDayReportData, AMIGO_DAY_REPORT_REFERENCE } from './dayReportData.js';
+import { getDayReportData } from './dayReportData.js';
 import { saveState } from './data.js';
-
-let currentReportMode = 'live'; // 'live' | 'reference'
 
 /**
  * Populates a DOM tree (either print section or modal preview) with Day Report data
@@ -211,16 +209,6 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
     </div>
     
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <!-- Mode Switcher -->
-      <div class="dr-mode-switcher">
-        <button type="button" class="dr-mode-btn ${currentReportMode === 'live' ? 'active' : ''}" id="drModeLiveBtn">
-          📊 Live Store Report
-        </button>
-        <button type="button" class="dr-mode-btn ${currentReportMode === 'reference' ? 'active' : ''}" id="drModeRefBtn">
-          📄 Reference Benchmark
-        </button>
-      </div>
-
       <!-- Zoom Buttons -->
       <div class="dr-preview-actions">
         <span style="font-size: 0.76rem; color: #cbd5e1;">Zoom:</span>
@@ -231,8 +219,8 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   `;
   container.appendChild(toolbar);
 
-  // 2. Financial Reconciliation Quick Adjust Bar (Only in Live Mode)
-  if (currentReportMode === 'live' && state) {
+  // 2. Financial Reconciliation Quick Adjust Bar
+  if (state) {
     const finBar = document.createElement('div');
     finBar.className = 'dr-fin-reconcile-panel';
     finBar.innerHTML = `
@@ -306,25 +294,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
 
   container.appendChild(sheetsWrapper);
 
-  // 4. Mode Switcher Listeners
-  const liveBtn = toolbar.querySelector('#drModeLiveBtn');
-  const refBtn = toolbar.querySelector('#drModeRefBtn');
 
-  if (liveBtn && refBtn) {
-    liveBtn.addEventListener('click', () => {
-      if (currentReportMode !== 'live') {
-        currentReportMode = 'live';
-        if (onRefresh) onRefresh();
-      }
-    });
-
-    refBtn.addEventListener('click', () => {
-      if (currentReportMode !== 'reference') {
-        currentReportMode = 'reference';
-        if (onRefresh) onRefresh();
-      }
-    });
-  }
 
   // 5. Zoom Listeners
   const fitBtn = toolbar.querySelector('#drZoomFitBtn');
@@ -387,13 +357,15 @@ window.addEventListener('afterprint', () => {
 /**
  * Helper to open the Day Report modal and initialize handlers
  */
-export function openDayReportModal(state, sfx = null) {
+export function openDayReportModal(getStateOrState, sfx = null) {
+  const getState = typeof getStateOrState === 'function' ? getStateOrState : () => getStateOrState;
   const modal = document.getElementById('dayReportModal');
   if (!modal) return;
 
   const refreshModal = () => {
-    const data = getDayReportData(state, currentReportMode);
-    renderDayReportModalPreview(data, state, refreshModal);
+    const currentState = getState();
+    const data = getDayReportData(currentState);
+    renderDayReportModalPreview(data, currentState, refreshModal);
   };
 
   refreshModal();
@@ -408,7 +380,8 @@ export function openDayReportModal(state, sfx = null) {
 /**
  * Wires Day Report UI buttons across the application
  */
-export function setupDayReportHandlers(state, sfx = null, showToast = null) {
+export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = null) {
+  const getState = typeof getStateOrState === 'function' ? getStateOrState : () => getStateOrState;
   const menuBtn = document.getElementById('menuDayReportBtn');
   const modal = document.getElementById('dayReportModal');
   const closeBtn = document.getElementById('closeDayReportModalBtn');
@@ -418,7 +391,7 @@ export function setupDayReportHandlers(state, sfx = null, showToast = null) {
   if (menuBtn) {
     menuBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      openDayReportModal(state, sfx);
+      openDayReportModal(getState, sfx);
       if (showToast) {
         showToast('📄 Official 2-Page Day Report loaded', 'info');
       }
@@ -435,7 +408,8 @@ export function setupDayReportHandlers(state, sfx = null, showToast = null) {
 
   if (printBtn) {
     printBtn.addEventListener('click', () => {
-      const data = getDayReportData(state, currentReportMode);
+      const currentState = getState();
+      const data = getDayReportData(currentState);
       printDayReport(data, sfx);
     });
   }

@@ -346,13 +346,9 @@ export function generateLiveDayReport(state) {
 }
 
 /**
- * Returns either live state report or official AMIGO reference report based on mode.
+ * Returns dynamic live store Georgia Lottery Day Report.
  * @param {Object} state Live application state
- * @param {'live'|'reference'} mode Selected report mode (defaults to 'live')
  */
-export function getDayReportData(state, mode = 'live') {
-  if (mode === 'reference') {
-    return JSON.parse(JSON.stringify(AMIGO_DAY_REPORT_REFERENCE));
-  }
+export function getDayReportData(state) {
   return generateLiveDayReport(state);
 }

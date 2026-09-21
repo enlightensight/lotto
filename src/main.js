@@ -1,8 +1,8 @@
 // Modern Lottery POS & Tracking System - Application Controller
 import { loadState, saveState, resetToDefaults, resetToCleanState, SAMPLE_GAMES, findGameByBarcode, getStandardPackDetails } from './data.js';
 import { sfx, voice } from './audio.js';
-import { setupDayReportHandlers, openDayReportModal, printDayReport } from './dayReportRenderer.js';
-import { AMIGO_DAY_REPORT_REFERENCE } from './dayReportData.js';
+import { setupDayReportHandlers, openDayReportModal, printDayReport, populateDayReportDOM } from './dayReportRenderer.js';
+import { getDayReportData } from './dayReportData.js';
 
 let state = loadState();
 let undoHistory = [];
@@ -204,70 +204,7 @@ export function cleanGameTitle(name) {
   return s;
 }
 
-// Seed full Georgia Lottery store dispenser boxes (from AMIGO FOOD MART reference) if slots are empty
-export function seedInitialActiveSlotsIfEmpty() {
-  // If user deliberately cleared data, do not re-seed
-  if (state.dataCleared) return false;
-  const activeCount = (state.slots || []).filter(isBoxActive).length;
-  if (activeCount === 0 && AMIGO_DAY_REPORT_REFERENCE && Array.isArray(AMIGO_DAY_REPORT_REFERENCE.boxes)) {
-    const newSlots = [];
-    for (let b = 1; b <= 70; b++) {
-      const boxDef = AMIGO_DAY_REPORT_REFERENCE.boxes.find(item => item.box === b);
-      if (!boxDef || boxDef.isEmpty) {
-        newSlots.push({
-          boxNumber: b,
-          status: 'EMPTY',
-          gameId: null,
-          gameName: null,
-          price: null,
-          packNumber: null,
-          packSize: null,
-          startTicket: 0,
-          currentTicket: 0,
-          activatedThisShift: false,
-          daysActive: 0,
-          scannedInEndShift: false
-        });
-      } else {
-        let packNum = boxDef.pack;
-        let rawName = boxDef.name;
-        let price = boxDef.price || 1;
-        let current = boxDef.open !== undefined ? boxDef.open : 0;
-        let isNewAct = false;
-        if (boxDef.isMultiPack && boxDef.subRows && boxDef.subRows.length > 0) {
-          packNum = boxDef.subRows[0].pack;
-          rawName = boxDef.subRows[0].name;
-          price = boxDef.subRows[0].price || price;
-          current = boxDef.subRows[0].open !== undefined ? boxDef.subRows[0].open : 0;
-          isNewAct = boxDef.subRows[0].highlight === 'green';
-        }
-        const cleanName = cleanGameTitle(rawName);
-        const std = getStandardPackDetails(price);
-        const packSize = std.packSize;
-        newSlots.push({
-          boxNumber: b,
-          status: 'ACTIVE',
-          gameId: 'g_' + (packNum ? packNum.replace(/[^0-9]/g, '').slice(0, 4) : b),
-          gameName: cleanName,
-          price: price,
-          packNumber: packNum,
-          packSize: packSize,
-          startTicket: current,
-          currentTicket: current,
-          activatedThisShift: isNewAct,
-          daysActive: Math.max(1, (b % 5) + 1),
-          scannedInEndShift: false
-        });
-      }
-    }
-    state.slots = newSlots;
-    state.totalSlots = 70;
-    state.shiftOpeningActiveCount = newSlots.filter(isBoxActive).length;
-    saveState(state);
-    return true;
-  }
-  return false;
-}
+
 
 // Sanitize & migrate existing state:
 // 1. If an active box was activated with count 0 (due to prior bug), update to 1 (01)
@@ -342,7 +279,6 @@ let _eventListenersInitialized = false;
 // Initialize System
 function initPOS() {
   initTheme();
-  seedInitialActiveSlotsIfEmpty();
   sanitizeAndMigrateSlots();
   populateActivationGameDropdown();
   if (state.settings && state.settings.soundEnabled === false) {
@@ -2602,7 +2538,7 @@ function setupEventListeners() {
   });
   if (reportPrintFullBtn) {
     reportPrintFullBtn.addEventListener('click', () => {
-      openDayReportModal(state, sfx);
+      openDayReportModal(() => state, sfx);
     });
   }
   reportEmailBtn.addEventListener('click', () => {
@@ -3119,6 +3055,12 @@ function setupEventListeners() {
         state = resetToCleanState();
         state.dataCleared = true;
         saveState(state);
+        // Clear Day Report print DOM immediately so no stale data remains
+        const printSection = document.getElementById('dayReportPrintSection');
+        if (printSection) {
+          const freshData = getDayReportData(state);
+          populateDayReportDOM(freshData, printSection);
+        }
         initPOS();
         sfx.alert();
         showToast('All POS data wiped. Clean start ready.', 'info');
@@ -3127,7 +3069,7 @@ function setupEventListeners() {
   }
 
   // Official 2-Page Day Report (AMIGO FOOD MART)
-  setupDayReportHandlers(state, sfx, showToast);
+  setupDayReportHandlers(() => state, sfx, showToast);
 }
 
 // Launch application

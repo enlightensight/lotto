@@ -120,6 +120,7 @@ export function getInitialState() {
     shiftHistory: [], // Clean audit history
     lastScannedBarcode: '',
     lastScannedSlot: null,
+    dataCleared: true,
     settings: {
       soundEnabled: true,
       voiceEnabled: true,
@@ -179,6 +180,7 @@ export function resetToCleanState() {
     console.error('Failed to clear storage:', e);
   }
   const fresh = getInitialState();
+  fresh.dataCleared = true;
   saveState(fresh);
   return fresh;
 }
