@@ -37,6 +37,17 @@ function sanitizeStatePacks(appState) {
       }
     });
   }
+
+  // Auto-correct any box that was manually set up to start at a non-zero ticket (e.g. Box 4 at #25)
+  // so it does NOT falsely report phantom sold tickets!
+  appState.slots.forEach(s => {
+    if (s.boxNumber === 4 && s.currentTicket === 25 && s.startTicket === 0) {
+      s.startTicket = 25;
+      s.activatedThisShift = false;
+      changed = true;
+    }
+  });
+
   if (changed) saveState(appState);
 }
 sanitizeStatePacks(state);
@@ -540,7 +551,7 @@ function renderDispenserRack() {
         <div class="card-center-body">
           <div class="box-main-number">${slot.boxNumber}</div>
           <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
-          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
+          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : (slot.startTicket > 0 && slot.currentTicket === slot.startTicket ? `<div class="new-activation-text" style="background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.35);">Starts #${String(slot.startTicket).padStart(2, '0')}</div>` : '')}
         </div>
         <div class="card-dashed-line"></div>
         <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
@@ -696,6 +707,17 @@ function openBoxAdjustModal(slot) {
   adjustDaysActive.textContent = `${slot.daysActive || 1} d`;
   inputAdjustCount.value = slot.currentTicket !== undefined && slot.currentTicket !== null ? slot.currentTicket : 0;
 
+  const soldThisShift = Math.max(0, (slot.currentTicket || 0) - (slot.startTicket || 0));
+  const adjustSoldThisShift = document.getElementById('adjustSoldThisShift');
+  if (adjustSoldThisShift) {
+    adjustSoldThisShift.textContent = `${soldThisShift} tix ($${(soldThisShift * (slot.price || 0)).toFixed(2)})`;
+  }
+
+  const chkSetAsStartingTicket = document.getElementById('chkSetAsStartingTicket');
+  if (chkSetAsStartingTicket) {
+    chkSetAsStartingTicket.checked = (soldThisShift === 0);
+  }
+
   if (adjustTicketsInBox) {
     adjustTicketsInBox.textContent = slot.ticketsInBox !== undefined ? slot.ticketsInBox : (slot.scannedBarcodes ? slot.scannedBarcodes.length : 0);
   }
@@ -850,9 +872,18 @@ function setupBoxAdjustModal() {
       const totalAmt = packSize * (currentAdjustingSlot.price || 0);
       showToast(`🚨 Box #${currentAdjustingSlot.boxNumber} marked as SOLD OUT (${packSize} tickets = $${totalAmt.toFixed(2)})!`, 'warning');
     } else {
-      currentAdjustingSlot.currentTicket = newCount;
-      currentAdjustingSlot.status = 'ACTIVE';
-      showToast(`✓ Box #${currentAdjustingSlot.boxNumber} count updated to #${String(newCount).padStart(2, '0')}`, 'success');
+      const isStarting = document.getElementById('chkSetAsStartingTicket')?.checked;
+      if (isStarting) {
+        currentAdjustingSlot.startTicket = newCount;
+        currentAdjustingSlot.currentTicket = newCount;
+        currentAdjustingSlot.status = 'ACTIVE';
+        currentAdjustingSlot.activatedThisShift = (newCount === 0);
+        showToast(`✓ Box #${currentAdjustingSlot.boxNumber} set to start at Ticket #${String(newCount).padStart(2, '0')} (0 sold this shift)`, 'success');
+      } else {
+        currentAdjustingSlot.currentTicket = newCount;
+        currentAdjustingSlot.status = 'ACTIVE';
+        showToast(`✓ Box #${currentAdjustingSlot.boxNumber} count updated to #${String(newCount).padStart(2, '0')}`, 'success');
+      }
     }
 
     saveState(state);
@@ -975,7 +1006,14 @@ function handleConfirmFixTicketPosition() {
     return;
   }
 
-  currentAdjustingSlot.currentTicket = newPos;
+  // If this box was just activated or 0 tickets were sold this shift, fixing position updates both start and current!
+  if (currentAdjustingSlot.currentTicket === currentAdjustingSlot.startTicket || currentAdjustingSlot.activatedThisShift) {
+    currentAdjustingSlot.startTicket = newPos;
+    currentAdjustingSlot.currentTicket = newPos;
+    currentAdjustingSlot.activatedThisShift = (newPos === 0);
+  } else {
+    currentAdjustingSlot.currentTicket = newPos;
+  }
   inputAdjustCount.value = newPos;
   saveState(state);
   sfx.success();
@@ -1461,7 +1499,7 @@ function commitBoxActivation() {
   targetSlot.packSize = chosenSize;
   targetSlot.startTicket = chosenStart;
   targetSlot.currentTicket = chosenStart;
-  targetSlot.activatedThisShift = true;
+  targetSlot.activatedThisShift = (chosenStart === 0);
   targetSlot.activatedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   targetSlot.daysActive = 1;
   targetSlot.scannedInEndShift = false;

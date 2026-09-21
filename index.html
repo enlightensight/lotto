@@ -305,9 +305,10 @@
           <div>Pack #: <strong id="adjustPackNum" style="color:var(--color-primary);">#884901</strong></div>
           <div>Pack Size: <strong id="adjustPackSize">150</strong> pk</div>
           <div>Started At: <strong id="adjustStartTicket">#00</strong></div>
+          <div>Sold This Shift: <strong id="adjustSoldThisShift" style="color:#10b981;">0 tix</strong></div>
           <div>Days Active: <strong id="adjustDaysActive">1</strong> d</div>
           <div>Tickets in Box: <strong id="adjustTicketsInBox" style="color:#10b981;">0</strong></div>
-          <div>Saved Barcodes: <button type="button" id="btnAdjustViewBarcodes" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700;"><span id="adjustBarcodesCount">0</span> Barcodes 🔍</button></div>
+          <div style="grid-column: span 2;">Saved Barcodes: <button type="button" id="btnAdjustViewBarcodes" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700;"><span id="adjustBarcodesCount">0</span> Barcodes 🔍</button></div>
         </div>
       </div>
 
@@ -322,6 +323,12 @@
           <button class="btn btn-primary" id="btnSellOneTicket" style="margin-left:auto; height:44px;">
             Sell 1 (+1)
           </button>
+        </div>
+        <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="chkSetAsStartingTicket" style="width: 18px; height: 18px; cursor: pointer;">
+          <label for="chkSetAsStartingTicket" style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; cursor: pointer;">
+            Set as Starting Ticket (Pack starts at this number · 0 sold this shift)
+          </label>
         </div>
         <p style="font-size:0.75rem; color:#94a3b8; margin-top:8px;">
           💡 When count is <strong>0</strong>, the box automatically renders as <strong>Empty (Box 5 style)</strong>.
