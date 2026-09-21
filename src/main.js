@@ -38,13 +38,25 @@ function sanitizeStatePacks(appState) {
     });
   }
 
-  // Auto-correct any box that was manually set up to start at a non-zero ticket (e.g. Box 4 at #25)
-  // so it does NOT falsely report phantom sold tickets!
+  // Auto-correct any slot that exceeds its game's max pack size
+  // e.g. A $50 ticket has a $900 book value (strictly 18 tickets: #00 to #17).
+  // Ticket #25 or selling 25 tickets is physically impossible!
   appState.slots.forEach(s => {
-    if (s.boxNumber === 4 && s.currentTicket === 25 && s.startTicket === 0) {
-      s.startTicket = 25;
-      s.activatedThisShift = false;
-      changed = true;
+    if (s.price && s.status === 'ACTIVE') {
+      const std = getStandardPackDetails(s.price);
+      const packSize = s.packSize || std.packSize;
+      if (s.currentTicket >= packSize || s.startTicket >= packSize) {
+        if (s.boxNumber === 4 && s.price === 50) {
+          s.startTicket = 0;
+          s.currentTicket = 0;
+          s.activatedThisShift = true;
+          changed = true;
+        } else {
+          s.currentTicket = Math.min(s.currentTicket || 0, packSize - 1);
+          s.startTicket = Math.min(s.startTicket || 0, packSize - 1);
+          changed = true;
+        }
+      }
     }
   });
 
@@ -850,6 +862,13 @@ function setupBoxAdjustModal() {
     const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
     const packSize = currentAdjustingSlot.packSize || std.packSize;
 
+    if (newCount > packSize) {
+      sfx.alert();
+      showToast(`⚠️ Invalid Count! A $${currentAdjustingSlot.price} pack only has ${packSize} tickets (#00 to #${String(packSize - 1).padStart(2, '0')}). Max value is ${packSize}.`, 'error');
+      inputAdjustCount?.focus();
+      return;
+    }
+
     recordUndoAction({
       type: 'ADJUST_COUNT',
       boxNumber: currentAdjustingSlot.boxNumber,
@@ -998,10 +1017,12 @@ function handleConfirmFixTicketPosition() {
     fixTicketPositionModal.close();
     return;
   }
-  const newPos = parseInt(rawVal, 10);
-  if (isNaN(newPos) || newPos < 0) {
+  const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
+  const packSize = currentAdjustingSlot.packSize || std.packSize;
+
+  if (newPos >= packSize) {
     sfx.alert();
-    showToast('Invalid ticket position. Must be a positive number.', 'error');
+    showToast(`⚠️ Invalid Position! A $${currentAdjustingSlot.price} game ($${(packSize * currentAdjustingSlot.price).toFixed(0)} book) only has ${packSize} tickets (#00 to #${String(packSize - 1).padStart(2, '0')}). Position #${newPos} exceeds the pack!`, 'error');
     inputFixTicketPosition?.focus();
     return;
   }
@@ -1281,6 +1302,11 @@ function populateActivationGameDropdown() {
       activationGameTitle.textContent = formatGameTitle(chosenGame.price, chosenGame.name);
       const presetPackInput = document.getElementById('presetPackNumberInput');
       if (presetPackInput) presetPackInput.value = pendingActivationPack.packNumber;
+      const presetStartInput = document.getElementById('presetStartTicketInput');
+      if (presetStartInput) {
+        presetStartInput.max = chosenGame.packSize - 1;
+        presetStartInput.title = `Valid tickets: #00 to #${String(chosenGame.packSize - 1).padStart(2, '0')}`;
+      }
       sfx.keypad();
     }
   });
@@ -1311,7 +1337,11 @@ function openActivationForBox(boxNumber, preselectedPack = null) {
   const presetPackInput = document.getElementById('presetPackNumberInput');
   if (presetPackInput) presetPackInput.value = pack.packNumber || '';
   const presetStartInput = document.getElementById('presetStartTicketInput');
-  if (presetStartInput) presetStartInput.value = 0;
+  if (presetStartInput) {
+    presetStartInput.value = 0;
+    presetStartInput.max = pack.packSize - 1;
+    presetStartInput.title = `Valid tickets: #00 to #${String(pack.packSize - 1).padStart(2, '0')}`;
+  }
 
   const boxInputHint = document.getElementById('boxInputHint');
   if (boxInputHint) {
@@ -1455,6 +1485,14 @@ function commitBoxActivation() {
   }
   if (!isNaN(pStart) && pStart >= 0) chosenStart = pStart;
   chosenSize = getStandardPackDetails(chosenPrice).packSize;
+
+  // Validate that start ticket does NOT exceed max tickets in pack!
+  // e.g. $50 ticket has book value $900 -> 18 tickets (#00 to #17). Ticket 25 is impossible!
+  if (chosenStart >= chosenSize) {
+    sfx.alert();
+    showToast(`⚠️ Invalid Start Ticket! A $${chosenPrice} game ($${(chosenSize * chosenPrice).toFixed(0)} book) only has ${chosenSize} tickets (#00 to #${String(chosenSize - 1).padStart(2, '0')}). Ticket #${chosenStart} does not exist!`, 'error');
+    return;
+  }
 
   // If user enters a box number beyond current totalSlots, dynamically expand capacity!
   if (boxNum > state.totalSlots) {
