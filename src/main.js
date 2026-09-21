@@ -3014,11 +3014,16 @@ function openHistoryModal(filter = 'all') {
     historyTableBody.appendChild(row);
   } else {
     list.forEach(h => {
+      const dateObj = h.endedAt ? new Date(h.endedAt) : (h.startedAt ? new Date(h.startedAt) : null);
+      const dateFormatted = dateObj && !isNaN(dateObj.getTime())
+        ? `${dateObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : '--';
+
       const row = document.createElement('tr');
       row.innerHTML = `
         <td style="font-weight:700; color:var(--color-primary);">Shift #${h.shiftNumber}</td>
         <td>${h.cashier || 'Clerk'}</td>
-        <td>${h.endedAt ? new Date(h.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
+        <td style="white-space:nowrap; font-family:'JetBrains Mono', monospace; font-size:0.85rem;">${dateFormatted}</td>
         <td>${h.totalTicketsSold || 0}</td>
         <td style="color:var(--color-success); font-weight:700;">$${Number(h.totalSalesRevenue || 0).toFixed(2)}</td>
         <td>${h.activationsCount || 0}</td>
