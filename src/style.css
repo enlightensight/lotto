@@ -1354,6 +1354,117 @@ body {
   }
 }
 
+/* =============================================================
+   LARGE SCREEN RESPONSIVE SCALING (OPTION 2: BIGGER BOX CARDS)
+   ============================================================= */
+
+/* Tier 1: Large Counter Displays & Full HD Monitors (1440px+ / 800px+ height) */
+@media (min-width: 1440px) and (min-height: 800px) {
+  .dispensers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .box-card {
+    height: 290px;
+    padding: 10px 12px;
+  }
+  .box-main-number {
+    font-size: 4.4rem;
+  }
+  .ticket-number-display {
+    font-size: 3.2rem;
+  }
+  .price-tag {
+    font-size: 1.65rem;
+  }
+  .game-title-strip {
+    font-size: 1.05rem;
+  }
+  .new-activation-text {
+    font-size: 0.95rem;
+  }
+  .quick-sell-btn {
+    font-size: 1.15rem;
+    padding: 5px 14px;
+  }
+  .empty-slot-plus {
+    font-size: 4.2rem;
+  }
+  .empty-slot-title {
+    font-size: 1.25rem;
+  }
+  .empty-slot-sub {
+    font-size: 1.05rem;
+  }
+  .metrics-tabs-bar {
+    height: 56px;
+  }
+  .metric-tab .tab-name {
+    font-size: 0.88rem;
+  }
+  .metric-tab .tab-val {
+    font-size: 1.22rem;
+  }
+}
+
+/* Tier 2: Ultra-Wide / 1440p / 4K / Giant Displays (1920px+ / 980px+ height) */
+@media (min-width: 1920px) and (min-height: 980px) {
+  .dispensers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+    gap: 16px;
+  }
+  .box-card {
+    height: 350px;
+    padding: 14px 16px;
+  }
+  .box-main-number {
+    font-size: 5.6rem;
+  }
+  .ticket-number-display {
+    font-size: 4.0rem;
+  }
+  .price-tag {
+    font-size: 2.1rem;
+  }
+  .game-title-strip {
+    font-size: 1.3rem;
+  }
+  .new-activation-text {
+    font-size: 1.15rem;
+  }
+  .quick-sell-btn {
+    font-size: 1.35rem;
+    padding: 7px 18px;
+  }
+  .empty-slot-plus {
+    font-size: 5.4rem;
+  }
+  .empty-slot-title {
+    font-size: 1.5rem;
+  }
+  .empty-slot-sub {
+    font-size: 1.25rem;
+  }
+  .metrics-tabs-bar {
+    height: 66px;
+  }
+  .metric-tab .tab-name {
+    font-size: 1.0rem;
+  }
+  .metric-tab .tab-val {
+    font-size: 1.45rem;
+  }
+  .stat-number-lt {
+    font-size: 4.8rem;
+  }
+  .scan-action-title-lt {
+    font-size: 1.25rem;
+  }
+  .scan-details-lt {
+    font-size: 1.15rem;
+  }
+}
+
 /* Scanning in progress targets */
 .box-card.scanning-target {
   border: 2px solid #2563eb;
