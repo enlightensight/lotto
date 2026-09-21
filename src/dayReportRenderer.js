@@ -218,17 +218,28 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   sheetsWrapper.className = 'dr-sheets-wrapper';
   sheetsWrapper.id = 'drSheetsWrapper';
 
-  // Page 1 clone
-  const p1Sheet = printSection.querySelector('#dayReportSheetPage1').cloneNode(true);
-  p1Sheet.removeAttribute('id');
-  p1Sheet.classList.add('dr-preview-sheet');
-  sheetsWrapper.appendChild(p1Sheet);
+  let p1Sheet = null;
+  let p2Sheet = null;
 
-  // Page 2 clone
-  const p2Sheet = printSection.querySelector('#dayReportSheetPage2').cloneNode(true);
-  p2Sheet.removeAttribute('id');
-  p2Sheet.classList.add('dr-preview-sheet');
-  sheetsWrapper.appendChild(p2Sheet);
+  try {
+    const p1Source = printSection.querySelector('#dayReportSheetPage1');
+    if (p1Source) {
+      p1Sheet = p1Source.cloneNode(true);
+      p1Sheet.removeAttribute('id');
+      p1Sheet.classList.add('dr-preview-sheet');
+      sheetsWrapper.appendChild(p1Sheet);
+    }
+
+    const p2Source = printSection.querySelector('#dayReportSheetPage2');
+    if (p2Source) {
+      p2Sheet = p2Source.cloneNode(true);
+      p2Sheet.removeAttribute('id');
+      p2Sheet.classList.add('dr-preview-sheet');
+      sheetsWrapper.appendChild(p2Sheet);
+    }
+  } catch (err) {
+    console.error('Error cloning Day Report sheets for preview:', err);
+  }
 
   container.appendChild(sheetsWrapper);
 
@@ -256,7 +267,8 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   }
   if (floatNext) {
     floatNext.onclick = () => {
-      container.scrollTo({ top: p1Sheet.offsetHeight + 24, behavior: 'smooth' });
+      const offset = p1Sheet ? (p1Sheet.offsetHeight + 24) : 800;
+      container.scrollTo({ top: offset, behavior: 'smooth' });
       if (floatIndicator) floatIndicator.textContent = '2 / 2';
     };
   }
@@ -287,7 +299,8 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   // Update page indicator on scroll
   container.onscroll = () => {
     if (!floatIndicator) return;
-    if (container.scrollTop > p1Sheet.offsetHeight / 2) {
+    const threshold = p1Sheet ? (p1Sheet.offsetHeight / 2) : 400;
+    if (container.scrollTop > threshold) {
       floatIndicator.textContent = '2 / 2';
     } else {
       floatIndicator.textContent = '1 / 2';
@@ -399,6 +412,11 @@ export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = 
   const btnCancel = document.getElementById('drReportCancelBtn');
   if (btnCancel && modal) {
     btnCancel.addEventListener('click', () => modal.close());
+  }
+
+  const btnUndo = document.getElementById('drReportUndoBtn');
+  if (btnUndo && modal) {
+    btnUndo.addEventListener('click', () => modal.close());
   }
 
   const btnStartNew = document.getElementById('drReportStartNewShiftBtn');
