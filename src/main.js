@@ -159,6 +159,48 @@ const adjustTicketsInBox = document.getElementById('adjustTicketsInBox');
 const adjustBarcodesCount = document.getElementById('adjustBarcodesCount');
 const btnAdjustViewBarcodes = document.getElementById('btnAdjustViewBarcodes');
 
+// LTSYSTEM Modals & Controls
+const ticketNotInInventoryModal = document.getElementById('ticketNotInInventoryModal');
+const closeTicketNotInInvBtn = document.getElementById('closeTicketNotInInvBtn');
+const notInInvBarcodeDetails = document.getElementById('notInInvBarcodeDetails');
+const btnConfirmNotInInvOk = document.getElementById('btnConfirmNotInInvOk');
+const btnGoToUpdateInventory = document.getElementById('btnGoToUpdateInventory');
+
+const updateSoldOutTicketModal = document.getElementById('updateSoldOutTicketModal');
+const closeUpdateSoldOutBtn = document.getElementById('closeUpdateSoldOutBtn');
+const soldOutGameHeader = document.getElementById('soldOutGameHeader');
+const btnSoldOutNo = document.getElementById('btnSoldOutNo');
+const btnSoldOutFix = document.getElementById('btnSoldOutFix');
+
+const fixTicketPositionModal = document.getElementById('fixTicketPositionModal');
+const closeFixTicketPosBtn = document.getElementById('closeFixTicketPosBtn');
+const fixPosGameName = document.getElementById('fixPosGameName');
+const fixPosScannedPos = document.getElementById('fixPosScannedPos');
+const inputFixTicketPosition = document.getElementById('inputFixTicketPosition');
+const btnCancelFixTicketPos = document.getElementById('btnCancelFixTicketPos');
+const btnConfirmFixTicketPos = document.getElementById('btnConfirmFixTicketPos');
+
+const terminalReconcileModal = document.getElementById('terminalReconcileModal');
+const closeTerminalReconcileBtn = document.getElementById('closeTerminalReconcileBtn');
+const inputTermOnlineSale = document.getElementById('inputTermOnlineSale');
+const inputTermOnlineCashOut = document.getElementById('inputTermOnlineCashOut');
+const inputTermScratchOffCash = document.getElementById('inputTermScratchOffCash');
+const btnTerminalReconcileDone = document.getElementById('btnTerminalReconcileDone');
+
+const switchBoxModal = document.getElementById('switchBoxModal');
+const closeSwitchBoxBtn = document.getElementById('closeSwitchBoxBtn');
+const switchBoxSourceInfo = document.getElementById('switchBoxSourceInfo');
+const inputSwitchTargetBox = document.getElementById('inputSwitchTargetBox');
+const btnCancelSwitchBox = document.getElementById('btnCancelSwitchBox');
+const btnConfirmSwitchBox = document.getElementById('btnConfirmSwitchBox');
+
+const btnBoxSwitch = document.getElementById('btnBoxSwitch');
+const btnBoxChange = document.getElementById('btnBoxChange');
+const btnFixPosition = document.getElementById('btnFixPosition');
+
+const setBoxStepUp = document.getElementById('setBoxStepUp');
+const setBoxStepDown = document.getElementById('setBoxStepDown');
+
 const historyModal = document.getElementById('historyModal');
 const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const closeHistoryBottomBtn = document.getElementById('closeHistoryBottomBtn');
@@ -610,6 +652,17 @@ function setupBoxAdjustModal() {
     }
   });
 
+  // LTSYSTEM Box Controls
+  btnBoxSwitch?.addEventListener('click', () => {
+    if (currentAdjustingSlot) openSwitchBoxModal(currentAdjustingSlot);
+  });
+  btnBoxChange?.addEventListener('click', () => {
+    if (currentAdjustingSlot) openSwitchBoxModal(currentAdjustingSlot);
+  });
+  btnFixPosition?.addEventListener('click', () => {
+    if (currentAdjustingSlot) openFixTicketPositionModal(currentAdjustingSlot);
+  });
+
   btnCountMinus?.addEventListener('click', () => {
     sfx.keypad();
     let val = parseInt(inputAdjustCount.value, 10) || 0;
@@ -742,6 +795,325 @@ function setupBoxAdjustModal() {
     renderHeaderAndMetrics();
     renderDispenserRack();
     renderSlotsRibbon();
+  });
+}
+
+// -------------------------------------------------------------
+// LTSYSTEM: Box Re-routing, Fix Position, Terminal Reconcile & Gatekeeper Modals
+// -------------------------------------------------------------
+
+function openSwitchBoxModal(slot) {
+  if (!switchBoxModal || !slot) return;
+  switchBoxSourceInfo.textContent = `Switching Box #${slot.boxNumber} (${cleanGameTitle(slot.gameName || 'Active Box')})`;
+  inputSwitchTargetBox.value = '';
+  sfx.keypad();
+  switchBoxModal.showModal();
+  setTimeout(() => {
+    inputSwitchTargetBox?.focus();
+  }, 100);
+}
+
+function handleConfirmSwitchBox() {
+  if (!currentAdjustingSlot) {
+    switchBoxModal?.close();
+    return;
+  }
+  const targetBoxNum = parseInt(inputSwitchTargetBox.value, 10);
+  if (isNaN(targetBoxNum) || targetBoxNum < 1 || targetBoxNum > 100) {
+    sfx.alert();
+    showToast('Please enter a valid target Box # (1-100).', 'error');
+    inputSwitchTargetBox?.focus();
+    return;
+  }
+  if (targetBoxNum === currentAdjustingSlot.boxNumber) {
+    sfx.alert();
+    showToast('Cannot switch box with itself. Enter a different box number.', 'error');
+    inputSwitchTargetBox?.focus();
+    return;
+  }
+
+  let targetSlot = state.slots.find(s => s.boxNumber === targetBoxNum);
+  if (!targetSlot) {
+    while (state.slots.length < targetBoxNum) {
+      const nextNum = state.slots.length + 1;
+      state.slots.push({
+        boxNumber: nextNum,
+        status: 'EMPTY',
+        gameId: null,
+        gameName: null,
+        price: null,
+        packNumber: null,
+        packSize: null,
+        startTicket: 0,
+        currentTicket: 0,
+        ticketsInBox: 0,
+        scannedBarcodes: [],
+        activatedThisShift: false,
+        daysActive: 0,
+        scannedInEndShift: false
+      });
+    }
+    targetSlot = state.slots.find(s => s.boxNumber === targetBoxNum);
+  }
+
+  // Swap all pack data between currentAdjustingSlot and targetSlot
+  const fields = [
+    'status', 'gameId', 'gameName', 'price', 'packNumber', 'packSize',
+    'startTicket', 'currentTicket', 'ticketsInBox', 'scannedBarcodes',
+    'activatedThisShift', 'daysActive', 'scannedInEndShift'
+  ];
+  fields.forEach(f => {
+    const tmp = currentAdjustingSlot[f];
+    currentAdjustingSlot[f] = targetSlot[f];
+    targetSlot[f] = tmp;
+  });
+
+  saveState(state);
+  sfx.success();
+  switchBoxModal.close();
+  boxAdjustModal?.close();
+  renderHeaderAndMetrics();
+  renderDispenserRack();
+  renderSlotsRibbon();
+  showToast(`⇄ Swapped Box #${currentAdjustingSlot.boxNumber} with Box #${targetBoxNum}!`, 'success');
+}
+
+function openFixTicketPositionModal(slot) {
+  if (!fixTicketPositionModal || !slot) return;
+  fixPosGameName.textContent = `Name: ${cleanGameTitle(slot.gameName || 'Scratch Off')}`;
+  fixPosScannedPos.textContent = `Scanned position: ${String(slot.currentTicket || 0).padStart(3, '0')}`;
+  inputFixTicketPosition.value = slot.currentTicket !== undefined ? slot.currentTicket : 0;
+  sfx.keypad();
+  fixTicketPositionModal.showModal();
+  setTimeout(() => {
+    inputFixTicketPosition?.focus();
+    inputFixTicketPosition?.select();
+  }, 100);
+}
+
+function handleConfirmFixTicketPosition() {
+  if (!currentAdjustingSlot) {
+    fixTicketPositionModal?.close();
+    return;
+  }
+  const rawVal = inputFixTicketPosition.value.trim();
+  if (rawVal === '') {
+    fixTicketPositionModal.close();
+    return;
+  }
+  const newPos = parseInt(rawVal, 10);
+  if (isNaN(newPos) || newPos < 0) {
+    sfx.alert();
+    showToast('Invalid ticket position. Must be a positive number.', 'error');
+    inputFixTicketPosition?.focus();
+    return;
+  }
+
+  currentAdjustingSlot.currentTicket = newPos;
+  inputAdjustCount.value = newPos;
+  saveState(state);
+  sfx.success();
+  fixTicketPositionModal.close();
+  renderHeaderAndMetrics();
+  renderDispenserRack();
+  renderSlotsRibbon();
+  showToast(`🎯 Missed Ticket is Fixed! Box #${currentAdjustingSlot.boxNumber} position set to #${String(newPos).padStart(2, '0')}`, 'success');
+}
+
+function setupFixTicketPositionKeypad() {
+  closeFixTicketPosBtn?.addEventListener('click', () => fixTicketPositionModal?.close());
+  btnCancelFixTicketPos?.addEventListener('click', () => fixTicketPositionModal?.close());
+  btnConfirmFixTicketPos?.addEventListener('click', handleConfirmFixTicketPosition);
+
+  const numBtns = fixTicketPositionModal?.querySelectorAll('.key-num-fix');
+  numBtns?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sfx.keypad();
+      const val = btn.getAttribute('data-val');
+      if (val === '.') return;
+      if (inputFixTicketPosition.value === '0') {
+        inputFixTicketPosition.value = val;
+      } else {
+        inputFixTicketPosition.value += val;
+      }
+    });
+  });
+
+  const keyFixClear = document.getElementById('keyFixClear');
+  keyFixClear?.addEventListener('click', () => {
+    sfx.keypad();
+    inputFixTicketPosition.value = '';
+    inputFixTicketPosition.focus();
+  });
+
+  const keyFixBackspace = document.getElementById('keyFixBackspace');
+  keyFixBackspace?.addEventListener('click', () => {
+    sfx.keypad();
+    inputFixTicketPosition.value = inputFixTicketPosition.value.slice(0, -1);
+  });
+
+  const keyFixEnter = document.getElementById('keyFixEnter');
+  keyFixEnter?.addEventListener('click', handleConfirmFixTicketPosition);
+
+  inputFixTicketPosition?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmFixTicketPosition();
+    }
+  });
+}
+
+let activeTermInput = null;
+let terminalReconcileOnDone = null;
+
+function openTerminalReconcileModal(onDoneCallback = null) {
+  if (!terminalReconcileModal) {
+    if (typeof onDoneCallback === 'function') onDoneCallback();
+    return;
+  }
+  activeTermInput = inputTermOnlineSale;
+  inputTermOnlineSale.value = state.onlineSales || 0;
+  inputTermOnlineCashOut.value = state.onlineCashes || 0;
+  inputTermScratchOffCash.value = state.cashes || 0;
+  terminalReconcileOnDone = onDoneCallback;
+  sfx.keypad();
+  terminalReconcileModal.showModal();
+  setTimeout(() => {
+    inputTermOnlineSale?.focus();
+    inputTermOnlineSale?.select();
+  }, 100);
+}
+
+function setupTerminalReconcileLogic() {
+  closeTerminalReconcileBtn?.addEventListener('click', () => terminalReconcileModal?.close());
+
+  [inputTermOnlineSale, inputTermOnlineCashOut, inputTermScratchOffCash].forEach(inp => {
+    inp?.addEventListener('focus', () => {
+      activeTermInput = inp;
+    });
+  });
+
+  const numBtns = terminalReconcileModal?.querySelectorAll('.key-num-term');
+  numBtns?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sfx.keypad();
+      if (!activeTermInput) activeTermInput = inputTermOnlineSale;
+      const val = btn.getAttribute('data-val');
+      if (val === '.') {
+        if (!activeTermInput.value.includes('.')) {
+          activeTermInput.value += '.';
+        }
+      } else {
+        if (activeTermInput.value === '0') {
+          activeTermInput.value = val;
+        } else {
+          activeTermInput.value += val;
+        }
+      }
+    });
+  });
+
+  const keyTermClear = document.getElementById('keyTermClear');
+  keyTermClear?.addEventListener('click', () => {
+    sfx.keypad();
+    if (!activeTermInput) activeTermInput = inputTermOnlineSale;
+    activeTermInput.value = '0';
+    activeTermInput.focus();
+  });
+
+  const keyTermBackspace = document.getElementById('keyTermBackspace');
+  keyTermBackspace?.addEventListener('click', () => {
+    sfx.keypad();
+    if (!activeTermInput) activeTermInput = inputTermOnlineSale;
+    if (activeTermInput.value.length > 1) {
+      activeTermInput.value = activeTermInput.value.slice(0, -1);
+    } else {
+      activeTermInput.value = '0';
+    }
+  });
+
+  const handleTerminalDone = () => {
+    state.onlineSales = parseFloat(inputTermOnlineSale?.value) || 0;
+    state.onlineCashes = parseFloat(inputTermOnlineCashOut?.value) || 0;
+    state.cashes = parseFloat(inputTermScratchOffCash?.value) || 0;
+    saveState(state);
+    sfx.success();
+    terminalReconcileModal.close();
+    renderHeaderAndMetrics();
+    showToast(`✓ Terminal data reconciled: Online Sales $${state.onlineSales.toFixed(2)}, Cashes $${state.cashes.toFixed(2)}`, 'success');
+    if (typeof terminalReconcileOnDone === 'function') {
+      const cb = terminalReconcileOnDone;
+      terminalReconcileOnDone = null;
+      cb();
+    } else {
+      openDayReportModal(() => state, sfx);
+    }
+  };
+
+  btnTerminalReconcileDone?.addEventListener('click', handleTerminalDone);
+  const keyTermEnter = document.getElementById('keyTermEnter');
+  keyTermEnter?.addEventListener('click', handleTerminalDone);
+}
+
+let pendingSoldOutBarcode = null;
+let pendingSoldOutPack = null;
+
+function setupDiscrepancyAndInventoryGatekeeperModals() {
+  // Ticket Not In Inventory Modal
+  closeTicketNotInInvBtn?.addEventListener('click', () => {
+    ticketNotInInventoryModal?.close();
+    barcodeInput?.focus();
+  });
+  btnConfirmNotInInvOk?.addEventListener('click', () => {
+    ticketNotInInventoryModal?.close();
+    barcodeInput?.focus();
+  });
+  btnGoToUpdateInventory?.addEventListener('click', () => {
+    ticketNotInInventoryModal?.close();
+    openInventoryModal();
+    if (invBoxTicketBarcodeInput && notInInvBarcodeDetails) {
+      invBoxTicketBarcodeInput.value = notInInvBarcodeDetails.textContent.trim();
+      invBoxTicketBarcodeInput.focus();
+    }
+  });
+
+  // Update Sold Out Ticket Modal
+  closeUpdateSoldOutBtn?.addEventListener('click', () => {
+    updateSoldOutTicketModal?.close();
+    barcodeInput?.focus();
+  });
+  btnSoldOutNo?.addEventListener('click', () => {
+    updateSoldOutTicketModal?.close();
+    barcodeInput?.focus();
+  });
+  btnSoldOutFix?.addEventListener('click', () => {
+    updateSoldOutTicketModal?.close();
+    if (pendingSoldOutBarcode) {
+      openSetBoxModal(pendingSoldOutBarcode);
+    }
+  });
+
+  // Switch Box Modal
+  closeSwitchBoxBtn?.addEventListener('click', () => switchBoxModal?.close());
+  btnCancelSwitchBox?.addEventListener('click', () => switchBoxModal?.close());
+  btnConfirmSwitchBox?.addEventListener('click', handleConfirmSwitchBox);
+  inputSwitchTargetBox?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmSwitchBox();
+    }
+  });
+
+  // Set Box Stepper buttons
+  setBoxStepUp?.addEventListener('click', () => {
+    sfx.keypad();
+    let val = parseInt(setBoxNumberInput.value, 10) || 1;
+    if (val < 100) setBoxNumberInput.value = val + 1;
+  });
+  setBoxStepDown?.addEventListener('click', () => {
+    sfx.keypad();
+    let val = parseInt(setBoxNumberInput.value, 10) || 1;
+    if (val > 1) setBoxNumberInput.value = val - 1;
   });
 }
 
@@ -1311,7 +1683,9 @@ function confirmEndShift() {
   if (inputActualCash) {
     inputActualCash.value = drawerCash.toFixed(2);
   }
-  openShiftReportModal();
+  openTerminalReconcileModal(() => {
+    openShiftReportModal();
+  });
 }
 
 function openShiftReportModal() {
@@ -2270,6 +2644,14 @@ function processScannedBarcode(rawBarcode) {
   sfx.beep();
   state.lastScannedBarcode = rawBarcode;
 
+  // Reset any alert banner styles from previous gatekeeper warnings
+  if (scanActionTitle) {
+    scanActionTitle.style.background = '';
+    scanActionTitle.style.color = '';
+    scanActionTitle.style.padding = '';
+    scanActionTitle.style.borderRadius = '';
+  }
+
   // Scenario 1: Update Inventory Modal is open -> handle ticket scan
   if (inventoryModal && inventoryModal.open) {
     handleTicketBarcodeScan(rawBarcode, 'inventory');
@@ -2393,12 +2775,56 @@ function processScannedBarcode(rawBarcode) {
       return;
     }
 
-    // 3. If not an active box or sale, handle inventory ticket scan!
-    // Check duplicate first:
+    // 2b. Check if scanned barcode matches a sold-out pack (Discrepancy Handling)
+    const soldOutPack = (state.soldOutThisShift || []).find(so => {
+      const p = String(so.packNumber || '').replace(/[^0-9]/g, '');
+      return (p && cleanNum.includes(p)) || (so.gameName && rawBarcode.toLowerCase().includes(so.gameName.toLowerCase()));
+    });
+    if (soldOutPack) {
+      sfx.alert();
+      pendingSoldOutBarcode = rawBarcode;
+      pendingSoldOutPack = soldOutPack;
+      if (soldOutGameHeader) {
+        soldOutGameHeader.textContent = cleanGameTitle(soldOutPack.gameName || 'Scratch Off Ticket');
+      }
+      updateSoldOutTicketModal?.showModal();
+      return;
+    }
+
+    // 3. Duplicate check: Has this barcode already been scanned into inventory?
     if (isBarcodeAlreadyScanned(rawBarcode)) {
       const existing = findScannedBarcodeInfo(rawBarcode);
       sfx.alert();
       showToast(`⚠️ Already Scanned! Ticket [${rawBarcode}] was already put into Box #${existing?.boxNumber || '?'}. Skipping duplicate.`, 'error');
+      return;
+    }
+
+    // 4. Inventory Gatekeeper:
+    // Check if the barcode matches any known game in the database or stock in inventory
+    const matchedGame = findGameByBarcode(rawBarcode, state.customGames);
+    const isInInventory = (state.inventory || []).some(p => {
+      const pNum = String(p.packNumber || '').replace(/[^0-9]/g, '');
+      return pNum && cleanNum.includes(pNum);
+    });
+    const isInInventoryBarcodes = Boolean(state.inventoryBarcodes && state.inventoryBarcodes[rawBarcode]);
+
+    if (!matchedGame && !isInInventory && !isInInventoryBarcodes) {
+      // Un-inventoried / un-recognized ticket: Block with yellow alert banner and modal
+      sfx.alert();
+      if (scanActionTitle) {
+        scanActionTitle.textContent = '⚠️ THIS TICKET IS NOT IN THE INVENTORY OR NOT IN DATABASE';
+        scanActionTitle.style.background = '#fef08a';
+        scanActionTitle.style.color = '#854d0e';
+        scanActionTitle.style.padding = '4px 8px';
+        scanActionTitle.style.borderRadius = '4px';
+      }
+      if (lastScanDisplay) {
+        lastScanDisplay.textContent = `Last Scan: ${rawBarcode} (Ticket not in inventory)`;
+      }
+      if (notInInvBarcodeDetails) {
+        notInInvBarcodeDetails.textContent = rawBarcode;
+      }
+      ticketNotInInventoryModal?.showModal();
       return;
     }
 
@@ -2607,7 +3033,9 @@ function setupEventListeners() {
   });
   if (reportPrintFullBtn) {
     reportPrintFullBtn.addEventListener('click', () => {
-      openDayReportModal(() => state, sfx);
+      openTerminalReconcileModal(() => {
+        openDayReportModal(() => state, sfx);
+      });
     });
   }
   reportEmailBtn.addEventListener('click', () => {
@@ -3116,6 +3544,11 @@ function setupEventListeners() {
 
   // Set Box & Saved Barcodes Modals
   setupSetBoxModalLogic();
+
+  // LTSYSTEM Modals (Fix Position, Terminal Reconcile, Gatekeeper, Sold Out)
+  setupFixTicketPositionKeypad();
+  setupTerminalReconcileLogic();
+  setupDiscrepancyAndInventoryGatekeeperModals();
 
   const menuClearDataBtn = document.getElementById('menuClearDataBtn');
   if (menuClearDataBtn) {

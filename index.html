@@ -329,7 +329,16 @@
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding-top:14px; border-top:1px solid var(--border-color); flex-wrap:wrap;">
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" id="btnBoxSwitch" style="border: 1.5px solid #38bdf8; color: #38bdf8; font-weight:700;">
+            ⇄ Switch Box
+          </button>
+          <button type="button" class="btn btn-outline" id="btnBoxChange" style="border: 1.5px solid #a855f7; color: #a855f7; font-weight:700;">
+            ✏️ Change Box #
+          </button>
+          <button type="button" class="btn btn-outline" id="btnFixPosition" style="border: 1.5px solid #10b981; color: #10b981; font-weight:700;">
+            🎯 Fix Position
+          </button>
           <button class="btn btn-warning" id="btnMarkPackSoldOut" style="background:#f59e0b; color:#0f172a; font-weight:700;">
             🔥 Mark Sold Out (Full Pack)
           </button>
@@ -691,15 +700,21 @@
         </label>
         <div style="display: flex; justify-content: center; align-items: center; gap: 12px;">
           <span style="font-weight: 800; font-size: 1.25rem; color: var(--color-primary);">BOX #</span>
-          <input 
-            type="number" 
-            id="setBoxNumberInput" 
-            class="box-num-input" 
-            min="1" 
-            max="100" 
-            value="1" 
-            style="width: 120px; height: 50px; font-size: 1.8rem; font-weight: 800; text-align: center; font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: 8px;"
-          >
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <input 
+              type="number" 
+              id="setBoxNumberInput" 
+              class="box-num-input" 
+              min="1" 
+              max="100" 
+              value="1" 
+              style="width: 120px; height: 50px; font-size: 1.8rem; font-weight: 800; text-align: center; font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: 8px;"
+            >
+            <div class="stepper-arrows" style="display: flex; flex-direction: column; gap: 2px;">
+              <button type="button" class="stepper-btn" id="setBoxStepUp" style="height: 23px; width: 28px; padding: 0; font-size: 0.75rem;">▲</button>
+              <button type="button" class="stepper-btn" id="setBoxStepDown" style="height: 23px; width: 28px; padding: 0; font-size: 0.75rem;">▼</button>
+            </div>
+          </div>
           <button type="button" id="btnSetBoxConfirm" class="btn btn-primary" style="height: 50px; padding: 0 28px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; background: #10b981; border-color: #10b981;">
             SET
           </button>
@@ -720,6 +735,189 @@
     <div class="modal-footer" style="padding: 12px 20px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
       <button type="button" class="btn btn-secondary" id="btnCancelSetBox">Cancel</button>
       <span style="font-size: 0.75rem; color: #10b981; font-weight: 600;">✓ Duplicate tickets are automatically skipped</span>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Ticket Not In Inventory Alert (Matching LTSYSTEM Warning) -->
+  <dialog id="ticketNotInInventoryModal" style="width: 480px; max-width: 95vw; border-radius: 12px; border: 2px solid #ef4444; padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div style="background: #ef4444; color: #ffffff; padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between;">
+      <span>Ticket is not in the inventory</span>
+      <button type="button" class="modal-close-btn" id="closeTicketNotInInvBtn" style="color:#ffffff;">&times;</button>
+    </div>
+    <div style="padding: 24px 20px; text-align: center;">
+      <div style="font-size: 2.8rem; margin-bottom: 12px;">⚠️</div>
+      <div id="notInInvBarcodeDetails" style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); margin-bottom: 8px; font-family: var(--font-mono);">
+        ---
+      </div>
+      <p style="color: #ef4444; font-weight: 800; font-size: 1.05rem; margin-bottom: 20px;">
+        Ticket must be updated in the inventory first!
+      </p>
+      <div style="display: flex; justify-content: center; gap: 12px;">
+        <button type="button" class="btn btn-primary" id="btnConfirmNotInInvOk" style="min-width: 100px; font-weight: 800;">
+          OK
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnGoToUpdateInventory" style="font-weight: 700;">
+          📦 Open Stock Intake
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Update Sold Out Ticket (Matching LTSYSTEM Image 4) -->
+  <dialog id="updateSoldOutTicketModal" style="width: 480px; max-width: 95vw; border-radius: 12px; border: 2px solid #f59e0b; padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div style="background: #f59e0b; color: #0f172a; padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between;">
+      <span>Update Ticket</span>
+      <button type="button" class="modal-close-btn" id="closeUpdateSoldOutBtn" style="color:#0f172a;">&times;</button>
+    </div>
+    <div style="padding: 24px 20px; text-align: center;">
+      <div id="soldOutGameHeader" style="font-weight: 900; font-size: 1.25rem; color: #ef4444; margin-bottom: 12px;">
+        $20 MILLIONAIRE JU
+      </div>
+      <div style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); margin-bottom: 8px;">
+        This Ticket was sold out in previous shift
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 24px;">
+        Do you want to add this Ticket back into New Shift?
+      </p>
+      <div style="display: flex; justify-content: center; gap: 16px;">
+        <button type="button" class="btn btn-secondary" id="btnSoldOutNo" style="min-width: 100px; font-weight: 800;">
+          No
+        </button>
+        <button type="button" class="btn btn-primary" id="btnSoldOutFix" style="min-width: 100px; font-weight: 800; background: #2563eb;">
+          Fix
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Fix Ticket Position (Matching LTSYSTEM Image 6) -->
+  <dialog id="fixTicketPositionModal" style="width: 580px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div style="background: var(--bg-surface-elevated, #1e293b); color: var(--text-primary); padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+      <span>Fix Ticket Position</span>
+      <button type="button" class="modal-close-btn" id="closeFixTicketPosBtn">&times;</button>
+    </div>
+    <div style="padding: 20px; display: grid; grid-template-columns: 1fr 190px; gap: 20px;">
+      <!-- Left column: Info & Input -->
+      <div>
+        <div style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); margin-bottom: 8px;" id="fixPosGameName">
+          Name: $20 MILLIONAIRE JU
+        </div>
+        <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary); margin-bottom: 12px;" id="fixPosScannedPos">
+          Scanned position: 012
+        </div>
+        <p style="font-size: 0.8rem; color: #ef4444; line-height: 1.4; margin-bottom: 16px;">
+          If this ticket's start position needs to be fixed you can fix it by entering a correct position below. Leave it blank if the scanned position is correct.<br>
+          (If a non-numeric position is typed, then the ticket position entered will be ignored)
+        </p>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+            Enter correct Ticket Position:
+          </label>
+          <input type="number" id="inputFixTicketPosition" class="box-num-input" style="width: 120px; height: 44px; font-size: 1.35rem; text-align: center;" min="0" max="999">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelFixTicketPos" style="min-width: 85px;">Cancel</button>
+          <button type="button" class="btn btn-success" id="btnConfirmFixTicketPos" style="min-width: 85px; font-weight: 800; background: #16a34a; color: #fff;">Fix</button>
+        </div>
+      </div>
+      <!-- Right column: Touch Keypad -->
+      <div class="touch-keypad" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+        <button type="button" class="key-btn key-fn" id="keyFixClear" style="grid-column: span 1; font-size: 0.8rem; padding: 10px 4px;">Clear</button>
+        <button type="button" class="key-btn key-fn" id="keyFixBackspace" style="grid-column: span 2; font-size: 0.8rem; padding: 10px 4px;">⌫ Back</button>
+        <button type="button" class="key-btn key-num-fix" data-val="7">7</button>
+        <button type="button" class="key-btn key-num-fix" data-val="8">8</button>
+        <button type="button" class="key-btn key-num-fix" data-val="9">9</button>
+        <button type="button" class="key-btn key-num-fix" data-val="4">4</button>
+        <button type="button" class="key-btn key-num-fix" data-val="5">5</button>
+        <button type="button" class="key-btn key-num-fix" data-val="6">6</button>
+        <button type="button" class="key-btn key-num-fix" data-val="1">1</button>
+        <button type="button" class="key-btn key-num-fix" data-val="2">2</button>
+        <button type="button" class="key-btn key-num-fix" data-val="3">3</button>
+        <button type="button" class="key-btn key-num-fix" data-val="0">0</button>
+        <button type="button" class="key-btn key-num-fix" data-val=".">.</button>
+        <button type="button" class="key-btn key-enter" id="keyFixEnter" style="font-size: 0.8rem; padding: 10px 4px;">↵</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Georgia Lottery Terminal Reconciliation (Matching LTSYSTEM Image 15 & 16) -->
+  <dialog id="terminalReconcileModal" style="width: 580px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div style="background: var(--bg-surface-elevated, #1e293b); color: var(--text-primary); padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+      <span>Processing online Ticket data input</span>
+      <button type="button" class="modal-close-btn" id="closeTerminalReconcileBtn">&times;</button>
+    </div>
+    <div style="padding: 24px 20px; display: grid; grid-template-columns: 1fr 190px; gap: 20px; align-items: start;">
+      <!-- Left column: 3 Inputs -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+            Online Sale:
+          </label>
+          <div style="position: relative;">
+            <span style="position: absolute; left: 10px; top: 9px; color: var(--text-muted); font-weight: 700;">$</span>
+            <input type="number" id="inputTermOnlineSale" class="scanner-field text-right" style="padding-left: 24px; font-size: 1.25rem; font-weight: 800; height: 42px; width: 100%;" step="1" min="0" value="0">
+          </div>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+            Online Cash Out:
+          </label>
+          <div style="position: relative;">
+            <span style="position: absolute; left: 10px; top: 9px; color: var(--text-muted); font-weight: 700;">$</span>
+            <input type="number" id="inputTermOnlineCashOut" class="scanner-field text-right" style="padding-left: 24px; font-size: 1.25rem; font-weight: 800; height: 42px; width: 100%;" step="1" min="0" value="0">
+          </div>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+            Scratch Off Cash:
+          </label>
+          <div style="position: relative;">
+            <span style="position: absolute; left: 10px; top: 9px; color: var(--text-muted); font-weight: 700;">$</span>
+            <input type="number" id="inputTermScratchOffCash" class="scanner-field text-right" style="padding-left: 24px; font-size: 1.25rem; font-weight: 800; height: 42px; width: 100%;" step="1" min="0" value="0">
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="btnTerminalReconcileDone" style="height: 44px; font-size: 1.05rem; font-weight: 800; background: #2563eb; margin-top: 8px;">
+          DONE
+        </button>
+      </div>
+      <!-- Right column: Touch Keypad -->
+      <div class="touch-keypad" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+        <button type="button" class="key-btn key-fn" id="keyTermClear" style="grid-column: span 1; font-size: 0.8rem; padding: 10px 4px;">Clear</button>
+        <button type="button" class="key-btn key-fn" id="keyTermBackspace" style="grid-column: span 2; font-size: 0.8rem; padding: 10px 4px;">⌫ Back</button>
+        <button type="button" class="key-btn key-num-term" data-val="7">7</button>
+        <button type="button" class="key-btn key-num-term" data-val="8">8</button>
+        <button type="button" class="key-btn key-num-term" data-val="9">9</button>
+        <button type="button" class="key-btn key-num-term" data-val="4">4</button>
+        <button type="button" class="key-btn key-num-term" data-val="5">5</button>
+        <button type="button" class="key-btn key-num-term" data-val="6">6</button>
+        <button type="button" class="key-btn key-num-term" data-val="1">1</button>
+        <button type="button" class="key-btn key-num-term" data-val="2">2</button>
+        <button type="button" class="key-btn key-num-term" data-val="3">3</button>
+        <button type="button" class="key-btn key-num-term" data-val="0">0</button>
+        <button type="button" class="key-btn key-num-term" data-val=".">.</button>
+        <button type="button" class="key-btn key-enter" id="keyTermEnter" style="font-size: 0.8rem; padding: 10px 4px;">↵</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Switch Box Assignment -->
+  <dialog id="switchBoxModal" style="width: 440px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div style="background: var(--bg-surface-elevated, #1e293b); color: var(--text-primary); padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+      <span>⇄ Switch Dispenser Boxes</span>
+      <button type="button" class="modal-close-btn" id="closeSwitchBoxBtn">&times;</button>
+    </div>
+    <div style="padding: 20px; text-align: center;">
+      <div id="switchBoxSourceInfo" style="font-weight: 800; font-size: 1rem; color: var(--color-primary); margin-bottom: 14px;">
+        Switching Box #---
+      </div>
+      <label for="inputSwitchTargetBox" style="display: block; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+        Swap places with Box #:
+      </label>
+      <input type="number" id="inputSwitchTargetBox" class="box-num-input" min="1" max="100" style="width: 110px; height: 46px; font-size: 1.4rem; text-align: center; margin: 0 auto 20px auto;">
+      <div style="display: flex; justify-content: center; gap: 12px;">
+        <button type="button" class="btn btn-secondary" id="btnCancelSwitchBox">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmSwitchBox" style="font-weight: 800;">Confirm Swap</button>
+      </div>
     </div>
   </dialog>
 
