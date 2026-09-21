@@ -705,9 +705,37 @@ const btnSellOneTicket = document.getElementById('btnSellOneTicket');
 const btnSetCountZero = document.getElementById('btnSetCountZero');
 const saveBoxAdjustBtn = document.getElementById('saveBoxAdjustBtn');
 
+export function showModalError(bannerId, msg, targetInput = null) {
+  const banner = document.getElementById(bannerId);
+  if (banner) {
+    banner.innerHTML = `<span>⚠️</span> <div>${msg}</div>`;
+    banner.style.display = 'flex';
+  }
+  if (targetInput) {
+    targetInput.classList.add('input-error-highlight');
+    targetInput.focus();
+    targetInput.select?.();
+    targetInput.addEventListener('input', () => {
+      targetInput.classList.remove('input-error-highlight');
+      if (banner) banner.style.display = 'none';
+    }, { once: true });
+  }
+  sfx.alert();
+  showToast(msg, 'error');
+}
+
+export function clearModalError(bannerId, ...inputs) {
+  const banner = document.getElementById(bannerId);
+  if (banner) banner.style.display = 'none';
+  inputs.forEach(inp => {
+    if (inp) inp.classList.remove('input-error-highlight');
+  });
+}
+
 function openBoxAdjustModal(slot) {
   currentAdjustingSlot = slot;
   if (!boxAdjustModal) return;
+  clearModalError('boxAdjustErrorBanner', inputAdjustCount);
 
   adjustModalTitle.textContent = `📦 Dispenser Box #${slot.boxNumber} Details`;
   adjustGameName.textContent = slot.gameName;
@@ -853,9 +881,10 @@ function setupBoxAdjustModal() {
 
   saveBoxAdjustBtn?.addEventListener('click', () => {
     if (!currentAdjustingSlot) return;
+    clearModalError('boxAdjustErrorBanner', inputAdjustCount);
     const newCount = parseInt(inputAdjustCount.value, 10);
     if (isNaN(newCount) || newCount < 0) {
-      showToast('Please enter a valid ticket count (0 or higher).', 'error');
+      showModalError('boxAdjustErrorBanner', 'Please enter a valid ticket count (0 or higher).', inputAdjustCount);
       return;
     }
 
@@ -863,9 +892,7 @@ function setupBoxAdjustModal() {
     const packSize = currentAdjustingSlot.packSize || std.packSize;
 
     if (newCount > packSize) {
-      sfx.alert();
-      showToast(`⚠️ Invalid Count! A $${currentAdjustingSlot.price} pack only has ${packSize} tickets (#00 to #${String(packSize - 1).padStart(2, '0')}). Max value is ${packSize}.`, 'error');
-      inputAdjustCount?.focus();
+      showModalError('boxAdjustErrorBanner', `⚠️ Invalid Count! A $${currentAdjustingSlot.price} pack only has ${packSize} tickets (#00 to #${String(packSize - 1).padStart(2, '0')}). Max value is ${packSize}.`, inputAdjustCount);
       return;
     }
 
@@ -996,6 +1023,7 @@ function handleConfirmSwitchBox() {
 
 function openFixTicketPositionModal(slot) {
   if (!fixTicketPositionModal || !slot) return;
+  clearModalError('fixPosErrorBanner', inputFixTicketPosition);
   fixPosGameName.textContent = `Name: ${cleanGameTitle(slot.gameName || 'Scratch Off')}`;
   fixPosScannedPos.textContent = `Scanned position: ${String(slot.currentTicket || 0).padStart(3, '0')}`;
   inputFixTicketPosition.value = slot.currentTicket !== undefined ? slot.currentTicket : 0;
@@ -1012,18 +1040,22 @@ function handleConfirmFixTicketPosition() {
     fixTicketPositionModal?.close();
     return;
   }
+  clearModalError('fixPosErrorBanner', inputFixTicketPosition);
   const rawVal = inputFixTicketPosition.value.trim();
   if (rawVal === '') {
     fixTicketPositionModal.close();
+    return;
+  }
+  const newPos = parseInt(rawVal, 10);
+  if (isNaN(newPos) || newPos < 0) {
+    showModalError('fixPosErrorBanner', 'Please enter a valid ticket number (0 or higher).', inputFixTicketPosition);
     return;
   }
   const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
   const packSize = currentAdjustingSlot.packSize || std.packSize;
 
   if (newPos >= packSize) {
-    sfx.alert();
-    showToast(`⚠️ Invalid Position! A $${currentAdjustingSlot.price} game ($${(packSize * currentAdjustingSlot.price).toFixed(0)} book) only has ${packSize} tickets (#00 to #${String(packSize - 1).padStart(2, '0')}). Position #${newPos} exceeds the pack!`, 'error');
-    inputFixTicketPosition?.focus();
+    showModalError('fixPosErrorBanner', `⚠️ Invalid Position! A $${currentAdjustingSlot.price} game ($${(packSize * currentAdjustingSlot.price).toFixed(0)} book) only has ${packSize} tickets (#00 to #${String(packSize - 1).padStart(2, '0')}). Position #${newPos} exceeds the pack!`, inputFixTicketPosition);
     return;
   }
 
@@ -1278,6 +1310,40 @@ export function formatGameTitle(price, name) {
 }
 
 
+function showActivationModalError(msg, targetInput = null) {
+  showModalError('activationErrorBanner', msg, targetInput);
+}
+
+function clearActivationModalError() {
+  clearModalError(
+    'activationErrorBanner',
+    document.getElementById('presetStartTicketInput'),
+    document.getElementById('presetPackNumberInput'),
+    keypadBoxInput
+  );
+}
+
+function updateActivationPackHints(game) {
+  if (!game) return;
+  const packHint = document.getElementById('activationPackHint');
+  const startMaxHint = document.getElementById('startTicketMaxHint');
+  const presetStartInput = document.getElementById('presetStartTicketInput');
+  const maxTicketNum = game.packSize - 1;
+  const maxTicketFormatted = String(maxTicketNum).padStart(2, '0');
+  const bookVal = (game.packSize * game.price).toFixed(0);
+
+  if (packHint) {
+    packHint.textContent = `📖 Pack Size: ${game.packSize} Tickets (#00 to #${maxTicketFormatted}) • Book Value: $${bookVal}.00`;
+  }
+  if (startMaxHint) {
+    startMaxHint.textContent = `Max: #${maxTicketFormatted}`;
+  }
+  if (presetStartInput) {
+    presetStartInput.max = maxTicketNum;
+    presetStartInput.title = `Valid tickets: #00 to #${maxTicketFormatted}`;
+  }
+}
+
 function populateActivationGameDropdown() {
   const activationGameDropdown = document.getElementById('activationGameDropdown');
   if (!activationGameDropdown) return;
@@ -1290,6 +1356,7 @@ function populateActivationGameDropdown() {
   });
 
   activationGameDropdown.addEventListener('change', () => {
+    clearActivationModalError();
     const chosenGame = SAMPLE_GAMES.find(g => g.id === activationGameDropdown.value);
     if (chosenGame) {
       pendingActivationPack = {
@@ -1302,17 +1369,14 @@ function populateActivationGameDropdown() {
       activationGameTitle.textContent = formatGameTitle(chosenGame.price, chosenGame.name);
       const presetPackInput = document.getElementById('presetPackNumberInput');
       if (presetPackInput) presetPackInput.value = pendingActivationPack.packNumber;
-      const presetStartInput = document.getElementById('presetStartTicketInput');
-      if (presetStartInput) {
-        presetStartInput.max = chosenGame.packSize - 1;
-        presetStartInput.title = `Valid tickets: #00 to #${String(chosenGame.packSize - 1).padStart(2, '0')}`;
-      }
+      updateActivationPackHints(chosenGame);
       sfx.keypad();
     }
   });
 }
 
 function openActivationForBox(boxNumber, preselectedPack = null) {
+  clearActivationModalError();
   let pack = preselectedPack;
   const activationGameDropdown = document.getElementById('activationGameDropdown');
   
@@ -1339,9 +1403,8 @@ function openActivationForBox(boxNumber, preselectedPack = null) {
   const presetStartInput = document.getElementById('presetStartTicketInput');
   if (presetStartInput) {
     presetStartInput.value = 0;
-    presetStartInput.max = pack.packSize - 1;
-    presetStartInput.title = `Valid tickets: #00 to #${String(pack.packSize - 1).padStart(2, '0')}`;
   }
+  updateActivationPackHints(pack);
 
   const boxInputHint = document.getElementById('boxInputHint');
   if (boxInputHint) {
@@ -1441,20 +1504,22 @@ function setupKeypad() {
   // "Not In Box" action
   btnNotInBox.addEventListener('click', () => {
     sfx.chime();
+    clearActivationModalError();
     activationModal.close();
     showToast(`Pack #${pendingActivationPack?.packNumber || '0000'} stored in back-office inventory.`, 'info');
   });
 
   closeActivationBtn.addEventListener('click', () => {
+    clearActivationModalError();
     activationModal.close();
   });
 }
 
 function commitBoxActivation() {
+  clearActivationModalError();
   const boxNum = parseInt(keypadBoxInput.value, 10);
   if (!boxNum || boxNum < 1 || boxNum > 100) {
-    sfx.alert();
-    showToast('Please enter a valid box number between 1 and 100', 'error');
+    showActivationModalError('Please enter a valid box number between 1 and 100', keypadBoxInput);
     return;
   }
 
@@ -1472,13 +1537,14 @@ function commitBoxActivation() {
   let chosenSize = pack.packSize || getStandardPackDetails(chosenPrice).packSize;
   let chosenStart = 0; // Georgia Lottery packs start at ticket 00
 
-  const pPackRaw = document.getElementById('presetPackNumberInput')?.value.trim();
-  const pStart = parseInt(document.getElementById('presetStartTicketInput')?.value, 10);
+  const pPackInput = document.getElementById('presetPackNumberInput');
+  const pPackRaw = pPackInput?.value.trim();
+  const pStartInput = document.getElementById('presetStartTicketInput');
+  const pStart = parseInt(pStartInput?.value, 10);
   if (pPackRaw) {
     const cleanPack = pPackRaw.replace(/[^0-9]/g, '');
     if (cleanPack.length === 0) {
-      sfx.alert();
-      showToast('⚠️ Invalid Pack Number! Pack numbers must contain only digits (e.g. 882853). Emojis and letters are not allowed.', 'error');
+      showActivationModalError('⚠️ Invalid Pack Number! Pack numbers must contain only digits (e.g. 882853). Emojis and letters are not allowed.', pPackInput);
       return;
     }
     chosenPack = cleanPack;
@@ -1489,8 +1555,8 @@ function commitBoxActivation() {
   // Validate that start ticket does NOT exceed max tickets in pack!
   // e.g. $50 ticket has book value $900 -> 18 tickets (#00 to #17). Ticket 25 is impossible!
   if (chosenStart >= chosenSize) {
-    sfx.alert();
-    showToast(`⚠️ Invalid Start Ticket! A $${chosenPrice} game ($${(chosenSize * chosenPrice).toFixed(0)} book) only has ${chosenSize} tickets (#00 to #${String(chosenSize - 1).padStart(2, '0')}). Ticket #${chosenStart} does not exist!`, 'error');
+    const maxTicket = String(chosenSize - 1).padStart(2, '0');
+    showActivationModalError(`⚠️ Invalid Start Ticket! A $${chosenPrice} game ($${(chosenSize * chosenPrice).toFixed(0)} book) only has ${chosenSize} tickets (#00 to #${maxTicket}). Ticket #${chosenStart} does not exist!`, pStartInput);
     return;
   }
 

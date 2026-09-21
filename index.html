@@ -207,11 +207,14 @@
         <div class="activation-header-banner">
           <div class="activation-header-title-box">
             <div class="activation-game-badge" id="activationGameTitle">$1 5X MONEY</div>
-            <div class="activation-pack-hint">Ticket Pack starts at #00 &bull; Active Count: 00</div>
+            <div class="activation-pack-hint" id="activationPackHint">Ticket Pack starts at #00 &bull; Active Count: 00</div>
           </div>
           <div class="mode-toggle-pills">
           </div>
         </div>
+
+        <!-- Inline Error Banner for Activation Modal -->
+        <div id="activationErrorBanner" class="modal-error-banner" style="display: none;"></div>
 
         <!-- 1. Preset Dropdown Container -->
         <div id="activationDropdownContainer" class="activation-preset-row">
@@ -225,9 +228,10 @@
             <label class="activation-field-label">PACK #:</label>
             <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" id="presetPackNumberInput" class="scanner-field activation-input" placeholder="Pack # (e.g. 882853)">
           </div>
-          <div style="width: 80px;">
+          <div style="width: 95px;">
             <label class="activation-field-label">START #:</label>
             <input type="number" id="presetStartTicketInput" class="scanner-field activation-input text-center" min="0" max="999" value="0">
+            <div id="startTicketMaxHint" style="font-size: 0.72rem; color: #94a3b8; text-align: center; margin-top: 3px; font-weight: 700;">Max: #17</div>
           </div>
         </div>
 
@@ -311,6 +315,9 @@
           <div style="grid-column: span 2;">Saved Barcodes: <button type="button" id="btnAdjustViewBarcodes" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700;"><span id="adjustBarcodesCount">0</span> Barcodes 🔍</button></div>
         </div>
       </div>
+
+      <!-- Inline Error Banner for Box Adjust Modal -->
+      <div id="boxAdjustErrorBanner" class="modal-error-banner" style="display: none;"></div>
 
       <div style="margin-bottom:20px;">
         <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:8px; color:var(--text-secondary);">
@@ -816,6 +823,8 @@
         <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary); margin-bottom: 12px;" id="fixPosScannedPos">
           Scanned position: 012
         </div>
+        <!-- Inline Error Banner for Fix Position Modal -->
+        <div id="fixPosErrorBanner" class="modal-error-banner" style="display: none;"></div>
         <p style="font-size: 0.8rem; color: #ef4444; line-height: 1.4; margin-bottom: 16px;">
           If this ticket's start position needs to be fixed you can fix it by entering a correct position below. Leave it blank if the scanned position is correct.<br>
           (If a non-numeric position is typed, then the ticket position entered will be ignored)
