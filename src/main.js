@@ -546,83 +546,66 @@ function renderHeaderAndMetrics() {
 function renderDispenserRack() {
   dispensersGrid.innerHTML = '';
 
-  state.slots.forEach(slot => {
+  const activeSlots = state.slots.filter(isBoxActive);
+
+  if (activeSlots.length === 0) {
+    dispensersGrid.innerHTML = `
+      <div class="empty-rack-notice">
+        <div class="empty-rack-icon">🎟️</div>
+        <div class="empty-rack-title">No Active Tickets on Counter</div>
+        <div class="empty-rack-sub">Scan a lottery ticket pack barcode to activate and display a box here.</div>
+      </div>
+    `;
+    return;
+  }
+
+  activeSlots.forEach(slot => {
     const card = document.createElement('div');
     const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
 
-    // A box is active when it has an assigned pack and status ACTIVE
-    const isBoxEmpty = slot.status !== 'ACTIVE' || !slot.packNumber;
-
-    if (!isBoxEmpty) {
-      let ageBoxClass = '';
-      if (slot.daysActive >= 21) {
-        ageBoxClass = 'age-21-box';
-      } else if (slot.daysActive >= 12) {
-        ageBoxClass = 'age-12-box';
-      } else if (slot.daysActive >= 7) {
-        ageBoxClass = 'age-7-box';
-      }
-
-      card.className = `box-card active ${ageBoxClass} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
-
-      const cleanName = cleanGameTitle(slot.gameName);
-      const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
-      const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
-      card.innerHTML = `
-        <div class="card-header-row">
-          <span class="price-tag">$${slot.price}</span>
-          <span class="box-num-label">Box ${slot.boxNumber}</span>
-        </div>
-        <div class="card-center-body">
-          <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
-          <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
-          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
-        </div>
-        <div class="card-dashed-line"></div>
-        <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
-          <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
-          ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
-          ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
-        </div>
-      `;
-
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('.quick-sell-btn')) {
-          e.stopPropagation();
-          quickSellTicket(slot);
-          return;
-        }
-        handleBoxCardClick(slot);
-      });
-    } else {
-      // Empty slot
-      card.className = 'box-card empty-slot';
-      card.innerHTML = `
-        <div class="empty-slot-plus">+</div>
-        <div class="empty-slot-title">Box ${slot.boxNumber} · Empty</div>
-        <span class="empty-slot-sub">Tap to Activate</span>
-      `;
-      card.addEventListener('click', () => {
-        openActivationForBox(slot.boxNumber);
-      });
+    let ageBoxClass = '';
+    if (slot.daysActive >= 21) {
+      ageBoxClass = 'age-21-box';
+    } else if (slot.daysActive >= 12) {
+      ageBoxClass = 'age-12-box';
+    } else if (slot.daysActive >= 7) {
+      ageBoxClass = 'age-7-box';
     }
+
+    card.className = `box-card active ${ageBoxClass} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
+
+    const cleanName = cleanGameTitle(slot.gameName);
+    const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
+    const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
+    card.innerHTML = `
+      <div class="card-header-row">
+        <span class="price-tag">$${slot.price}</span>
+        <span class="box-num-label">Box ${slot.boxNumber}</span>
+      </div>
+      <div class="card-center-body">
+        <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
+        <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
+        ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
+      </div>
+      <div class="card-dashed-line"></div>
+      <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
+        <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
+        ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
+        ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
+      </div>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.quick-sell-btn')) {
+        e.stopPropagation();
+        quickSellTicket(slot);
+        return;
+      }
+      handleBoxCardClick(slot);
+    });
 
     dispensersGrid.appendChild(card);
   });
-
-  // Dedicated "+ Add Box" card at the end of the dispenser rack
-  const addCard = document.createElement('div');
-  addCard.className = 'box-card add-new-box-card';
-  addCard.id = 'cardAddNewBox';
-  addCard.innerHTML = `
-    <div class="empty-slot-plus">+</div>
-    <div class="empty-slot-title">Add Box #${state.totalSlots + 1}</div>
-    <span class="empty-slot-sub">Expand Store Rack</span>
-  `;
-  addCard.addEventListener('click', () => {
-    addNewBox();
-  });
-  dispensersGrid.appendChild(addCard);
 }
 
 function renderSlotsRibbon() {
@@ -3653,12 +3636,12 @@ function setupEventListeners() {
 
   document.getElementById('tabInactive')?.addEventListener('click', () => {
     sfx.keypad();
-    const firstEmpty = document.querySelector('.box-card.empty-slot');
+    const firstEmpty = document.querySelector('.ribbon-cell.empty-slot');
     if (firstEmpty) {
-      firstEmpty.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstEmpty.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       firstEmpty.classList.add('pulse-highlight');
       setTimeout(() => firstEmpty.classList.remove('pulse-highlight'), 1800);
-      showToast(`📦 ${metricInactive?.textContent || 0} Inactive / Empty dispenser boxes. Tap any box to activate a pack.`, 'info');
+      showToast(`📦 ${metricInactive?.textContent || 0} Inactive / Empty dispenser slots in rack. Scan a pack barcode to activate a ticket.`, 'info');
     } else {
       showToast('All dispenser boxes are currently active!', 'success');
     }

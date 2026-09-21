@@ -464,14 +464,21 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html, body {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-app);
   color: var(--text-primary);
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
+  overflow: hidden;
   user-select: none;
 }
 
@@ -1119,10 +1126,12 @@ body {
    ============================================================= */
 .main-workspace {
   flex: 1;
+  min-height: 0;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding: 6px 12px;
+  padding: 4px 12px 2px 12px;
+  overflow: hidden;
 }
 
 .dispensers-grid-wrapper {
@@ -1130,14 +1139,18 @@ body {
   gap: 6px;
   align-items: stretch;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .dispensers-grid {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 10px;
+  gap: 8px;
   align-content: start;
+  padding-bottom: 4px;
 }
 
 /* Acrylic Dispenser Box Card */
@@ -1145,8 +1158,8 @@ body {
   background: #ffffff;
   border: 1.5px solid #1e293b;
   border-radius: 0; /* Sharp acrylic box edges! */
-  height: 240px;
-  padding: 8px 10px;
+  height: 205px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1376,6 +1389,53 @@ body {
   text-align: center;
 }
 
+.empty-rack-notice {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  margin: 20px auto;
+  max-width: 540px;
+  width: 100%;
+}
+
+.empty-rack-icon {
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+}
+
+.empty-rack-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.empty-rack-sub {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .empty-rack-notice {
+  background: rgba(17, 28, 53, 0.6);
+  border-color: #24355a;
+}
+
+[data-theme="dark"] .empty-rack-title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .empty-rack-sub {
+  color: #94a3b8;
+}
+
 @media (max-height: 720px) {
   .box-card {
     height: 195px;
@@ -1519,13 +1579,14 @@ body {
    BOTTOM STATUS STRIP (Legend & Slot Counters)
    ============================================================= */
 .bottom-status-strip {
+  flex-shrink: 0;
   margin-top: auto;
   background: #ffffff;
   border-top: 1.5px solid #cbd5e1;
-  padding: 6px 8px 2px 8px;
+  padding: 4px 8px 2px 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .legend-and-stats {
