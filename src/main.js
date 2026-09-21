@@ -379,28 +379,21 @@ function renderHeaderAndMetrics() {
     scanActionTitle.textContent = 'Shift Closed · Ready for New Shift';
   }
 
+  if (state.shiftStatus === 'SCANNING_END_SHIFT') {
+    scanActionTitle.textContent = 'Scanning...End Shift';
+  } else if (state.shiftStatus === 'IN_PROGRESS') {
+    scanActionTitle.textContent = 'Shift in Progress';
+  } else if (state.shiftStatus === 'SHIFT_ENDED') {
+    scanActionTitle.textContent = 'Shift Ended';
+  }
+
   if (state.lastScanData) {
     const d = state.lastScanData;
-    const isVerified = d.action === 'VERIFIED';
-    const formattedPrice = Number(d.price).toFixed(2);
-    lastScanDisplay.innerHTML = `
-      <div class="scan-chips-row">
-        <span class="scan-chip chip-barcode" title="Scanned Barcode"><span class="chip-lbl">BARCODE:</span> ${d.barcode}</span>
-        <span class="scan-chip chip-box">BOX #${d.boxNumber}</span>
-        <span class="scan-chip chip-price">$${formattedPrice}</span>
-        <span class="scan-chip chip-game">${d.gameName}</span>
-        <span class="scan-chip chip-pack"><span class="chip-lbl">PACK:</span> #${d.packNumber}</span>
-        <span class="scan-chip chip-ticket"><span class="chip-lbl">TICKET:</span> #${String(d.ticketNumber).padStart(2, '0')}</span>
-        <span class="scan-chip chip-action ${isVerified ? 'verified' : 'sold'}">${isVerified ? '✓ VERIFIED' : `🛒 +1 SOLD ($${formattedPrice})`}</span>
-      </div>
-    `;
+    lastScanDisplay.textContent = `Last Scan: $${Number(d.price)} ${cleanGameTitle(d.gameName)} (#${String(d.ticketNumber).padStart(2, '0')})`;
   } else if (state.lastScannedBarcode) {
     lastScanDisplay.textContent = `Last Scan: ${state.lastScannedBarcode}`;
   } else {
-    lastScanDisplay.innerHTML = `<span class="scan-chip chip-idle">⚡ Scanner Ready · Point scanner at ticket barcode or enter box number</span>`;
-  }
-  if (lastScanDisplay) {
-    lastScanDisplay.removeAttribute('title');
+    lastScanDisplay.textContent = 'Ready for scan';
   }
 
   const remainingPacksCount = document.getElementById('remainingPacksCount');
@@ -415,10 +408,10 @@ function renderHeaderAndMetrics() {
   if (state.shiftStatus === 'SCANNING_END_SHIFT') {
     const verifiedCount = state.slots.filter(s => isBoxActive(s) && s.scannedInEndShift).length;
     largeStatReadout.textContent = `${verifiedCount}/${activeCount}`;
-    if (largeStatLabel) largeStatLabel.textContent = 'Boxes Verified';
+    if (largeStatLabel) largeStatLabel.textContent = '';
   } else {
     largeStatReadout.textContent = state.lastScannedSlot || activeCount;
-    if (largeStatLabel) largeStatLabel.textContent = state.lastScannedSlot ? `Box #${state.lastScannedSlot}` : 'Active Slots';
+    if (largeStatLabel) largeStatLabel.textContent = '';
   }
 
   // Calculate current sales this shift (from active slots + packs sold out this shift)
