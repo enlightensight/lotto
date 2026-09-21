@@ -1194,6 +1194,14 @@ body {
   display: none;
 }
 
+.box-num-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 /* Card Center: Huge Bold Black Box Number */
 .card-center-body {
   text-align: center;

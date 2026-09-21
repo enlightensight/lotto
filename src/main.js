@@ -566,18 +566,21 @@ function renderDispenserRack() {
       card.className = `box-card active ${ageBoxClass} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
 
       const cleanName = cleanGameTitle(slot.gameName);
+      const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
+      const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
       card.innerHTML = `
         <div class="card-header-row">
           <span class="price-tag">$${slot.price}</span>
+          <span class="box-num-label">Box ${slot.boxNumber}</span>
         </div>
         <div class="card-center-body">
-          <div class="box-main-number">${slot.boxNumber}</div>
+          <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
           <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
-          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : (slot.startTicket > 0 && slot.currentTicket === slot.startTicket ? `<div class="new-activation-text" style="background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.35);">Starts #${String(slot.startTicket).padStart(2, '0')}</div>` : '')}
+          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
         </div>
         <div class="card-dashed-line"></div>
         <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
-          <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${String(slot.currentTicket !== undefined ? slot.currentTicket : 0).padStart(2, '0')}</span>
+          <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
           ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
           ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
         </div>
@@ -4129,9 +4132,60 @@ function setupEventListeners() {
   document.getElementById('closeStartShiftConfirmBtn')?.addEventListener('click', () => document.getElementById('startShiftConfirmModal')?.close());
   document.getElementById('cancelStartShiftConfirmBtn')?.addEventListener('click', () => document.getElementById('startShiftConfirmModal')?.close());
   document.getElementById('confirmStartShiftBtn')?.addEventListener('click', () => {
-    const name = document.getElementById('inputNewShiftCashierName')?.value?.trim() || state.cashierName || 'master';
+    // Validate Worker ID and Password
+    const workerId = document.getElementById('inputNewShiftWorkerId')?.value?.trim() || '';
+    const password = document.getElementById('inputNewShiftPassword')?.value?.trim() || '';
+    const loginError = document.getElementById('shiftLoginError');
+
+    if (!workerId || !password) {
+      if (loginError) {
+        loginError.textContent = '❌ Please enter both Worker ID and Password.';
+        loginError.style.display = 'block';
+      }
+      sfx.alert();
+      return;
+    }
+
+    // Default workers if none configured
+    if (!state.workers || state.workers.length === 0) {
+      state.workers = [
+        { id: 'master', password: '1234', name: 'Master' },
+        { id: 'W001', password: '0000', name: 'Worker 1' }
+      ];
+      saveState(state);
+    }
+
+    const matchedWorker = (state.workers || []).find(w =>
+      w.id.toLowerCase() === workerId.toLowerCase() && w.password === password
+    );
+
+    if (!matchedWorker) {
+      if (loginError) {
+        loginError.textContent = '❌ Invalid Worker ID or Password. Please try again.';
+        loginError.style.display = 'block';
+      }
+      sfx.alert();
+      document.getElementById('inputNewShiftPassword').value = '';
+      document.getElementById('inputNewShiftPassword')?.focus();
+      return;
+    }
+
+    // Login successful — hide error, auto-fill cashier name
+    if (loginError) loginError.style.display = 'none';
+    const cashierInput = document.getElementById('inputNewShiftCashierName');
+    if (cashierInput && (!cashierInput.value.trim() || cashierInput.value.trim() === state.cashierName)) {
+      cashierInput.value = matchedWorker.name || matchedWorker.id;
+    }
+    const name = cashierInput?.value?.trim() || matchedWorker.name || state.cashierName || 'master';
     const floatVal = Math.max(0, parseFloat(document.getElementById('inputNewShiftDrawerFloat')?.value) || 0);
     executeStartNewShift(name, floatVal);
+
+    // Clear login fields after successful start
+    document.getElementById('inputNewShiftWorkerId').value = '';
+    document.getElementById('inputNewShiftPassword').value = '';
+  });
+  document.getElementById('inputNewShiftPassword')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('confirmStartShiftBtn')?.click();
   });
   document.getElementById('inputNewShiftCashierName')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('confirmStartShiftBtn')?.click();
