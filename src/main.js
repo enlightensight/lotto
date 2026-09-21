@@ -1057,6 +1057,7 @@ function setupTerminalReconcileLogic() {
 
 let pendingSoldOutBarcode = null;
 let pendingSoldOutPack = null;
+let pendingRestorePack = null;
 
 function setupDiscrepancyAndInventoryGatekeeperModals() {
   // Ticket Not In Inventory Modal
@@ -1089,6 +1090,7 @@ function setupDiscrepancyAndInventoryGatekeeperModals() {
   btnSoldOutFix?.addEventListener('click', () => {
     updateSoldOutTicketModal?.close();
     if (pendingSoldOutBarcode) {
+      pendingRestorePack = pendingSoldOutPack;
       openSetBoxModal(pendingSoldOutBarcode);
     }
   });
@@ -2352,11 +2354,13 @@ function confirmSetBoxForTicket() {
   }
 
   const barcode = pendingSetBoxBarcode;
-  const success = handleSetBoxForTicket(boxNum, barcode, pendingSetBoxGame);
+  const restorePack = pendingRestorePack;
+  const success = handleSetBoxForTicket(boxNum, barcode, pendingSetBoxGame, restorePack);
   if (success) {
     setBoxModal?.close();
     pendingSetBoxBarcode = null;
     pendingSetBoxGame = null;
+    pendingRestorePack = null;
 
     const invInput = document.getElementById('invBoxTicketBarcodeInput');
     if (invInput) {
@@ -2373,7 +2377,7 @@ function confirmSetBoxForTicket() {
   }
 }
 
-function handleSetBoxForTicket(boxNumber, barcode, detectedGame) {
+function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = null) {
   const boxNum = parseInt(boxNumber, 10);
   if (isNaN(boxNum) || boxNum < 1) {
     showToast('Please enter a valid Box # (1 or higher).', 'error');
@@ -2440,8 +2444,37 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame) {
   slot.scannedBarcodes.push(barcodeRecord);
   slot.ticketsInBox = slot.scannedBarcodes.length;
 
-  // If slot was empty, activate it with detected or fallback game
-  if (slot.status === 'EMPTY' || !slot.gameName) {
+  // Restore sold-out pack vs brand new activation
+  if (restorePack) {
+    const std = getStandardPackDetails(restorePack.price || 2);
+    slot.status = 'ACTIVE';
+    slot.gameId = restorePack.gameId || (detectedGame ? detectedGame.id : 'g101');
+    slot.gameName = cleanGameTitle(restorePack.gameName || (detectedGame ? detectedGame.name : 'Lottery Game'));
+    slot.price = restorePack.price || (detectedGame ? detectedGame.price : 2);
+    slot.packNumber = restorePack.packNumber || (cleanDigits.length >= 6 ? cleanDigits.slice(-7) : barcode);
+    slot.packSize = restorePack.packSize || std.packSize;
+
+    // Use ticket number from scanned barcode, or closing ticket from sold-out pack
+    const restoredPos = (ticketNum !== null && !isNaN(ticketNum))
+      ? ticketNum
+      : ((restorePack.closeTicket !== undefined && restorePack.closeTicket !== null) ? restorePack.closeTicket : 0);
+
+    slot.startTicket = restoredPos;
+    slot.currentTicket = restoredPos;
+    slot.activatedThisShift = false; // Restored pack, NOT a brand new #00 pack
+    slot.daysActive = restorePack.daysActive || 1;
+
+    // Remove from state.soldOutThisShift so it's no longer marked sold out
+    if (state.soldOutThisShift) {
+      const soIdx = state.soldOutThisShift.findIndex(
+        so => so.packNumber === slot.packNumber || so.boxNumber === slot.boxNumber
+      );
+      if (soIdx >= 0) {
+        state.soldOutThisShift.splice(soIdx, 1);
+      }
+    }
+    showToast(`✓ Restored Pack #${slot.packNumber} into Box #${boxNum} at Ticket #${String(restoredPos).padStart(2, '0')}!`, 'success');
+  } else if (slot.status === 'EMPTY' || !slot.gameName) {
     const game = detectedGame || findGameByBarcode(barcode, state.customGames) || SAMPLE_GAMES[0];
     const std = getStandardPackDetails(game.price || 2);
     slot.status = 'ACTIVE';
@@ -2450,9 +2483,10 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame) {
     slot.price = game.price || 2;
     slot.packNumber = cleanDigits.length >= 6 ? cleanDigits.slice(-7) : barcode;
     slot.packSize = game.packSize || std.packSize;
-    slot.startTicket = 0;
-    slot.currentTicket = 0;
-    slot.activatedThisShift = true;
+    const initialPos = ticketNum !== null && !isNaN(ticketNum) ? ticketNum : 0;
+    slot.startTicket = initialPos;
+    slot.currentTicket = initialPos;
+    slot.activatedThisShift = (initialPos === 0);
     slot.daysActive = 1;
   }
 
