@@ -22,15 +22,25 @@ export const SAMPLE_GAMES = [
   { id: 'g115', name: '50X MONEY', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1422' },
   { id: 'g116', name: 'HIT 500', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1893' },
   { id: 'g117', name: 'PLATINUM', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1871' },
-  { id: 'g118', name: '100X MONEY', price: 20, bookValue: 600, packSize: 30, barcodePrefix: '1423' },
-  { id: 'g119', name: 'HIT 1000', price: 20, bookValue: 600, packSize: 30, barcodePrefix: '1894' },
-  { id: 'g120', name: '200X MONEY', price: 25, bookValue: 750, packSize: 30, barcodePrefix: '1860' },
-  { id: 'g121', name: 'GRANT 50', price: 30, bookValue: 900, packSize: 30, barcodePrefix: '1881' },
-  { id: 'g122', name: 'MILLIONAIRE MA', price: 30, bookValue: 900, packSize: 30, barcodePrefix: '1843' },
-  { id: 'g123', name: '500X THE MONEY', price: 50, bookValue: 1000, packSize: 20, barcodePrefix: '1770' },
-  { id: 'g124', name: 'CASH 500000 $', price: 50, bookValue: 1000, packSize: 20, barcodePrefix: '1890' },
-  { id: 'g125', name: 'JUMBO BUCK EXT', price: 50, bookValue: 1000, packSize: 20, barcodePrefix: '1835' }
+  { id: 'g118', name: '100X MONEY', price: 20, bookValue: 300, packSize: 15, barcodePrefix: '1423' },
+  { id: 'g119', name: 'HIT 1000', price: 20, bookValue: 300, packSize: 15, barcodePrefix: '1894' },
+  { id: 'g120', name: '200X MONEY', price: 25, bookValue: 300, packSize: 12, barcodePrefix: '1860' },
+  { id: 'g121', name: 'GRANT 50', price: 30, bookValue: 300, packSize: 10, barcodePrefix: '1881' },
+  { id: 'g122', name: 'MILLIONAIRE MA', price: 30, bookValue: 300, packSize: 10, barcodePrefix: '1843' },
+  { id: 'g123', name: '500X THE MONEY', price: 50, bookValue: 900, packSize: 18, barcodePrefix: '1770' },
+  { id: 'g124', name: 'CASH 500000 $', price: 50, bookValue: 900, packSize: 18, barcodePrefix: '1890' },
+  { id: 'g125', name: 'JUMBO BUCK EXT', price: 50, bookValue: 900, packSize: 18, barcodePrefix: '1835' }
 ];
+
+export function getStandardPackDetails(price) {
+  const p = Number(price) || 1;
+  if (p >= 50) {
+    return { bookValue: 900, packSize: 18 };
+  }
+  const bookValue = 300;
+  const packSize = Math.max(1, Math.floor(bookValue / p));
+  return { bookValue, packSize };
+}
 
 export function findGameByBarcode(rawCode, customGames = []) {
   if (!rawCode) return null;

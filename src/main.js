@@ -1,5 +1,5 @@
 // Modern Lottery POS & Tracking System - Application Controller
-import { loadState, saveState, resetToDefaults, resetToCleanState, SAMPLE_GAMES, findGameByBarcode } from './data.js';
+import { loadState, saveState, resetToDefaults, resetToCleanState, SAMPLE_GAMES, findGameByBarcode, getStandardPackDetails } from './data.js';
 import { sfx, voice } from './audio.js';
 import { setupDayReportHandlers, openDayReportModal, printDayReport } from './dayReportRenderer.js';
 import { AMIGO_DAY_REPORT_REFERENCE } from './dayReportData.js';
@@ -244,7 +244,8 @@ export function seedInitialActiveSlotsIfEmpty() {
           isNewAct = boxDef.subRows[0].highlight === 'green';
         }
         const cleanName = cleanGameTitle(rawName);
-        const packSize = price === 1 ? 300 : price === 2 ? 150 : price === 3 ? 100 : price === 5 ? 60 : price >= 50 ? 20 : 30;
+        const std = getStandardPackDetails(price);
+        const packSize = std.packSize;
         newSlots.push({
           boxNumber: b,
           status: 'ACTIVE',
@@ -281,6 +282,14 @@ function sanitizeAndMigrateSlots() {
       const cleaned = cleanGameTitle(slot.gameName);
       if (cleaned && cleaned !== slot.gameName) {
         slot.gameName = cleaned;
+        modified = true;
+      }
+    }
+    // Ensure packSize matches standard rules ($50 -> 18 pk / $900; <$50 -> 300 / price pk / $300)
+    if (slot.price) {
+      const std = getStandardPackDetails(slot.price);
+      if (!slot.packSize || slot.packSize === 100 || (slot.price >= 50 && slot.packSize !== 18) || (slot.price < 50 && slot.packSize !== std.packSize)) {
+        slot.packSize = std.packSize;
         modified = true;
       }
     }
@@ -789,7 +798,7 @@ function openActivationForBox(boxNumber, preselectedPack = null, forceManual = f
   const manualPack = document.getElementById('manualPackNumber');
   if (manualPack && !manualPack.value) manualPack.value = pack.packNumber || '';
   const manualSize = document.getElementById('manualPackSize');
-  if (manualSize) manualSize.value = pack.packSize || 100;
+  if (manualSize) manualSize.value = pack.packSize || getStandardPackDetails(pack.price || 2).packSize;
   const manualStart = document.getElementById('manualStartTicket');
   if (manualStart) manualStart.value = 1;
 
@@ -843,7 +852,7 @@ function setupKeypad() {
   btnModeDropdown?.addEventListener('click', () => setActivationMode(false));
   btnModeManual?.addEventListener('click', () => setActivationMode(true));
 
-  // Live title synchronization as user types custom name or price
+  // Live title and pack size synchronization as user types custom name or price
   const manualGameNameEl = document.getElementById('manualGameName');
   const manualGamePriceEl = document.getElementById('manualGamePrice');
   const syncManualTitle = () => {
@@ -854,7 +863,16 @@ function setupKeypad() {
     }
   };
   manualGameNameEl?.addEventListener('input', syncManualTitle);
-  manualGamePriceEl?.addEventListener('input', syncManualTitle);
+  manualGamePriceEl?.addEventListener('input', () => {
+    syncManualTitle();
+    const p = parseFloat(manualGamePriceEl.value);
+    if (!isNaN(p) && p > 0) {
+      const manualPackSizeEl = document.getElementById('manualPackSize');
+      if (manualPackSizeEl) {
+        manualPackSizeEl.value = getStandardPackDetails(p).packSize;
+      }
+    }
+  });
 
   // Connect scanner mode label ML to manual mode
   const scannerModeLabel = document.getElementById('scannerModeLabel');
@@ -952,13 +970,13 @@ function commitBoxActivation() {
     gameId: 'g105',
     gameName: '$5 Cash Blast',
     price: 5,
-    packSize: 100
+    packSize: 60
   };
 
   let chosenName = pack.gameName;
   let chosenPrice = pack.price;
   let chosenPack = pack.packNumber;
-  let chosenSize = pack.packSize;
+  let chosenSize = pack.packSize || getStandardPackDetails(chosenPrice).packSize;
   let chosenStart = 0; // Georgia Lottery packs start at ticket 00
 
   if (isManualActivationMode) {
@@ -971,13 +989,18 @@ function commitBoxActivation() {
     if (mName) chosenName = mName;
     if (!isNaN(mPrice) && mPrice > 0) chosenPrice = mPrice;
     if (mPack) chosenPack = mPack;
-    if (!isNaN(mSize) && mSize > 0) chosenSize = mSize;
+    if (!isNaN(mSize) && mSize > 0) {
+      chosenSize = mSize;
+    } else {
+      chosenSize = getStandardPackDetails(chosenPrice).packSize;
+    }
     if (!isNaN(mStart) && mStart >= 0) chosenStart = mStart;
   } else {
     const pPack = document.getElementById('presetPackNumberInput')?.value.trim();
     const pStart = parseInt(document.getElementById('presetStartTicketInput')?.value, 10);
     if (pPack) chosenPack = pPack;
     if (!isNaN(pStart) && pStart >= 0) chosenStart = pStart;
+    chosenSize = getStandardPackDetails(chosenPrice).packSize;
   }
 
   // If user enters a box number beyond current totalSlots, dynamically expand capacity!
@@ -1955,19 +1978,36 @@ function setupInventoryModalLogic() {
 
   function updateComputedPackSize() {
     const tv = parseFloat(newTicketValueSelect?.value) || 2;
-    const bv = parseFloat(newBookValueInput?.value) || 300;
+    const std = getStandardPackDetails(tv);
+    
+    // Auto-update book value based on ticket value if not manually overridden
+    if (newBookValueInput && (!newBookValueInput.dataset.manualEdit || newBookValueInput.dataset.lastTv !== String(tv))) {
+      newBookValueInput.value = std.bookValue;
+      newBookValueInput.dataset.lastTv = String(tv);
+    }
+    
+    const bv = parseFloat(newBookValueInput?.value) || std.bookValue;
     const pkSize = Math.max(1, Math.round(bv / tv));
     if (newComputedPackSize) newComputedPackSize.textContent = `${pkSize} Tickets`;
     if (newComputedFormula) newComputedFormula.textContent = `($${bv} Book ÷ $${tv} Ticket)`;
   }
 
-  newTicketValueSelect?.addEventListener('change', updateComputedPackSize);
-  newBookValueInput?.addEventListener('input', updateComputedPackSize);
+  newTicketValueSelect?.addEventListener('change', () => {
+    delete newBookValueInput.dataset.manualEdit;
+    updateComputedPackSize();
+  });
+  newBookValueInput?.addEventListener('input', () => {
+    newBookValueInput.dataset.manualEdit = 'true';
+    updateComputedPackSize();
+  });
 
   document.querySelectorAll('.btn-book-preset').forEach(btn => {
     btn.addEventListener('click', () => {
       const val = btn.getAttribute('data-val');
-      if (newBookValueInput) newBookValueInput.value = val;
+      if (newBookValueInput) {
+        newBookValueInput.value = val;
+        newBookValueInput.dataset.manualEdit = 'true';
+      }
       sfx.keypad();
       updateComputedPackSize();
     });
@@ -1983,7 +2023,8 @@ function setupInventoryModalLogic() {
     }
 
     const price = parseFloat(newTicketValueSelect?.value) || 2;
-    const bookValue = parseFloat(newBookValueInput?.value) || 300;
+    const std = getStandardPackDetails(price);
+    const bookValue = parseFloat(newBookValueInput?.value) || std.bookValue;
     const packSize = Math.max(1, Math.round(bookValue / price));
     const rawPack = newPackNumberInput?.value.trim() || String(Math.floor(100000 + Math.random() * 900000));
     const cleanPack = rawPack.replace(/[^0-9]/g, '').slice(-7) || rawPack;
@@ -2206,12 +2247,13 @@ function processScannedBarcode(rawBarcode) {
       return;
     } else {
       // Scanned another pack barcode: update pack info
+      const std = getStandardPackDetails(20);
       pendingActivationPack = {
         packNumber: rawBarcode.replace(/[^0-9]/g, '').slice(-6) || '889901',
         gameId: 'g' + Math.floor(100 + Math.random() * 900),
         gameName: '$20 100X THE MONEY',
         price: 20,
-        packSize: 30
+        packSize: std.packSize
       };
       activationGameTitle.textContent = formatGameTitle(pendingActivationPack.price, pendingActivationPack.gameName);
       showToast(`Pack #${pendingActivationPack.packNumber} scanned!`, 'info');
@@ -2308,14 +2350,15 @@ function processScannedBarcode(rawBarcode) {
       packInfo = state.inventory.splice(invIndex, 1)[0];
     } else {
       const matchedGame = findGameByBarcode(rawBarcode, state.customGames) || SAMPLE_GAMES[0];
-      const bookVal = matchedGame.bookValue || (matchedGame.price * matchedGame.packSize);
+      const std = getStandardPackDetails(matchedGame.price);
+      const bookVal = matchedGame.bookValue || std.bookValue;
       packInfo = {
         packNumber: cleanNum.slice(-7) || String(Math.floor(100000 + Math.random() * 900000)),
         gameId: matchedGame.id,
         gameName: matchedGame.name,
         price: matchedGame.price,
         bookValue: bookVal,
-        packSize: matchedGame.packSize
+        packSize: matchedGame.packSize || std.packSize
       };
     }
 

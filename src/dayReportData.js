@@ -285,7 +285,7 @@ export function generateLiveDayReport(state) {
 
   // Active Retail Value: Total dollar value of unsold tickets inside all active dispensers
   const activeValue = activeSlots.reduce((sum, s) => {
-    const packSize = s.packSize || 100;
+    const packSize = s.packSize || (s.price ? (s.price >= 50 ? 18 : Math.max(1, Math.floor(300 / s.price))) : 100);
     const remaining = Math.max(0, packSize - (s.currentTicket || 0));
     return sum + (remaining * (s.price || 0));
   }, 0);
