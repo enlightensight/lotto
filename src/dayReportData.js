@@ -154,8 +154,9 @@ export function generateLiveDayReport(state) {
   const boxes = [];
   let totalScratcherSales = 0;
 
-  // Georgia Lottery Dispenser standard rack capacity: exactly 70 boxes (Boxes 1 to 70)
-  for (let boxNum = 1; boxNum <= 70; boxNum++) {
+  // Georgia Lottery Dispenser standard rack capacity: at least 70 boxes (Boxes 1 to 70+)
+  const maxBoxNum = Math.max(70, ...(state?.slots || []).map(s => s.boxNumber || 0));
+  for (let boxNum = 1; boxNum <= maxBoxNum; boxNum++) {
     const slot = (state?.slots || []).find(s => s.boxNumber === boxNum);
     const soldPacks = soldOutMap.get(boxNum) || [];
     const isSlotActive = Boolean(slot && slot.status === 'ACTIVE' && slot.packNumber);

@@ -328,11 +328,16 @@
         </p>
       </div>
 
-      <div style="display:flex; justify-content:space-between; gap:10px; padding-top:14px; border-top:1px solid var(--border-color);">
-        <button class="btn btn-danger" id="btnSetCountZero">
-          Set Count 0 (Make Box Empty)
-        </button>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding-top:14px; border-top:1px solid var(--border-color); flex-wrap:wrap;">
         <div style="display:flex; gap:8px;">
+          <button class="btn btn-warning" id="btnMarkPackSoldOut" style="background:#f59e0b; color:#0f172a; font-weight:700;">
+            🔥 Mark Sold Out (Full Pack)
+          </button>
+          <button class="btn btn-danger" id="btnSetCountZero">
+            Empty Box (0 Count)
+          </button>
+        </div>
+        <div style="display:flex; gap:8px; margin-left:auto;">
           <button class="btn btn-secondary" id="cancelBoxAdjustBtn">Cancel</button>
           <button class="btn btn-primary" id="saveBoxAdjustBtn">Save Count</button>
         </div>

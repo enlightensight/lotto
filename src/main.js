@@ -35,8 +35,10 @@ export function recordSoldOutPack(slot, closeOverride = null) {
   if (!slot || !slot.packNumber || !slot.gameName) return;
   if (!state.soldOutThisShift) state.soldOutThisShift = [];
 
-  const start = slot.startTicket || 0;
-  const close = closeOverride !== null ? closeOverride : (slot.currentTicket || slot.packSize || 0);
+  const start = (slot.startTicket !== undefined && slot.startTicket !== null) ? slot.startTicket : 0;
+  const close = closeOverride !== null 
+    ? closeOverride 
+    : ((slot.currentTicket !== undefined && slot.currentTicket !== null) ? slot.currentTicket : (slot.packSize || 0));
   const sold = Math.max(0, close - start);
   const amount = sold * (slot.price || 0);
 
@@ -44,12 +46,21 @@ export function recordSoldOutPack(slot, closeOverride = null) {
     so => so.boxNumber === slot.boxNumber && so.packNumber === slot.packNumber
   );
 
+  // If 0 tickets were sold from this pack, DO NOT record it in soldOutThisShift!
+  // If it was previously recorded and now sold is 0, remove it.
+  if (sold <= 0) {
+    if (existingIdx >= 0) {
+      state.soldOutThisShift.splice(existingIdx, 1);
+    }
+    return;
+  }
+
   const record = {
     boxNumber: slot.boxNumber,
     gameName: slot.gameName,
     price: slot.price || 0,
     packNumber: slot.packNumber,
-    packSize: slot.packSize || 100,
+    packSize: slot.packSize || getStandardPackDetails(slot.price || 2).packSize,
     startTicket: start,
     closeTicket: close,
     ticketsSold: sold,
@@ -615,25 +626,69 @@ function setupBoxAdjustModal() {
 
   btnSellOneTicket?.addEventListener('click', () => {
     if (!currentAdjustingSlot) return;
+    const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
+    const packSize = currentAdjustingSlot.packSize || std.packSize;
+    const nextTicket = (currentAdjustingSlot.currentTicket || 0) + 1;
+
     recordUndoAction({
       type: 'SELL',
       boxNumber: currentAdjustingSlot.boxNumber,
       prevTicket: currentAdjustingSlot.currentTicket
     });
-    sfx.success();
-    currentAdjustingSlot.currentTicket += 1;
-    inputAdjustCount.value = currentAdjustingSlot.currentTicket;
+
+    if (nextTicket >= packSize) {
+      currentAdjustingSlot.currentTicket = packSize;
+      currentAdjustingSlot.status = 'SOLD_OUT';
+      recordSoldOutPack(currentAdjustingSlot, packSize);
+      sfx.alert();
+      boxAdjustModal.close();
+      const totalAmt = packSize * (currentAdjustingSlot.price || 0);
+      showToast(`🚨 Box #${currentAdjustingSlot.boxNumber} (${cleanGameTitle(currentAdjustingSlot.gameName)}) is SOLD OUT! Pack completed (${packSize} tickets = $${totalAmt.toFixed(2)}).`, 'warning');
+    } else {
+      sfx.success();
+      currentAdjustingSlot.currentTicket = nextTicket;
+      inputAdjustCount.value = currentAdjustingSlot.currentTicket;
+      showToast(`🛒 Box #${currentAdjustingSlot.boxNumber} sold 1 ticket! (Now #${String(currentAdjustingSlot.currentTicket).padStart(2, '0')})`, 'success');
+    }
+
     saveState(state);
     renderHeaderAndMetrics();
     renderDispenserRack();
     renderSlotsRibbon();
-    showToast(`🛒 Box #${currentAdjustingSlot.boxNumber} sold 1 ticket! (Now #${String(currentAdjustingSlot.currentTicket).padStart(2, '0')})`, 'success');
+  });
+
+  const btnMarkPackSoldOut = document.getElementById('btnMarkPackSoldOut');
+  btnMarkPackSoldOut?.addEventListener('click', () => {
+    if (!currentAdjustingSlot) return;
+    const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
+    const packSize = currentAdjustingSlot.packSize || std.packSize;
+    
+    recordUndoAction({
+      type: 'ADJUST_COUNT',
+      boxNumber: currentAdjustingSlot.boxNumber,
+      prevTicket: currentAdjustingSlot.currentTicket,
+      prevStatus: currentAdjustingSlot.status
+    });
+
+    currentAdjustingSlot.currentTicket = packSize;
+    currentAdjustingSlot.status = 'SOLD_OUT';
+    recordSoldOutPack(currentAdjustingSlot, packSize);
+    saveState(state);
+    sfx.alert();
+    boxAdjustModal.close();
+    renderHeaderAndMetrics();
+    renderDispenserRack();
+    renderSlotsRibbon();
+    const totalAmt = packSize * (currentAdjustingSlot.price || 0);
+    showToast(`🚨 Box #${currentAdjustingSlot.boxNumber} marked FULLY SOLD OUT (${packSize} tickets = $${totalAmt.toFixed(2)})!`, 'warning');
   });
 
   btnSetCountZero?.addEventListener('click', () => {
     if (!currentAdjustingSlot) return;
     sfx.alert();
-    recordSoldOutPack(currentAdjustingSlot, currentAdjustingSlot.currentTicket);
+    if ((currentAdjustingSlot.currentTicket || 0) > 0) {
+      recordSoldOutPack(currentAdjustingSlot, currentAdjustingSlot.currentTicket);
+    }
     currentAdjustingSlot.currentTicket = 0;
     currentAdjustingSlot.status = 'EMPTY';
     currentAdjustingSlot.activatedThisShift = false;
@@ -642,7 +697,7 @@ function setupBoxAdjustModal() {
     renderHeaderAndMetrics();
     renderDispenserRack();
     renderSlotsRibbon();
-    showToast(`📦 Box #${currentAdjustingSlot.boxNumber} count set to 0: marked as SOLD OUT / Empty!`, 'info');
+    showToast(`📦 Box #${currentAdjustingSlot.boxNumber} emptied.`, 'info');
   });
 
   saveBoxAdjustBtn?.addEventListener('click', () => {
@@ -653,6 +708,9 @@ function setupBoxAdjustModal() {
       return;
     }
 
+    const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
+    const packSize = currentAdjustingSlot.packSize || std.packSize;
+
     recordUndoAction({
       type: 'ADJUST_COUNT',
       boxNumber: currentAdjustingSlot.boxNumber,
@@ -661,11 +719,19 @@ function setupBoxAdjustModal() {
     });
 
     if (newCount === 0) {
-      recordSoldOutPack(currentAdjustingSlot, currentAdjustingSlot.currentTicket);
+      if ((currentAdjustingSlot.currentTicket || 0) > 0) {
+        recordSoldOutPack(currentAdjustingSlot, currentAdjustingSlot.currentTicket);
+      }
       currentAdjustingSlot.currentTicket = 0;
       currentAdjustingSlot.status = 'EMPTY';
       currentAdjustingSlot.activatedThisShift = false;
-      showToast(`📦 Box #${currentAdjustingSlot.boxNumber} count set to 0: marked as SOLD OUT / Empty!`, 'info');
+      showToast(`📦 Box #${currentAdjustingSlot.boxNumber} count set to 0 (Emptied).`, 'info');
+    } else if (newCount >= packSize) {
+      currentAdjustingSlot.currentTicket = packSize;
+      currentAdjustingSlot.status = 'SOLD_OUT';
+      recordSoldOutPack(currentAdjustingSlot, packSize);
+      const totalAmt = packSize * (currentAdjustingSlot.price || 0);
+      showToast(`🚨 Box #${currentAdjustingSlot.boxNumber} marked as SOLD OUT (${packSize} tickets = $${totalAmt.toFixed(2)})!`, 'warning');
     } else {
       currentAdjustingSlot.currentTicket = newCount;
       currentAdjustingSlot.status = 'ACTIVE';
@@ -980,11 +1046,16 @@ function quickSellTicket(slot, barcodeScanned = null) {
   });
   if (state.recentScans.length > 50) state.recentScans.pop();
   
-  if (slot.packSize && slot.currentTicket >= slot.packSize) {
+  const std = getStandardPackDetails(slot.price || 2);
+  const packSize = slot.packSize || std.packSize;
+
+  if (packSize && slot.currentTicket >= packSize) {
+    slot.currentTicket = packSize;
     slot.status = 'SOLD_OUT';
-    recordSoldOutPack(slot, slot.currentTicket);
+    recordSoldOutPack(slot, packSize);
     sfx.alert();
-    showToast(`🚨 Box #${slot.boxNumber} (${cleanName}) is SOLD OUT! Pack completed.`, 'warning');
+    const totalAmt = packSize * (slot.price || 0);
+    showToast(`🚨 Box #${slot.boxNumber} (${cleanName}) is SOLD OUT! Full pack of ${packSize} tickets sold ($${totalAmt.toFixed(2)}).`, 'warning');
   } else {
     sfx.success();
     showToast(`🛒 ${bcPrefix}Sold 1x $${Number(slot.price).toFixed(2)} · ${cleanName} (Box #${slot.boxNumber})! Now #${String(slot.currentTicket).padStart(2, '0')}`, 'success');
@@ -3055,11 +3126,15 @@ function setupEventListeners() {
         state = resetToCleanState();
         state.dataCleared = true;
         saveState(state);
-        // Clear Day Report print DOM immediately so no stale data remains
+        // Clear Day Report print DOM and preview container immediately so no stale data remains
         const printSection = document.getElementById('dayReportPrintSection');
         if (printSection) {
           const freshData = getDayReportData(state);
           populateDayReportDOM(freshData, printSection);
+        }
+        const previewContainer = document.getElementById('dayReportPreviewContainer');
+        if (previewContainer) {
+          previewContainer.innerHTML = '';
         }
         initPOS();
         sfx.alert();
