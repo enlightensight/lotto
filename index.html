@@ -210,8 +210,6 @@
             <div class="activation-pack-hint">Ticket Pack starts at #00 &bull; Active Count: 00</div>
           </div>
           <div class="mode-toggle-pills">
-            <button type="button" class="mode-pill-btn active" id="btnModeDropdown" title="Select from Preset List">📋 Preset List</button>
-            <button type="button" class="mode-pill-btn" id="btnModeManual" title="Manual Entry (ML Mode)">✍️ Manual (ML)</button>
           </div>
         </div>
 
@@ -233,34 +231,7 @@
           </div>
         </div>
 
-        <!-- 2. Manual Custom Entry Container (LT System Software ML Mode) -->
-        <div id="activationManualContainer" class="activation-manual-box" style="display: none;">
-          <div class="manual-row-1">
-            <div>
-              <label class="activation-field-label">CUSTOM GAME NAME / TICKET ID:</label>
-              <input type="text" id="manualGameName" class="scanner-field activation-input" placeholder="e.g. $3 CROSSWORD">
-            </div>
-            <div>
-              <label class="activation-field-label">TICKET PRICE ($):</label>
-              <input type="number" id="manualGamePrice" class="scanner-field activation-input" min="1" max="100" value="3">
-            </div>
-          </div>
-          <div class="manual-row-2">
-            <div>
-              <label class="activation-field-label">PACK #:</label>
-              <input type="text" id="manualPackNumber" class="scanner-field activation-input" placeholder="0019425">
-            </div>
-            <div>
-              <label class="activation-field-label">PACK SIZE (PK):</label>
-              <input type="number" id="manualPackSize" class="scanner-field activation-input text-center" min="1" max="500" value="100">
-            </div>
-            <div>
-              <label class="activation-field-label">START TICKET #:</label>
-              <input type="number" id="manualStartTicket" class="scanner-field activation-input text-center" min="0" max="999" value="0">
-            </div>
-          </div>
-        </div>
-        
+
         <!-- Bottom Section: Box Number & Touch Keypad Split -->
         <div class="activation-input-split">
           <!-- Left: Box Input & Action Buttons -->
@@ -585,14 +556,10 @@
     </div>
     <div class="modal-body" style="padding: 18px; max-height: calc(90vh - 120px); overflow-y: auto;">
       
-      <!-- Top Modal Navigation Tabs -->
-      <div class="inv-mode-toggle" style="display: flex; gap: 10px; margin-bottom: 16px;">
-        <button type="button" class="btn btn-outline active" id="btnTabActiveInventory" style="flex: 1.2; padding: 10px; font-weight: 800; font-size: 0.92rem; border-width: 2px;">
-          ⚡ Activated Tickets Inventory (<span id="invNavActiveCount">0</span>)
-        </button>
-        <button type="button" class="btn btn-outline" id="btnTabIntake" style="flex: 0.8; padding: 10px; font-weight: 800; font-size: 0.92rem; border-width: 2px;">
-          📥 Add Delivery Books to Safe (<span id="invNavSafeCount">0</span>)
-        </button>
+      
+      <!-- Top Modal Title -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <span style="font-size: 0.92rem; font-weight: 800; color: var(--text-primary);">⚡ Activated Tickets in Dispensers</span>
       </div>
 
       <!-- VIEW 1: ACTIVATED TICKETS INVENTORY (PRIMARY & DEFAULT) -->
@@ -678,142 +645,6 @@
             </thead>
             <tbody id="inventoryTableBody">
               <!-- Populated dynamically with active slots only -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- VIEW 2: BOOK INTAKE (RECEIVE DELIVERY INTO SAFE) -->
-      <div id="invViewIntake" style="display: none;">
-        <!-- Sub-Mode Tabs: Old Ticket vs Brand New Ticket -->
-        <div class="inv-mode-toggle" style="display: flex; gap: 10px; margin-bottom: 14px;">
-          <button type="button" class="btn btn-outline active" id="btnInvModeOld" style="flex: 1; padding: 8px; font-weight: 800; font-size: 0.88rem;">
-            ⚡ Old Ticket (Take Automatically)
-          </button>
-          <button type="button" class="btn btn-outline" id="btnInvModeNew" style="flex: 1; padding: 8px; font-weight: 800; font-size: 0.88rem;">
-            ✨ Brand New Ticket (New Game)
-          </button>
-        </div>
-
-        <!-- Section A: Old Ticket (Automatic Take) -->
-        <div id="invOldTicketSection" style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <h4 style="color: var(--color-primary); margin: 0; font-size: 0.92rem;">
-              ⚡ Old Ticket · Instant Automatic Intake
-            </h4>
-            <span style="font-size: 0.72rem; color: var(--color-success); font-weight: 700;">
-              ✓ Auto-matches Georgia Lottery games
-            </span>
-          </div>
-          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">
-            Scan ticket barcode from the pack. System registers the pack directly into the store safe.
-          </p>
-          <div style="display: flex; gap: 10px;">
-            <input 
-              type="text" 
-              id="inventoryBarcodeInput" 
-              class="scanner-field" 
-              placeholder="Scan ticket barcode (e.g. 1410-0759558)..." 
-              style="flex: 1; width: auto; font-size: 1rem;"
-            >
-            <button class="btn btn-primary" id="inventoryAddManualBtn" style="font-weight: 800; min-width: 130px;">
-              ⚡ Auto-Intake
-            </button>
-          </div>
-          <div id="invOldAutoFeedback" style="margin-top: 8px; display: none; padding: 8px 12px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; font-size: 0.82rem; color: var(--color-success); font-weight: 700;">
-          </div>
-        </div>
-
-        <!-- Section B: Brand New Ticket (New Game Catalog) -->
-        <div id="invNewTicketSection" style="display: none; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <h4 style="color: #f59e0b; margin: 0; font-size: 0.92rem;">
-              ✨ Brand New Ticket · Enter Game Details
-            </h4>
-            <span style="font-size: 0.72rem; color: var(--text-muted);">
-              Saves to store catalog for all future auto-intakes
-            </span>
-          </div>
-          
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px;">
-            <div>
-              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
-                TICKET NAME *
-              </label>
-              <input type="text" id="newTicketNameInput" class="scanner-field" placeholder="e.g. 2026 HAPPY NEW" style="width: 100%; box-sizing: border-box;">
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
-                TICKET VALUE ($) *
-              </label>
-              <select id="newTicketValueSelect" class="scanner-field" style="width: 100%; box-sizing: border-box; cursor: pointer;">
-                <option value="1">$1.00 Ticket</option>
-                <option value="2" selected>$2.00 Ticket</option>
-                <option value="3">$3.00 Ticket</option>
-                <option value="5">$5.00 Ticket</option>
-                <option value="10">$10.00 Ticket</option>
-                <option value="20">$20.00 Ticket</option>
-                <option value="25">$25.00 Ticket</option>
-                <option value="30">$30.00 Ticket</option>
-                <option value="50">$50.00 Ticket</option>
-              </select>
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
-                BOOK VALUE ($) *
-              </label>
-              <input type="number" id="newBookValueInput" class="scanner-field" value="300" style="width: 100%; box-sizing: border-box;">
-              <div style="display: flex; gap: 4px; margin-top: 4px;">
-                <button type="button" class="btn btn-outline btn-book-preset" data-val="300" style="padding: 2px 6px; font-size: 0.7rem;">$300</button>
-                <button type="button" class="btn btn-outline btn-book-preset" data-val="600" style="padding: 2px 6px; font-size: 0.7rem;">$600</button>
-                <button type="button" class="btn btn-outline btn-book-preset" data-val="900" style="padding: 2px 6px; font-size: 0.7rem;">$900</button>
-                <button type="button" class="btn btn-outline btn-book-preset" data-val="1000" style="padding: 2px 6px; font-size: 0.7rem;">$1000</button>
-              </div>
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">
-                PACK NUMBER *
-              </label>
-              <input type="text" id="newPackNumberInput" class="scanner-field" placeholder="e.g. 1874-0015175" style="width: 100%; box-sizing: border-box;">
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
-            <div style="font-size: 0.82rem;">
-              <span>Computed Pack Size:</span>
-              <strong id="newComputedPackSize" style="color: var(--color-primary); font-size: 0.95rem; margin-left: 6px;">150 Tickets</strong>
-              <span id="newComputedFormula" style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">($300 Book ÷ $2 Ticket)</span>
-            </div>
-            <button type="button" class="btn btn-warning" id="btnRegisterNewTicket" style="font-weight: 800; padding: 6px 14px;">
-              📥 Register Brand New Ticket
-            </button>
-          </div>
-        </div>
-
-        <!-- Safe Backstock List -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <h5 style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
-            📦 Packs Currently in Safe Backstock (<span id="invSafePacksCount">0</span>)
-          </h5>
-          <span style="font-size: 0.75rem; color: var(--text-muted);">
-            Stored in safe until dispenser slot becomes empty
-          </span>
-        </div>
-        <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-          <table class="report-table" style="width: 100%; margin: 0;">
-            <thead>
-              <tr>
-                <th>Pack #</th>
-                <th>Ticket Name</th>
-                <th style="width: 75px;">Price</th>
-                <th style="width: 90px;">Book Val</th>
-                <th style="width: 80px;">Pack Size</th>
-                <th style="width: 95px;">Status</th>
-                <th style="width: 110px; text-align: center;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="inventorySafeTableBody">
-              <!-- Populated dynamically with safe packs -->
             </tbody>
           </table>
         </div>
@@ -1496,87 +1327,6 @@
 
     </div>
   </dialog>
-
-  <!-- Floating Quick Simulator / Demo Assistant (Hidden in Live Store Mode) -->
-  <button class="demo-helper-fab" id="demoFabBtn" style="display:none;" title="Open Demo Testing Assistant">
-    <span>⚡ Quick Demo Helper</span>
-  </button>
-
-  <aside class="demo-drawer" id="demoDrawer" style="display:none;">
-    <div class="drawer-title">
-      <span>Interactive Demo Tools</span>
-      <button id="closeDemoDrawer" style="background:none; border:none; color:#94a3b8; cursor:pointer;">&times;</button>
-    </div>
-    
-    <button class="drawer-btn" id="simCustomerBuyBtn">
-      <span>🛒</span>
-      <div>
-        <div>Simulate Customer Purchase</div>
-        <small style="color:#94a3b8;">Sells 1-3 scratchers from active boxes</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simScanNewPackBtn">
-      <span>🎟️</span>
-      <div>
-        <div>Scan New $2 HIT 200 Pack</div>
-        <small style="color:#94a3b8;">Triggers Box Assignment Keypad</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simScan$20PackBtn">
-      <span>💎</span>
-      <div>
-        <div>Scan New $20 100X Pack</div>
-        <small style="color:#94a3b8;">Triggers Box Assignment Keypad</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simEndShiftScanAllBtn">
-      <span>🔍</span>
-      <div>
-        <div>Quick-Verify All Active Boxes</div>
-        <small style="color:var(--text-muted);">Scans all boxes during End Shift</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simSetBoxEmptyBtn" style="border-color:#f59e0b; color:#fbbf24;">
-      <span>📦</span>
-      <div>
-        <div>Simulate Count = 0 (Box 5 Style)</div>
-        <small style="color:var(--text-muted);">Empties Box 19: count 0 renders as Box 5</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simScanBoxBarcodeBtn" style="border-color:#10b981; color:#34d399;">
-      <span>🏷️</span>
-      <div>
-        <div>Scan Box Barcode (BOX-05)</div>
-        <small style="color:var(--text-muted);">Simulate scanning dispenser slot barcode</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simAddNewBoxBtn" style="border-color:#38bdf8; color:#38bdf8;">
-      <span>➕</span>
-      <div>
-        <div>+ Add New Dispenser Box</div>
-        <small style="color:var(--text-muted);">Expands capacity (e.g. Box 21, 22...)</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="drawerThemeToggleBtn">
-      <span id="drawerThemeIcon">🌗</span>
-      <div>
-        <div id="drawerThemeTitle">Switch Theme (Light / Dark)</div>
-        <small style="color:var(--text-muted);">Toggle between Medical Light & Dark POS</small>
-      </div>
-    </button>
-
-    <button class="drawer-btn" id="simResetStateBtn" style="border-color:#ef4444; color:#fca5a5;">
-      <span>🗑️</span>
-      <div>Erase All Data / Clean Reset</div>
-    </button>
-  </aside>
 
   <!-- Toast Notification System -->
   <div class="toast-container" id="toastContainer"></div>

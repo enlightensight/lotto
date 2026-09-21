@@ -154,25 +154,12 @@ const closeHistoryBottomBtn = document.getElementById('closeHistoryBottomBtn');
 const historyTableBody = document.getElementById('historyTableBody');
 const menuHistoryBtn = document.getElementById('menuHistoryBtn');
 
-// Demo Drawer Elements
-const demoFabBtn = document.getElementById('demoFabBtn');
-const demoDrawer = document.getElementById('demoDrawer');
-const closeDemoDrawer = document.getElementById('closeDemoDrawer');
-const simCustomerBuyBtn = document.getElementById('simCustomerBuyBtn');
-const simScanNewPackBtn = document.getElementById('simScanNewPackBtn');
-const simScan$20PackBtn = document.getElementById('simScan$20PackBtn');
-const simEndShiftScanAllBtn = document.getElementById('simEndShiftScanAllBtn');
-const simResetStateBtn = document.getElementById('simResetStateBtn');
-
 const toastContainer = document.getElementById('toastContainer');
 
 // Theme Toggle References
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const themeToggleIcon = document.getElementById('themeToggleIcon');
 const themeToggleText = document.getElementById('themeToggleText');
-const drawerThemeToggleBtn = document.getElementById('drawerThemeToggleBtn');
-const drawerThemeIcon = document.getElementById('drawerThemeIcon');
-const drawerThemeTitle = document.getElementById('drawerThemeTitle');
 
 // Theme Management
 let currentTheme = localStorage.getItem('lotto_theme') || 'dark';
@@ -189,14 +176,10 @@ function applyTheme(theme, notify = true) {
   if (theme === 'dark') {
     if (themeToggleIcon) themeToggleIcon.textContent = '☀️';
     if (themeToggleText) themeToggleText.textContent = 'Light Mode';
-    if (drawerThemeIcon) drawerThemeIcon.textContent = '☀️';
-    if (drawerThemeTitle) drawerThemeTitle.textContent = 'Switch to Light Mode';
     if (notify) showToast('Switched to Dark Mode (Classic POS)', 'info');
   } else {
     if (themeToggleIcon) themeToggleIcon.textContent = '🌙';
     if (themeToggleText) themeToggleText.textContent = 'Dark Mode';
-    if (drawerThemeIcon) drawerThemeIcon.textContent = '🌙';
-    if (drawerThemeTitle) drawerThemeTitle.textContent = 'Switch to Dark Mode';
     if (notify) showToast('Switched to Light Mode (Arron Portal)', 'info');
   }
 }
@@ -772,7 +755,6 @@ export function formatGameTitle(price, name) {
   return price ? `$${price} ${clean}` : clean;
 }
 
-let isManualActivationMode = false;
 
 function populateActivationGameDropdown() {
   const activationGameDropdown = document.getElementById('activationGameDropdown');
@@ -803,7 +785,7 @@ function populateActivationGameDropdown() {
   });
 }
 
-function openActivationForBox(boxNumber, preselectedPack = null, forceManual = false) {
+function openActivationForBox(boxNumber, preselectedPack = null) {
   let pack = preselectedPack;
   const activationGameDropdown = document.getElementById('activationGameDropdown');
   
@@ -830,54 +812,13 @@ function openActivationForBox(boxNumber, preselectedPack = null, forceManual = f
   const presetStartInput = document.getElementById('presetStartTicketInput');
   if (presetStartInput) presetStartInput.value = 0;
 
-  // Pre-fill manual inputs with default game if empty
-  const manualName = document.getElementById('manualGameName');
-  if (manualName && !manualName.value) manualName.value = pack.gameName || '';
-  const manualPrice = document.getElementById('manualGamePrice');
-  if (manualPrice) manualPrice.value = pack.price || 2;
-  const manualPack = document.getElementById('manualPackNumber');
-  if (manualPack && !manualPack.value) manualPack.value = pack.packNumber || '';
-  const manualSize = document.getElementById('manualPackSize');
-  if (manualSize) manualSize.value = pack.packSize || getStandardPackDetails(pack.price || 2).packSize;
-  const manualStart = document.getElementById('manualStartTicket');
-  if (manualStart) manualStart.value = 0;
-
   const boxInputHint = document.getElementById('boxInputHint');
   if (boxInputHint) {
     boxInputHint.textContent = `Assign to dispenser slot (1-${state.totalSlots} or enter higher number to add new box).`;
   }
 
-  setActivationMode(forceManual);
-
   sfx.keypad();
   activationModal.showModal();
-}
-
-function setActivationMode(manual) {
-  isManualActivationMode = manual;
-  const btnModeDropdown = document.getElementById('btnModeDropdown');
-  const btnModeManual = document.getElementById('btnModeManual');
-  const activationDropdownContainer = document.getElementById('activationDropdownContainer');
-  const activationManualContainer = document.getElementById('activationManualContainer');
-
-  if (manual) {
-    btnModeManual?.classList.add('active');
-    btnModeDropdown?.classList.remove('active');
-    if (activationManualContainer) activationManualContainer.style.display = 'block';
-    if (activationDropdownContainer) activationDropdownContainer.style.display = 'none';
-    const mName = document.getElementById('manualGameName')?.value.trim() || 'CUSTOM GAME';
-    const mPrice = parseFloat(document.getElementById('manualGamePrice')?.value) || 1;
-    activationGameTitle.textContent = formatGameTitle(mPrice, mName);
-  } else {
-    btnModeDropdown?.classList.add('active');
-    btnModeManual?.classList.remove('active');
-    if (activationDropdownContainer) activationDropdownContainer.style.display = 'flex';
-    if (activationManualContainer) activationManualContainer.style.display = 'none';
-    const chosenGame = SAMPLE_GAMES.find(g => g.id === document.getElementById('activationGameDropdown')?.value) || SAMPLE_GAMES[0];
-    if (chosenGame) {
-      activationGameTitle.textContent = formatGameTitle(chosenGame.price, chosenGame.name);
-    }
-  }
 }
 
 function findFirstEmptyBox() {
@@ -886,40 +827,12 @@ function findFirstEmptyBox() {
 }
 
 function setupKeypad() {
-  // Mode switcher listeners
-  const btnModeDropdown = document.getElementById('btnModeDropdown');
-  const btnModeManual = document.getElementById('btnModeManual');
-  btnModeDropdown?.addEventListener('click', () => setActivationMode(false));
-  btnModeManual?.addEventListener('click', () => setActivationMode(true));
-
-  // Live title and pack size synchronization as user types custom name or price
-  const manualGameNameEl = document.getElementById('manualGameName');
-  const manualGamePriceEl = document.getElementById('manualGamePrice');
-  const syncManualTitle = () => {
-    if (isManualActivationMode) {
-      const n = manualGameNameEl?.value.trim() || 'CUSTOM GAME';
-      const p = parseFloat(manualGamePriceEl?.value) || 1;
-      activationGameTitle.textContent = formatGameTitle(p, n);
-    }
-  };
-  manualGameNameEl?.addEventListener('input', syncManualTitle);
-  manualGamePriceEl?.addEventListener('input', () => {
-    syncManualTitle();
-    const p = parseFloat(manualGamePriceEl.value);
-    if (!isNaN(p) && p > 0) {
-      const manualPackSizeEl = document.getElementById('manualPackSize');
-      if (manualPackSizeEl) {
-        manualPackSizeEl.value = getStandardPackDetails(p).packSize;
-      }
-    }
-  });
-
-  // Connect scanner mode label ML to manual mode
+  // Connect scanner mode label to open activation
   const scannerModeLabel = document.getElementById('scannerModeLabel');
   if (scannerModeLabel) {
     scannerModeLabel.addEventListener('click', () => {
-      openActivationForBox(findFirstEmptyBox(), null, true);
-      showToast('✍️ Manual Pack Entry (ML Mode) opened!', 'info');
+      openActivationForBox(findFirstEmptyBox());
+      showToast('🎟️ Pack Activation opened!', 'info');
     });
   }
 
@@ -931,8 +844,7 @@ function setupKeypad() {
     }
   });
 
-  // Also support Enter on manual inputs
-  ['manualGameName', 'manualGamePrice', 'manualPackNumber', 'manualPackSize', 'manualStartTicket', 'presetPackNumberInput', 'presetStartTicketInput'].forEach(id => {
+  ['presetPackNumberInput', 'presetStartTicketInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('keydown', (e) => {
@@ -1019,29 +931,11 @@ function commitBoxActivation() {
   let chosenSize = pack.packSize || getStandardPackDetails(chosenPrice).packSize;
   let chosenStart = 0; // Georgia Lottery packs start at ticket 00
 
-  if (isManualActivationMode) {
-    const mName = document.getElementById('manualGameName')?.value.trim();
-    const mPrice = parseFloat(document.getElementById('manualGamePrice')?.value);
-    const mPack = document.getElementById('manualPackNumber')?.value.trim();
-    const mSize = parseInt(document.getElementById('manualPackSize')?.value, 10);
-    const mStart = parseInt(document.getElementById('manualStartTicket')?.value, 10);
-
-    if (mName) chosenName = mName;
-    if (!isNaN(mPrice) && mPrice > 0) chosenPrice = mPrice;
-    if (mPack) chosenPack = mPack;
-    if (!isNaN(mSize) && mSize > 0) {
-      chosenSize = mSize;
-    } else {
-      chosenSize = getStandardPackDetails(chosenPrice).packSize;
-    }
-    if (!isNaN(mStart) && mStart >= 0) chosenStart = mStart;
-  } else {
-    const pPack = document.getElementById('presetPackNumberInput')?.value.trim();
-    const pStart = parseInt(document.getElementById('presetStartTicketInput')?.value, 10);
-    if (pPack) chosenPack = pPack;
-    if (!isNaN(pStart) && pStart >= 0) chosenStart = pStart;
-    chosenSize = getStandardPackDetails(chosenPrice).packSize;
-  }
+  const pPack = document.getElementById('presetPackNumberInput')?.value.trim();
+  const pStart = parseInt(document.getElementById('presetStartTicketInput')?.value, 10);
+  if (pPack) chosenPack = pPack;
+  if (!isNaN(pStart) && pStart >= 0) chosenStart = pStart;
+  chosenSize = getStandardPackDetails(chosenPrice).packSize;
 
   // If user enters a box number beyond current totalSlots, dynamically expand capacity!
   if (boxNum > state.totalSlots) {
@@ -1784,49 +1678,14 @@ const startNewShift = promptStartNewShift;
 // Update Inventory (Pack Intake) Workflow
 // -------------------------------------------------------------
 
-function openInventoryModal(tab = 'ACTIVATED') {
-  setInventoryTab(tab);
+function openInventoryModal() {
+  renderInventoryTable();
   sfx.keypad();
   inventoryModal.showModal();
-}
-
-function setInventoryTab(tab) {
-  const btnTabActive = document.getElementById('btnTabActiveInventory');
-  const btnTabIntake = document.getElementById('btnTabIntake');
-  const viewActive = document.getElementById('invViewActive');
-  const viewIntake = document.getElementById('invViewIntake');
-  const footerHint = document.getElementById('invFooterHint');
-
-  if (tab === 'INTAKE') {
-    btnTabIntake?.classList.add('active');
-    btnTabActive?.classList.remove('active');
-    if (viewIntake) viewIntake.style.display = 'block';
-    if (viewActive) viewActive.style.display = 'none';
-    if (footerHint) footerHint.textContent = '💡 Scan Georgia Lottery delivery pack barcode to register books into store safe.';
-    renderSafeBackstockTable();
-    setTimeout(() => {
-      const barcodeInput = document.getElementById('inventoryBarcodeInput');
-      barcodeInput?.focus();
-    }, 100);
-  } else {
-    // ACTIVATED (default)
-    btnTabActive?.classList.add('active');
-    btnTabIntake?.classList.remove('active');
-    if (viewActive) viewActive.style.display = 'block';
-    if (viewIntake) viewIntake.style.display = 'none';
-    if (footerHint) footerHint.textContent = '💡 Showing all live lottery tickets currently activated across store dispensers.';
-    renderInventoryTable();
-  }
-  updateInventoryTabCounters();
-}
-
-function updateInventoryTabCounters() {
-  const activeCount = (state.slots || []).filter(isBoxActive).length;
-  const safeCount = (state.inventory || []).length;
-  const navActive = document.getElementById('invNavActiveCount');
-  const navSafe = document.getElementById('invNavSafeCount');
-  if (navActive) navActive.textContent = activeCount;
-  if (navSafe) navSafe.textContent = safeCount;
+  setTimeout(() => {
+    const scanInput = document.getElementById('invBoxTicketBarcodeInput');
+    scanInput?.focus();
+  }, 100);
 }
 
 function renderInventoryTable() {
@@ -1876,7 +1735,6 @@ function renderInventoryTable() {
       </td>
     `;
     inventoryTableBody.appendChild(emptyRow);
-    updateInventoryTabCounters();
     return;
   }
 
@@ -1935,57 +1793,6 @@ function renderInventoryTable() {
     });
 
     inventoryTableBody.appendChild(row);
-  });
-
-  updateInventoryTabCounters();
-}
-
-function renderSafeBackstockTable() {
-  const safeTableBody = document.getElementById('inventorySafeTableBody');
-  const safePacks = state.inventory || [];
-  const safeCountDisplay = document.getElementById('invSafePacksCount');
-  if (safeCountDisplay) safeCountDisplay.textContent = safePacks.length;
-  if (!safeTableBody) return;
-
-  safeTableBody.innerHTML = '';
-  if (safePacks.length === 0) {
-    const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = `
-      <td colspan="7" style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">
-        No unactivated packs in safe backstock. Use Auto-Intake above to register delivery books into safe.
-      </td>
-    `;
-    safeTableBody.appendChild(emptyRow);
-    return;
-  }
-
-  safePacks.forEach(pack => {
-    const row = document.createElement('tr');
-    const bookVal = pack.bookValue || (pack.price * pack.packSize);
-    const cleanName = cleanGameTitle(pack.gameName);
-
-    row.innerHTML = `
-      <td style="font-weight:700; color:var(--color-primary); font-family:monospace;">#${pack.packNumber}</td>
-      <td style="font-weight:600;">${cleanName}</td>
-      <td style="font-weight:700;">$${pack.price}.00</td>
-      <td style="color:var(--color-success); font-weight:700;">$${bookVal}</td>
-      <td>${pack.packSize} pk</td>
-      <td><span style="background:rgba(34,197,94,0.12); color:var(--color-success); border:1px solid rgba(34,197,94,0.3); padding:2px 8px; border-radius:4px; font-weight:700; font-size:0.75rem;">IN SAFE</span></td>
-      <td style="text-align:center;">
-        <button class="btn btn-primary btn-act-safe" style="padding:4px 10px; font-size:0.75rem; font-weight:700;" data-pack="${pack.packNumber}">
-          📥 Activate into Box...
-        </button>
-      </td>
-    `;
-
-    row.querySelector('.btn-act-safe')?.addEventListener('click', () => {
-      inventoryModal.close();
-      const targetBox = prompt(`Enter Box Number to activate ${cleanName} into dispenser (e.g. 1-70):`, '1');
-      const boxNum = parseInt(targetBox, 10) || findFirstEmptyBox();
-      openActivationForBox(boxNum, pack);
-    });
-
-    safeTableBody.appendChild(row);
   });
 }
 
@@ -2287,7 +2094,6 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame) {
   renderInventoryTable();
   renderDispenserRack();
   renderHeaderAndMetrics();
-  updateInventoryTabCounters();
 
   return true;
 }
@@ -2347,140 +2153,10 @@ function setupSetBoxModalLogic() {
 }
 
 function setupInventoryModalLogic() {
-  const btnTabActive = document.getElementById('btnTabActiveInventory');
-  const btnTabIntake = document.getElementById('btnTabIntake');
   const invSearchInput = document.getElementById('invSearchInput');
-
-  btnTabActive?.addEventListener('click', () => setInventoryTab('ACTIVATED'));
-  btnTabIntake?.addEventListener('click', () => setInventoryTab('INTAKE'));
 
   invSearchInput?.addEventListener('input', () => {
     renderInventoryTable();
-  });
-
-  const btnInvModeOld = document.getElementById('btnInvModeOld');
-  const btnInvModeNew = document.getElementById('btnInvModeNew');
-  const invOldTicketSection = document.getElementById('invOldTicketSection');
-  const invNewTicketSection = document.getElementById('invNewTicketSection');
-  const newTicketNameInput = document.getElementById('newTicketNameInput');
-  const newTicketValueSelect = document.getElementById('newTicketValueSelect');
-  const newBookValueInput = document.getElementById('newBookValueInput');
-  const newPackNumberInput = document.getElementById('newPackNumberInput');
-  const newComputedPackSize = document.getElementById('newComputedPackSize');
-  const newComputedFormula = document.getElementById('newComputedFormula');
-  const btnRegisterNewTicket = document.getElementById('btnRegisterNewTicket');
-
-  function setIntakeMode(isNew) {
-    if (isNew) {
-      btnInvModeNew?.classList.add('active');
-      btnInvModeOld?.classList.remove('active');
-      if (invNewTicketSection) invNewTicketSection.style.display = 'block';
-      if (invOldTicketSection) invOldTicketSection.style.display = 'none';
-      setTimeout(() => newTicketNameInput?.focus(), 100);
-    } else {
-      btnInvModeOld?.classList.add('active');
-      btnInvModeNew?.classList.remove('active');
-      if (invOldTicketSection) invOldTicketSection.style.display = 'block';
-      if (invNewTicketSection) invNewTicketSection.style.display = 'none';
-      setTimeout(() => inventoryBarcodeInput?.focus(), 100);
-    }
-  }
-
-  btnInvModeOld?.addEventListener('click', () => setIntakeMode(false));
-  btnInvModeNew?.addEventListener('click', () => setIntakeMode(true));
-
-  function updateComputedPackSize() {
-    const tv = parseFloat(newTicketValueSelect?.value) || 2;
-    const std = getStandardPackDetails(tv);
-    
-    // Auto-update book value based on ticket value if not manually overridden
-    if (newBookValueInput && (!newBookValueInput.dataset.manualEdit || newBookValueInput.dataset.lastTv !== String(tv))) {
-      newBookValueInput.value = std.bookValue;
-      newBookValueInput.dataset.lastTv = String(tv);
-    }
-    
-    const bv = parseFloat(newBookValueInput?.value) || std.bookValue;
-    const pkSize = Math.max(1, Math.round(bv / tv));
-    if (newComputedPackSize) newComputedPackSize.textContent = `${pkSize} Tickets`;
-    if (newComputedFormula) newComputedFormula.textContent = `($${bv} Book ÷ $${tv} Ticket)`;
-  }
-
-  newTicketValueSelect?.addEventListener('change', () => {
-    delete newBookValueInput.dataset.manualEdit;
-    updateComputedPackSize();
-  });
-  newBookValueInput?.addEventListener('input', () => {
-    newBookValueInput.dataset.manualEdit = 'true';
-    updateComputedPackSize();
-  });
-
-  document.querySelectorAll('.btn-book-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const val = btn.getAttribute('data-val');
-      if (newBookValueInput) {
-        newBookValueInput.value = val;
-        newBookValueInput.dataset.manualEdit = 'true';
-      }
-      sfx.keypad();
-      updateComputedPackSize();
-    });
-  });
-
-  btnRegisterNewTicket?.addEventListener('click', () => {
-    const rawName = newTicketNameInput?.value.trim();
-    if (!rawName) {
-      sfx.alert();
-      showToast('Please enter a Ticket Name for the brand new game.', 'error');
-      newTicketNameInput?.focus();
-      return;
-    }
-
-    const price = parseFloat(newTicketValueSelect?.value) || 2;
-    const std = getStandardPackDetails(price);
-    const bookValue = parseFloat(newBookValueInput?.value) || std.bookValue;
-    const packSize = Math.max(1, Math.round(bookValue / price));
-    const rawPack = newPackNumberInput?.value.trim() || String(Math.floor(100000 + Math.random() * 900000));
-    const cleanPack = rawPack.replace(/[^0-9]/g, '').slice(-7) || rawPack;
-
-    const newGameId = 'g_' + Date.now();
-    const formattedName = cleanGameTitle(rawName).toUpperCase();
-    const customGame = {
-      id: newGameId,
-      name: formattedName,
-      price: price,
-      bookValue: bookValue,
-      packSize: packSize,
-      barcodePrefix: cleanPack.slice(0, 4)
-    };
-
-    if (!state.customGames) state.customGames = [];
-    if (!state.customGames.some(g => g.name === formattedName)) {
-      state.customGames.push(customGame);
-    }
-
-    const newPack = {
-      packNumber: cleanPack,
-      gameId: newGameId,
-      gameName: formattedName,
-      price: price,
-      bookValue: bookValue,
-      packSize: packSize,
-      dateReceived: new Date().toISOString().split('T')[0],
-      status: 'IN_SAFE'
-    };
-
-    state.inventory.unshift(newPack);
-    saveState(state);
-    sfx.chime();
-    voice.speakInventoryUpdated();
-
-    if (newTicketNameInput) newTicketNameInput.value = '';
-    if (newPackNumberInput) newPackNumberInput.value = '';
-    renderSafeBackstockTable();
-    renderHeaderAndMetrics();
-    updateInventoryTabCounters();
-
-    showToast(`✨ Brand New Ticket Registered: ${formattedName} · Book Value: $${bookValue} · Ticket Value: $${price} (${packSize} pk) stored in safe!`, 'success');
   });
 
   invBoxTicketBarcodeInput?.addEventListener('keydown', (e) => {
@@ -2493,90 +2169,6 @@ function setupInventoryModalLogic() {
   btnInvBoxTicketScan?.addEventListener('click', () => {
     handleTicketBarcodeScan(invBoxTicketBarcodeInput?.value.trim(), 'inventory');
   });
-
-  inventoryBarcodeInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleInventoryPackIntake();
-    }
-  });
-
-  document.getElementById('inventoryAddManualBtn')?.addEventListener('click', handleInventoryPackIntake);
-}
-
-function handleInventoryPackIntake() {
-  const rawInput = inventoryBarcodeInput.value.trim();
-  if (!rawInput) {
-    sfx.alert();
-    showToast('Please scan or enter a ticket barcode.', 'error');
-    return;
-  }
-
-  // Duplicate check for safe intake
-  if (isBarcodeAlreadyScanned(rawInput)) {
-    const existing = findScannedBarcodeInfo(rawInput);
-    sfx.alert();
-    showToast(`⚠️ Already Scanned! Ticket [${rawInput}] is already in Box #${existing?.boxNumber || '?'}. Skipping duplicate.`, 'error');
-    const fb = document.getElementById('invOldAutoFeedback');
-    if (fb) {
-      fb.style.display = 'block';
-      fb.style.background = 'rgba(239, 68, 68, 0.15)';
-      fb.style.borderColor = '#ef4444';
-      fb.style.color = '#ef4444';
-      fb.innerHTML = `❌ <strong>ALREADY SCANNED:</strong> Ticket <code>${rawInput}</code> is already in <strong>Box #${existing?.boxNumber}</strong>. Skipped duplicate.`;
-    }
-    inventoryBarcodeInput.value = '';
-    return;
-  }
-
-  const cleanNum = rawInput.replace(/[^0-9]/g, '');
-  const matchedGame = findGameByBarcode(rawInput, state.customGames);
-
-  if (matchedGame) {
-    // Old ticket: Take automatically!
-    const packNum = cleanNum.length >= 6 ? cleanNum.slice(-7) : (rawInput || String(Math.floor(100000 + Math.random() * 900000)));
-    const bookVal = matchedGame.bookValue || (matchedGame.price * matchedGame.packSize);
-
-    const newPack = {
-      packNumber: packNum,
-      gameId: matchedGame.id,
-      gameName: matchedGame.name,
-      price: matchedGame.price,
-      bookValue: bookVal,
-      packSize: matchedGame.packSize,
-      dateReceived: new Date().toISOString().split('T')[0],
-      status: 'IN_SAFE'
-    };
-
-    state.inventory.unshift(newPack);
-    saveState(state);
-    sfx.success();
-    voice.speakInventoryUpdated();
-    inventoryBarcodeInput.value = '';
-
-    const fb = document.getElementById('invOldAutoFeedback');
-    if (fb) {
-      fb.style.display = 'block';
-      fb.innerHTML = `✓ Auto-Intake: <strong>${newPack.gameName}</strong> · Ticket Value: <strong>$${newPack.price}</strong> · Book Value: <strong>$${bookVal}</strong> (${newPack.packSize} pk) · Pack #${newPack.packNumber} registered in safe!`;
-    }
-
-    renderInventoryTable();
-    renderHeaderAndMetrics();
-    showToast(`✓ Old Ticket Auto-Intake: ${newPack.gameName} · Pack #${newPack.packNumber} ($${bookVal} Book Value) registered in safe!`, 'success');
-  } else {
-    // Not recognized: switch to Brand New Ticket mode!
-    sfx.keypad();
-    const btnInvModeNew = document.getElementById('btnInvModeNew');
-    btnInvModeNew?.click();
-
-    const newPackNumberInput = document.getElementById('newPackNumberInput');
-    if (newPackNumberInput) newPackNumberInput.value = rawInput;
-
-    const newTicketNameInput = document.getElementById('newTicketNameInput');
-    newTicketNameInput?.focus();
-
-    showToast(`✨ Brand New Ticket detected! Enter Ticket Name & Book Value to register.`, 'info');
-  }
 }
 
 // -------------------------------------------------------------
@@ -2599,11 +2191,6 @@ function setupHardwareScannerListener() {
         return;
       }
 
-      // If inventoryBarcodeInput was active, let it handle pack intake
-      if (activeEl === inventoryBarcodeInput) {
-        scanBuffer = '';
-        return;
-      }
 
       // If keypadBoxInput was active inside activationModal
       if (activeEl === keypadBoxInput) {
@@ -2821,54 +2408,6 @@ function processScannedBarcode(rawBarcode) {
   renderSlotsRibbon();
 }
 
-// -------------------------------------------------------------
-// Interactive Customer Purchase & Demo Simulation
-// -------------------------------------------------------------
-
-function simulateCustomerPurchase() {
-  const activeSlots = state.slots.filter(s => s.status === 'ACTIVE' && s.packNumber);
-  if (activeSlots.length === 0) {
-    showToast('No active dispenser boxes with tickets to sell from!', 'error');
-    return;
-  }
-
-  // Pick random active box
-  const target = activeSlots[Math.floor(Math.random() * activeSlots.length)];
-  const cleanName = cleanGameTitle(target.gameName);
-  target.currentTicket = (target.currentTicket || 0) + count;
-  state.lastScannedSlot = target.boxNumber;
-  state.lastScannedBarcode = `Box #${target.boxNumber} · $${Number(target.price).toFixed(2)} · ${cleanName} (Sold ${count}x → #${String(target.currentTicket).padStart(2, '0')})`;
-
-  if (target.packSize && target.currentTicket >= target.packSize) {
-    target.status = 'SOLD_OUT';
-    recordSoldOutPack(target, target.currentTicket);
-    sfx.alert();
-    showToast(`🚨 Box #${target.boxNumber} (${cleanName}) is SOLD OUT! Pack completed.`, 'warning');
-  } else {
-    sfx.keypad();
-    showToast(`🛒 Customer purchased ${count}x $${Number(target.price).toFixed(2)} · ${cleanName} from Box #${target.boxNumber}! (Now #${String(target.currentTicket).padStart(2, '0')})`, 'success');
-  }
-}
-
-function simulateEndShiftScanAll() {
-  if (state.shiftStatus !== 'SCANNING_END_SHIFT') {
-    handleMainShiftAction(); // Switch to End Shift scanning first
-  }
-
-  state.slots.forEach(s => {
-    if (s.status === 'ACTIVE' && s.packNumber) {
-      s.scannedInEndShift = true;
-    }
-  });
-
-  sfx.chime();
-  saveState(state);
-  renderHeaderAndMetrics();
-  renderDispenserRack();
-  renderSlotsRibbon();
-
-  showToast('✓ All active dispenser boxes verified!', 'success');
-}
 
 // -------------------------------------------------------------
 // Shift History Viewer
@@ -3567,97 +3106,11 @@ function setupEventListeners() {
 
   // Theme Toggles
   if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
-  if (drawerThemeToggleBtn) drawerThemeToggleBtn.addEventListener('click', toggleTheme);
-
   // Box Adjust Modal
   setupBoxAdjustModal();
 
   // Set Box & Saved Barcodes Modals
   setupSetBoxModalLogic();
-
-  // Floating Demo Drawer
-  demoFabBtn.addEventListener('click', () => {
-    demoDrawer.classList.toggle('open');
-  });
-  closeDemoDrawer.addEventListener('click', () => {
-    demoDrawer.classList.remove('open');
-  });
-
-  simCustomerBuyBtn.addEventListener('click', simulateCustomerPurchase);
-  simScanNewPackBtn.addEventListener('click', () => {
-    openActivationForBox(findFirstEmptyBox(), {
-      packNumber: '668102',
-      gameId: 'g102',
-      gameName: '$2 HIT 200......',
-      price: 2,
-      packSize: 150
-    });
-  });
-  simScan$20PackBtn.addEventListener('click', () => {
-    openActivationForBox(findFirstEmptyBox(), {
-      packNumber: '779201',
-      gameId: 'g120',
-      gameName: '$20 100X THE MONEY',
-      price: 20,
-      packSize: 30
-    });
-  });
-  simEndShiftScanAllBtn.addEventListener('click', simulateEndShiftScanAll);
-
-  const simSetBoxEmptyBtn = document.getElementById('simSetBoxEmptyBtn');
-  if (simSetBoxEmptyBtn) {
-    simSetBoxEmptyBtn.addEventListener('click', () => {
-      // Find Box 19 (or Box 20 or any active box) and set its count to 0 to demonstrate turning into Box 5
-      const target = state.slots.find(s => s.boxNumber === 19 && s.status === 'ACTIVE' && s.packNumber)
-        || state.slots.find(s => s.boxNumber === 20 && s.status === 'ACTIVE' && s.packNumber)
-        || state.slots.find(s => s.status === 'ACTIVE' && s.packNumber);
-
-      if (target) {
-        recordSoldOutPack(target, target.currentTicket);
-        target.currentTicket = 0;
-        target.status = 'EMPTY';
-        target.activatedThisShift = false;
-        saveState(state);
-        sfx.alert();
-        renderHeaderAndMetrics();
-        renderDispenserRack();
-        renderSlotsRibbon();
-        showToast(`📦 Box #${target.boxNumber} (${target.gameName}) marked as SOLD OUT / Empty!`, 'info');
-      } else {
-        showToast('No active box with tickets available to set to 0. Activate a box first!', 'error');
-      }
-    });
-  }
-
-  const btnAddDispenserBoxBtn = document.getElementById('btnAddDispenserBoxBtn');
-  if (btnAddDispenserBoxBtn) {
-    btnAddDispenserBoxBtn.addEventListener('click', addNewBox);
-  }
-
-  const simScanBoxBarcodeBtn = document.getElementById('simScanBoxBarcodeBtn');
-  if (simScanBoxBarcodeBtn) {
-    simScanBoxBarcodeBtn.addEventListener('click', () => {
-      processScannedBarcode('BOX-05');
-    });
-  }
-
-  const simAddNewBoxBtn = document.getElementById('simAddNewBoxBtn');
-  if (simAddNewBoxBtn) {
-    simAddNewBoxBtn.addEventListener('click', addNewBox);
-  }
-
-  if (simResetStateBtn) {
-    simResetStateBtn.addEventListener('click', () => {
-      if (confirm('Erase all mock data and reset the POS to a clean slate?')) {
-        state = resetToCleanState();
-        state.dataCleared = true;
-        saveState(state);
-        initPOS();
-        sfx.alert();
-        showToast('All fake data erased! Clean POS ready.', 'info');
-      }
-    });
-  }
 
   const menuClearDataBtn = document.getElementById('menuClearDataBtn');
   if (menuClearDataBtn) {

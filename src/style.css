@@ -1560,27 +1560,6 @@ dialog::backdrop {
   align-items: flex-end;
 }
 
-.activation-manual-box {
-  background: var(--bg-surface-elevated, #162444);
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  margin-bottom: 10px;
-}
-
-.manual-row-1 {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.manual-row-2 {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
-  gap: 8px;
-}
-
 .activation-field-label {
   display: block;
   font-size: 0.68rem;
@@ -2001,86 +1980,6 @@ dialog::backdrop {
   font-size: 0.95rem;
 }
 
-/* Floating Quick Simulator / Demo Assistant */
-.demo-helper-fab {
-  position: fixed;
-  bottom: 10px;
-  right: 14px;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 9999px;
-  padding: 6px 14px;
-  font-weight: 700;
-  font-size: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 115, 198, 0.3);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 90;
-  opacity: 0.82;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.demo-helper-fab:hover {
-  transform: translateY(-2px);
-  opacity: 1;
-  background: var(--color-primary-hover);
-  box-shadow: 0 8px 18px rgba(0, 115, 198, 0.45);
-}
-
-.demo-drawer {
-  position: fixed;
-  bottom: 75px;
-  right: 24px;
-  width: 320px;
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
-  padding: 18px;
-  z-index: 100;
-  display: none;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.demo-drawer.open {
-  display: flex;
-}
-
-.drawer-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.drawer-btn {
-  background: #f9fafb;
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s;
-}
-
-.drawer-btn:hover {
-  background: #f1f5f9;
-  border-color: var(--color-primary-border);
-  color: var(--color-primary);
-}
 
 /* Toast Notification (Arron Portal Clean Alert Toast) */
 .toast-container {
