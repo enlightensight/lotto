@@ -417,17 +417,53 @@ function renderHeaderAndMetrics() {
     if (largeStatLabel) largeStatLabel.textContent = '';
   }
 
-  // Calculate current sales this shift (from active slots + packs sold out this shift)
+  const now = new Date();
+  const isToday = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getFullYear() === now.getFullYear() &&
+           d.getMonth() === now.getMonth() &&
+           d.getDate() === now.getDate();
+  };
+
+  const isThisWeek = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return d >= oneWeekAgo && d <= now;
+  };
+
+  const isThisMonth = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  };
+
+  // 1. Calculate current sales this shift (from active slots + packs sold out this shift)
   const { totalSold, totalRevenue } = getShiftSalesTotals();
-  const todaySales = totalRevenue;
-  const todayTickets = totalSold;
+  const currentShiftSales = totalRevenue;
+  const currentShiftTickets = totalSold;
 
-  const pastShiftTickets = (state.shiftHistory || []).reduce((acc, h) => acc + (h.totalTicketsSold || 0), 0);
+  // 2. Aggregate across past shifts properly by date
+  const todayPastTickets = (state.shiftHistory || [])
+    .filter(h => isToday(h.endedAt || h.startedAt))
+    .reduce((acc, h) => acc + (h.totalTicketsSold || 0), 0);
+  const totalTodayTickets = todayPastTickets + currentShiftTickets;
 
-  if (metricSettlement) metricSettlement.textContent = `$${todaySales.toFixed(2)}`;
-  if (metricToday) metricToday.textContent = todayTickets;
-  if (metricThisWeek) metricThisWeek.textContent = pastShiftTickets + todayTickets;
-  if (metricThisMonth) metricThisMonth.textContent = pastShiftTickets + todayTickets;
+  const weekPastTickets = (state.shiftHistory || [])
+    .filter(h => isThisWeek(h.endedAt || h.startedAt))
+    .reduce((acc, h) => acc + (h.totalTicketsSold || 0), 0);
+  const totalWeekTickets = weekPastTickets + currentShiftTickets;
+
+  const monthPastTickets = (state.shiftHistory || [])
+    .filter(h => isThisMonth(h.endedAt || h.startedAt))
+    .reduce((acc, h) => acc + (h.totalTicketsSold || 0), 0);
+  const totalMonthTickets = monthPastTickets + currentShiftTickets;
+
+  if (metricSettlement) metricSettlement.textContent = `$${currentShiftSales.toFixed(2)}`;
+  if (metricToday) metricToday.textContent = totalTodayTickets;
+  if (metricThisWeek) metricThisWeek.textContent = totalWeekTickets;
+  if (metricThisMonth) metricThisMonth.textContent = totalMonthTickets;
   if (metricInactive) metricInactive.textContent = emptyCount;
   if (metricInventoryCount) metricInventoryCount.textContent = `${activeCount} Packs`;
 
@@ -2937,20 +2973,59 @@ function processScannedBarcode(rawBarcode) {
 // Shift History Viewer
 // -------------------------------------------------------------
 
-function openHistoryModal() {
+function openHistoryModal(filter = 'all') {
+  if (!historyTableBody) return;
   historyTableBody.innerHTML = '';
-  state.shiftHistory.forEach(h => {
+  
+  const now = new Date();
+  const isToday = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getFullYear() === now.getFullYear() &&
+           d.getMonth() === now.getMonth() &&
+           d.getDate() === now.getDate();
+  };
+
+  const isThisWeek = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return d >= oneWeekAgo && d <= now;
+  };
+
+  const isThisMonth = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  };
+
+  let list = state.shiftHistory || [];
+  if (filter === 'today') {
+    list = list.filter(h => isToday(h.endedAt || h.startedAt));
+  } else if (filter === 'week') {
+    list = list.filter(h => isThisWeek(h.endedAt || h.startedAt));
+  } else if (filter === 'month') {
+    list = list.filter(h => isThisMonth(h.endedAt || h.startedAt));
+  }
+
+  if (list.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td style="font-weight:700; color:var(--color-primary);">Shift #${h.shiftNumber}</td>
-      <td>${h.cashier}</td>
-      <td>${new Date(h.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-      <td>${h.totalTicketsSold}</td>
-      <td style="color:var(--color-success); font-weight:700;">$${h.totalSalesRevenue.toFixed(2)}</td>
-      <td>${h.activationsCount}</td>
-    `;
+    row.innerHTML = `<td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic;">No shifts recorded for ${filter === 'today' ? 'today' : filter === 'week' ? 'this week' : filter === 'month' ? 'this month' : 'this period'}.</td>`;
     historyTableBody.appendChild(row);
-  });
+  } else {
+    list.forEach(h => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="font-weight:700; color:var(--color-primary);">Shift #${h.shiftNumber}</td>
+        <td>${h.cashier || 'Clerk'}</td>
+        <td>${h.endedAt ? new Date(h.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
+        <td>${h.totalTicketsSold || 0}</td>
+        <td style="color:var(--color-success); font-weight:700;">$${Number(h.totalSalesRevenue || 0).toFixed(2)}</td>
+        <td>${h.activationsCount || 0}</td>
+      `;
+      historyTableBody.appendChild(row);
+    });
+  }
   sfx.keypad();
   historyModal.showModal();
 }
@@ -3143,6 +3218,47 @@ function setupEventListeners() {
   closeInventoryBtn?.addEventListener('click', () => inventoryModal.close());
   inventoryDoneBtn?.addEventListener('click', () => inventoryModal.close());
   setupInventoryModalLogic();
+
+  // Summary Metric Tabs Click Handlers
+  document.getElementById('tabSettlement')?.addEventListener('click', () => {
+    sfx.keypad();
+    if (state.shiftStatus === 'SHIFT_ENDED') {
+      openDayReportModal(() => state, sfx);
+    } else {
+      openShiftReportModal();
+    }
+  });
+
+  document.getElementById('tabToday')?.addEventListener('click', () => {
+    sfx.keypad();
+    openHistoryModal('today');
+    showToast(`📅 Today's Sales: ${metricToday?.textContent || 0} tickets sold`, 'info');
+  });
+
+  document.getElementById('tabThisWeek')?.addEventListener('click', () => {
+    sfx.keypad();
+    openHistoryModal('week');
+    showToast(`📅 This Week's Sales: ${metricThisWeek?.textContent || 0} tickets sold`, 'info');
+  });
+
+  document.getElementById('tabThisMonth')?.addEventListener('click', () => {
+    sfx.keypad();
+    openHistoryModal('month');
+    showToast(`📅 This Month's Sales: ${metricThisMonth?.textContent || 0} tickets sold`, 'info');
+  });
+
+  document.getElementById('tabInactive')?.addEventListener('click', () => {
+    sfx.keypad();
+    const firstEmpty = document.querySelector('.box-card.empty-slot');
+    if (firstEmpty) {
+      firstEmpty.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstEmpty.classList.add('pulse-highlight');
+      setTimeout(() => firstEmpty.classList.remove('pulse-highlight'), 1800);
+      showToast(`📦 ${metricInactive?.textContent || 0} Inactive / Empty dispenser boxes. Tap any box to activate a pack.`, 'info');
+    } else {
+      showToast('All dispenser boxes are currently active!', 'success');
+    }
+  });
 
 
   // -------------------------------------------------------------

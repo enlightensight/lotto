@@ -1049,6 +1049,22 @@ body {
   background: #333333;
 }
 
+.metric-tab:active {
+  background: #1a1a1a;
+  transform: translateY(1px);
+}
+
+@keyframes pulseHighlight {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+  50% { transform: scale(1.04); box-shadow: 0 0 0 12px rgba(56, 189, 248, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+
+.pulse-highlight {
+  animation: pulseHighlight 0.8s ease-in-out 2 !important;
+  border-color: #38bdf8 !important;
+}
+
 .metric-tab .tab-name {
   font-size: 0.8rem;
   font-weight: 700;
