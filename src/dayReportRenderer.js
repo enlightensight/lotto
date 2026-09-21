@@ -219,7 +219,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   const statEl = document.getElementById('drReportLargeStat');
   if (statEl) {
     const activeCount = (reportData.boxes || []).filter(b => !b.isEmpty).length;
-    statEl.textContent = activeCount || 65;
+    statEl.textContent = activeCount;
   }
 
   // 2. Clear and Render Sheets
