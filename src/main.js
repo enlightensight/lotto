@@ -201,6 +201,11 @@ const btnFixPosition = document.getElementById('btnFixPosition');
 const setBoxStepUp = document.getElementById('setBoxStepUp');
 const setBoxStepDown = document.getElementById('setBoxStepDown');
 
+const lastScanReadoutContainer = document.getElementById('lastScanReadoutContainer');
+const calculatingSpinnerModal = document.getElementById('calculatingSpinnerModal');
+const calculatingSpinnerText = document.getElementById('calculatingSpinnerText');
+const calculatingSubText = document.getElementById('calculatingSubText');
+
 const historyModal = document.getElementById('historyModal');
 const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const closeHistoryBottomBtn = document.getElementById('closeHistoryBottomBtn');
@@ -362,38 +367,36 @@ function renderHeaderAndMetrics() {
     shiftStatusText.textContent = 'Shift in Progress';
     mainShiftActionBtn.className = 'btn-lt-black-end';
     mainShiftActionBtn.textContent = 'End Shift';
-    scanActionTitle.textContent = state.lastScannedSlot 
-      ? `Scanner Ready · Last Box Sold: #${state.lastScannedSlot}` 
-      : 'Scanner Ready · Shift in Progress';
   } else if (state.shiftStatus === 'SCANNING_END_SHIFT') {
     shiftStatusBadge.className = 'btn-lt-green-progress scanning';
     shiftStatusText.textContent = 'Scanning... End Shift';
     mainShiftActionBtn.className = 'btn-lt-black-end btn-get-report';
     mainShiftActionBtn.textContent = 'Get Report';
-    scanActionTitle.textContent = 'End Shift Audit · Scan Active Dispenser Boxes';
   } else if (state.shiftStatus === 'SHIFT_ENDED') {
     shiftStatusBadge.className = 'btn-lt-green-progress ended';
     shiftStatusText.textContent = 'Shift Closed';
     mainShiftActionBtn.className = 'btn-lt-black-end btn-start-shift';
     mainShiftActionBtn.textContent = 'Start New Shift';
-    scanActionTitle.textContent = 'Shift Closed · Ready for New Shift';
   }
 
-  if (state.shiftStatus === 'SCANNING_END_SHIFT') {
-    scanActionTitle.textContent = 'Scanning...End Shift';
-  } else if (state.shiftStatus === 'IN_PROGRESS') {
-    scanActionTitle.textContent = 'Shift in Progress';
-  } else if (state.shiftStatus === 'SHIFT_ENDED') {
-    scanActionTitle.textContent = 'Shift Ended';
-  }
+  // Update Readout if not currently in an alert yellow state
+  if (!lastScanReadoutContainer?.classList.contains('alert-yellow')) {
+    if (state.shiftStatus === 'SCANNING_END_SHIFT') {
+      scanActionTitle.textContent = 'Scanning...End Shift';
+    } else if (state.shiftStatus === 'IN_PROGRESS') {
+      scanActionTitle.textContent = 'Shift in Progress';
+    } else if (state.shiftStatus === 'SHIFT_ENDED') {
+      scanActionTitle.textContent = 'Shift Ended';
+    }
 
-  if (state.lastScanData) {
-    const d = state.lastScanData;
-    lastScanDisplay.textContent = `Last Scan: $${Number(d.price)} ${cleanGameTitle(d.gameName)} (#${String(d.ticketNumber).padStart(2, '0')})`;
-  } else if (state.lastScannedBarcode) {
-    lastScanDisplay.textContent = `Last Scan: ${state.lastScannedBarcode}`;
-  } else {
-    lastScanDisplay.textContent = 'Ready for scan';
+    if (state.lastScanData) {
+      const d = state.lastScanData;
+      lastScanDisplay.textContent = `Last Scan: $${Number(d.price)} ${cleanGameTitle(d.gameName)} (#${String(d.ticketNumber).padStart(2, '0')})`;
+    } else if (state.lastScannedBarcode) {
+      lastScanDisplay.textContent = `Last Scan: ${state.lastScannedBarcode}`;
+    } else {
+      lastScanDisplay.textContent = 'Ready for scan';
+    }
   }
 
   const remainingPacksCount = document.getElementById('remainingPacksCount');
@@ -906,11 +909,30 @@ function handleConfirmFixTicketPosition() {
   inputAdjustCount.value = newPos;
   saveState(state);
   sfx.success();
+  voice.speakMissedTicketFixed();
+  if (lastScanReadoutContainer) lastScanReadoutContainer.classList.remove('alert-yellow');
+  if (scanActionTitle) scanActionTitle.textContent = 'Missed Ticket is Fixed';
+  if (lastScanDisplay) lastScanDisplay.textContent = `Box #${currentAdjustingSlot.boxNumber} (${cleanGameTitle(currentAdjustingSlot.gameName)}) at #${String(newPos).padStart(2, '0')}`;
   fixTicketPositionModal.close();
   renderHeaderAndMetrics();
   renderDispenserRack();
   renderSlotsRibbon();
   showToast(`🎯 Missed Ticket is Fixed! Box #${currentAdjustingSlot.boxNumber} position set to #${String(newPos).padStart(2, '0')}`, 'success');
+}
+
+function showCalculatingSpinner(title, subtext, onDone, duration = 900) {
+  if (!calculatingSpinnerModal) {
+    if (onDone) onDone();
+    return;
+  }
+  if (calculatingSpinnerText) calculatingSpinnerText.textContent = title;
+  if (calculatingSubText) calculatingSubText.textContent = subtext;
+  sfx.keypad();
+  calculatingSpinnerModal.showModal();
+  setTimeout(() => {
+    calculatingSpinnerModal.close();
+    if (onDone) onDone();
+  }, duration);
 }
 
 function setupFixTicketPositionKeypad() {
@@ -1034,13 +1056,17 @@ function setupTerminalReconcileLogic() {
     terminalReconcileModal.close();
     renderHeaderAndMetrics();
     showToast(`✓ Terminal data reconciled: Online Sales $${state.onlineSales.toFixed(2)}, Cashes $${state.cashes.toFixed(2)}`, 'success');
-    if (typeof terminalReconcileOnDone === 'function') {
-      const cb = terminalReconcileOnDone;
-      terminalReconcileOnDone = null;
-      cb();
-    } else {
-      openDayReportModal(() => state, sfx);
-    }
+    
+    // Show Calculating Segmented Spinner (Matching Video 03:35)
+    showCalculatingSpinner('Calculating', 'Generating Georgia Lottery Report...', () => {
+      if (typeof terminalReconcileOnDone === 'function') {
+        const cb = terminalReconcileOnDone;
+        terminalReconcileOnDone = null;
+        cb();
+      } else {
+        openDayReportModal(() => state, sfx);
+      }
+    }, 800);
   };
 
   btnTerminalReconcileDone?.addEventListener('click', handleTerminalDone);
@@ -1565,9 +1591,10 @@ function handleMainShiftAction() {
     renderSlotsRibbon();
     showToast('End Shift mode started! Scan or tap each active dispenser box.', 'info');
   } else if (state.shiftStatus === 'SCANNING_END_SHIFT') {
-    // Open Confirmation Dialog
-    openEndShiftConfirmation();
-    voice.speakEmptySlot();
+    // Show Calculating Segmented Spinner (Matching Video 02:55)
+    showCalculatingSpinner('Calculating', 'Calculating End Shift', () => {
+      openEndShiftConfirmation();
+    }, 900);
   } else if (state.shiftStatus === 'SHIFT_ENDED') {
     startNewShift();
   }
@@ -1578,6 +1605,9 @@ function openEndShiftConfirmation() {
   const activeCount = state.slots.filter(isBoxActive).length;
   const activations = state.slots.filter(s => isBoxActive(s) && s.activatedThisShift).length;
   const emptySlots = state.totalSlots - activeCount;
+
+  // Authentic LTSYSTEM Voice Prompt (Video 02:58)
+  voice.speakEmptySlotCheck(activations, emptySlots);
 
   // Gather all sold out packs and empty dispenser boxes
   const soldOutItems = [];
@@ -2355,6 +2385,16 @@ function confirmSetBoxForTicket() {
     pendingSetBoxGame = null;
     pendingRestorePack = null;
 
+    // Matching LTSYSTEM Video 01:21: If fixing a sold-out ticket, immediately open Fix Ticket Position keypad!
+    if (restorePack) {
+      const slot = state.slots.find(s => s.boxNumber === boxNum);
+      if (slot) {
+        currentAdjustingSlot = slot;
+        openFixTicketPositionModal(slot);
+        return;
+      }
+    }
+
     const invInput = document.getElementById('invBoxTicketBarcodeInput');
     if (invInput) {
       invInput.value = '';
@@ -2672,6 +2712,9 @@ function processScannedBarcode(rawBarcode) {
   state.lastScannedBarcode = rawBarcode;
 
   // Reset any alert banner styles from previous gatekeeper warnings
+  if (lastScanReadoutContainer) {
+    lastScanReadoutContainer.classList.remove('alert-yellow');
+  }
   if (scanActionTitle) {
     scanActionTitle.style.background = '';
     scanActionTitle.style.color = '';
@@ -2802,13 +2845,23 @@ function processScannedBarcode(rawBarcode) {
       return;
     }
 
-    // 2b. Check if scanned barcode matches a sold-out pack (Discrepancy Handling)
+    // 2b. Check if scanned barcode matches a sold-out pack (Discrepancy Handling - Video 01:13)
     const soldOutPack = (state.soldOutThisShift || []).find(so => {
       const p = String(so.packNumber || '').replace(/[^0-9]/g, '');
       return (p && cleanNum.includes(p)) || (so.gameName && rawBarcode.toLowerCase().includes(so.gameName.toLowerCase()));
     });
     if (soldOutPack) {
       sfx.alert();
+      voice.speakTicket();
+      if (lastScanReadoutContainer) {
+        lastScanReadoutContainer.classList.add('alert-yellow');
+      }
+      if (scanActionTitle) {
+        scanActionTitle.textContent = 'This Ticket was sold out in previous shift';
+      }
+      if (lastScanDisplay) {
+        lastScanDisplay.textContent = '';
+      }
       pendingSoldOutBarcode = rawBarcode;
       pendingSoldOutPack = soldOutPack;
       if (soldOutGameHeader) {
@@ -2818,15 +2871,27 @@ function processScannedBarcode(rawBarcode) {
       return;
     }
 
-    // 3. Duplicate check: Has this barcode already been scanned into inventory?
+    // 3. Duplicate check: Has this barcode already been scanned into inventory? (Video 00:31)
     if (isBarcodeAlreadyScanned(rawBarcode)) {
       const existing = findScannedBarcodeInfo(rawBarcode);
       sfx.alert();
-      showToast(`⚠️ Already Scanned! Ticket [${rawBarcode}] was already put into Box #${existing?.boxNumber || '?'}. Skipping duplicate.`, 'error');
+      voice.speakDuplicateError();
+      if (lastScanReadoutContainer) {
+        lastScanReadoutContainer.classList.add('alert-yellow');
+      }
+      if (scanActionTitle) {
+        scanActionTitle.textContent = 'THIS NUMBER HAS BEEN SCANNED';
+      }
+      if (lastScanDisplay) {
+        const gameTitle = existing?.gameName ? cleanGameTitle(existing.gameName) : 'Game Pack';
+        const packPart = existing?.packNumber ? ` #${existing.packNumber}` : '';
+        lastScanDisplay.textContent = `${gameTitle}${packPart}`;
+      }
+      showToast(`⚠️ THIS NUMBER HAS BEEN SCANNED! Ticket [${rawBarcode}] was already put into Box #${existing?.boxNumber || '?'}.`, 'error');
       return;
     }
 
-    // 4. Inventory Gatekeeper:
+    // 4. Inventory Gatekeeper: (Video 00:22)
     // Check if the barcode matches any known game in the database or stock in inventory
     const matchedGame = findGameByBarcode(rawBarcode, state.customGames);
     const isInInventory = (state.inventory || []).some(p => {
@@ -2838,15 +2903,15 @@ function processScannedBarcode(rawBarcode) {
     if (!matchedGame && !isInInventory && !isInInventoryBarcodes) {
       // Un-inventoried / un-recognized ticket: Block with yellow alert banner and modal
       sfx.alert();
+      voice.speakUpdateInventory();
+      if (lastScanReadoutContainer) {
+        lastScanReadoutContainer.classList.add('alert-yellow');
+      }
       if (scanActionTitle) {
-        scanActionTitle.textContent = '⚠️ THIS TICKET IS NOT IN THE INVENTORY OR NOT IN DATABASE';
-        scanActionTitle.style.background = '#fef08a';
-        scanActionTitle.style.color = '#854d0e';
-        scanActionTitle.style.padding = '4px 8px';
-        scanActionTitle.style.borderRadius = '4px';
+        scanActionTitle.textContent = 'THIS TICKET IS NOT IN THE INVENTORY OR NOT IN DATABASE';
       }
       if (lastScanDisplay) {
-        lastScanDisplay.textContent = `Last Scan: ${rawBarcode} (Ticket not in inventory)`;
+        lastScanDisplay.textContent = '';
       }
       if (notInInvBarcodeDetails) {
         notInInvBarcodeDetails.textContent = rawBarcode;

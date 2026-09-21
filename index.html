@@ -103,15 +103,15 @@
         <button class="btn-lt-black-end" id="mainShiftActionBtn">End Shift</button>
       </div>
 
-      <!-- Row 2: Readout on Left & Big Stat Number on Right -->
+      <!-- Row 2: Readout on Left & Big Stat Number on Right (Clean LTSYSTEM Layout) -->
       <div class="shift-status-readout-row">
-        <div class="last-scan-readout-lt">
-          <div class="scan-action-title-lt" id="scanActionTitle">Scanner Ready · Shift in Progress</div>
-          <div class="scan-details-lt" id="lastScanDisplay">Last Scan: Ready for scan</div>
+        <div class="last-scan-readout-lt" id="lastScanReadoutContainer">
+          <div class="scan-action-title-lt" id="scanActionTitle">Shift in Progress</div>
+          <div class="scan-details-lt" id="lastScanDisplay">Ready for scan</div>
         </div>
         <div class="large-stat-counter-lt">
           <div class="stat-number-lt" id="largeStatReadout">0</div>
-          <div class="stat-label-lt" id="largeStatLabel">Active Slots</div>
+          <div class="stat-label-lt" id="largeStatLabel" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -918,6 +918,17 @@
         <button type="button" class="btn btn-secondary" id="btnCancelSwitchBox">Cancel</button>
         <button type="button" class="btn btn-primary" id="btnConfirmSwitchBox" style="font-weight: 800;">Confirm Swap</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Calculating Segmented Spinner (Matching LTSYSTEM Video 02:55 & 03:35) -->
+  <dialog id="calculatingSpinnerModal" style="width: 280px; max-width: 90vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 26px 20px; text-align: center; background: var(--bg-surface); box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden;">
+    <div class="ltsystem-spinner-container" style="position: relative; width: 90px; height: 90px; margin: 0 auto 14px auto; display: flex; align-items: center; justify-content: center;">
+      <div class="ltsystem-segmented-wheel"></div>
+      <span id="calculatingSpinnerText" style="position: absolute; font-size: 0.78rem; font-weight: 800; color: var(--text-primary); text-align: center;">Calculating</span>
+    </div>
+    <div id="calculatingSubText" style="font-size: 0.9rem; font-weight: 700; color: var(--text-secondary);">
+      Calculating End Shift
     </div>
   </dialog>
 

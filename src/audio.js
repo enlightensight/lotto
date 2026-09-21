@@ -197,6 +197,22 @@ class VoiceGuide {
     this.speak("Report", 1.0);
   }
 
+  speakUpdateInventory() {
+    this.speak("Update inventory", 1.05);
+  }
+
+  speakTicket() {
+    this.speak("Ticket", 1.0);
+  }
+
+  speakEmptySlotCheck(activations, emptySlots) {
+    this.speak(`You have ${activations} Activation and ${emptySlots} Empty Slots. Please check the number of empty slots.`, 1.0);
+  }
+
+  speakMissedTicketFixed() {
+    this.speak("Missed ticket is fixed.", 1.05);
+  }
+
   speakReadyToSell(boxNum = 63) {
     this.speak(`Box number ${boxNum} ready to sell.`, 1.05);
   }
