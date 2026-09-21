@@ -54,13 +54,13 @@
     <!-- LEFT COLUMN: Shift Badge, Cancel/Undo Buttons, ML+Scanner Field -->
     <div class="shift-panel-left">
       <!-- Row 1: Current Shift Badge -->
-      <div class="shift-badge-box" id="shiftBadgeBox" style="cursor:pointer;" title="Click to Switch Cashier / Worker">
-        <div class="shift-badge-text">
+      <div class="shift-badge-box" id="shiftBadgeBox">
+        <div class="shift-badge-text" id="shiftBadgeText" style="cursor:pointer;" title="Click to Switch Cashier / Worker">
           Current Shift : <strong id="currentShiftNumber">1</strong>
           <span class="cashier-label" id="currentCashier">[MASTER]</span>
         </div>
-        <div class="shift-badge-arrow">
-          <svg width="34" height="18" viewBox="0 0 50 24" fill="none">
+        <button type="button" class="shift-badge-arrow-btn" id="systemRefreshBtn" title="Click to Refresh System & Synchronize State">
+          <svg class="refresh-arrow-svg" width="34" height="18" viewBox="0 0 50 24" fill="none">
             <defs>
               <linearGradient id="arrowGrad" x1="100%" y1="0%" x2="0%" y2="0%">
                 <stop offset="0%" stop-color="#1e3a8a"/>
@@ -70,7 +70,7 @@
             </defs>
             <path d="M22 2 L2 12 L22 22 L22 16 L48 16 L48 8 L22 8 Z" fill="url(#arrowGrad)" stroke="#1d4ed8" stroke-width="1.5"/>
           </svg>
-        </div>
+        </button>
       </div>
 
       <!-- Row 2: Cancel and Undo Buttons -->

@@ -3360,6 +3360,38 @@ function showToast(message, type = 'info') {
 }
 
 // -------------------------------------------------------------
+// System Refresh & State Synchronization
+// -------------------------------------------------------------
+
+export function refreshSystem() {
+  const refreshBtn = document.getElementById('systemRefreshBtn');
+  if (refreshBtn) {
+    refreshBtn.classList.add('refreshing');
+    setTimeout(() => refreshBtn.classList.remove('refreshing'), 600);
+  }
+
+  sfx.chime();
+
+  // 1. Reload the latest persisted state
+  state = loadState();
+
+  // 2. Sanitize and migrate slots and pack numbers
+  sanitizeStatePacks(state);
+  sanitizeAndMigrateSlots();
+
+  // 3. Re-render all views and metrics
+  renderHeaderAndMetrics();
+  renderDispenserRack();
+  renderSlotsRibbon();
+
+  // 4. Focus scanner input for immediate use
+  barcodeInput?.focus();
+
+  // 5. User feedback
+  showToast(`🔄 System Refreshed! Shift #${state.shiftNumber} metrics, dispenser boxes, and state synchronized.`, 'success');
+}
+
+// -------------------------------------------------------------
 // Event Listeners Wire-up
 // -------------------------------------------------------------
 
@@ -4024,8 +4056,12 @@ function setupEventListeners() {
     showToast(`👤 Active Worker / Cashier set to "${newName}"!`, 'success');
   }
 
-  document.getElementById('shiftBadgeBox')?.addEventListener('click', openCashierModal);
+  document.getElementById('shiftBadgeText')?.addEventListener('click', openCashierModal);
   document.getElementById('currentCashier')?.addEventListener('click', openCashierModal);
+  document.getElementById('systemRefreshBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    refreshSystem();
+  });
   document.getElementById('closeCashierModalBtn')?.addEventListener('click', () => document.getElementById('cashierModal')?.close());
   document.getElementById('cancelCashierModalBtn')?.addEventListener('click', () => document.getElementById('cashierModal')?.close());
   document.getElementById('saveCashierModalBtn')?.addEventListener('click', saveCashierModal);

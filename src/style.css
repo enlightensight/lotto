@@ -664,6 +664,38 @@ body {
   margin-left: 6px;
 }
 
+.shift-badge-arrow-btn {
+  background: transparent;
+  border: none;
+  padding: 3px 6px;
+  margin-left: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.shift-badge-arrow-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  transform: scale(1.08);
+}
+
+.shift-badge-arrow-btn:active {
+  transform: scale(0.94);
+}
+
+.shift-badge-arrow-btn.refreshing .refresh-arrow-svg {
+  animation: spin-refresh 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spin-refresh {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(-180deg) scale(1.18); }
+  100% { transform: rotate(-360deg) scale(1); }
+}
+
 /* Row 2: Cancel & Undo Buttons */
 .shift-cancel-undo-row {
   display: flex;
