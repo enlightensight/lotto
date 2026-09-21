@@ -628,9 +628,9 @@ function openBoxAdjustModal(slot) {
   adjustPriceTag.className = `price-tag p${slot.price}`;
   adjustPackNum.textContent = `#${slot.packNumber || '884901'}`;
   adjustPackSize.textContent = `${slot.packSize || 150} pk`;
-  adjustStartTicket.textContent = `#${String(slot.startTicket || 1).padStart(2, '0')}`;
+  adjustStartTicket.textContent = `#${String(slot.startTicket !== undefined && slot.startTicket !== null ? slot.startTicket : 0).padStart(2, '0')}`;
   adjustDaysActive.textContent = `${slot.daysActive || 1} d`;
-  inputAdjustCount.value = slot.currentTicket || 1;
+  inputAdjustCount.value = slot.currentTicket !== undefined && slot.currentTicket !== null ? slot.currentTicket : 0;
 
   sfx.keypad();
   boxAdjustModal.showModal();
@@ -788,7 +788,7 @@ function openActivationForBox(boxNumber, preselectedPack = null, forceManual = f
   const presetPackInput = document.getElementById('presetPackNumberInput');
   if (presetPackInput) presetPackInput.value = pack.packNumber || '';
   const presetStartInput = document.getElementById('presetStartTicketInput');
-  if (presetStartInput) presetStartInput.value = 1;
+  if (presetStartInput) presetStartInput.value = 0;
 
   // Pre-fill manual inputs with default game if empty
   const manualName = document.getElementById('manualGameName');
@@ -800,7 +800,7 @@ function openActivationForBox(boxNumber, preselectedPack = null, forceManual = f
   const manualSize = document.getElementById('manualPackSize');
   if (manualSize) manualSize.value = pack.packSize || getStandardPackDetails(pack.price || 2).packSize;
   const manualStart = document.getElementById('manualStartTicket');
-  if (manualStart) manualStart.value = 1;
+  if (manualStart) manualStart.value = 0;
 
   const boxInputHint = document.getElementById('boxInputHint');
   if (boxInputHint) {

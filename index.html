@@ -207,7 +207,7 @@
         <div class="activation-header-banner">
           <div class="activation-header-title-box">
             <div class="activation-game-badge" id="activationGameTitle">$1 5X MONEY</div>
-            <div class="activation-pack-hint">Ticket Pack starts at #01 &bull; Active Count: 01</div>
+            <div class="activation-pack-hint">Ticket Pack starts at #00 &bull; Active Count: 00</div>
           </div>
           <div class="mode-toggle-pills">
             <button type="button" class="mode-pill-btn active" id="btnModeDropdown" title="Select from Preset List">📋 Preset List</button>
@@ -229,7 +229,7 @@
           </div>
           <div style="width: 80px;">
             <label class="activation-field-label">START #:</label>
-            <input type="number" id="presetStartTicketInput" class="scanner-field activation-input text-center" min="0" max="999" value="1">
+            <input type="number" id="presetStartTicketInput" class="scanner-field activation-input text-center" min="0" max="999" value="0">
           </div>
         </div>
 
@@ -256,7 +256,7 @@
             </div>
             <div>
               <label class="activation-field-label">START TICKET #:</label>
-              <input type="number" id="manualStartTicket" class="scanner-field activation-input text-center" min="0" max="999" value="1">
+              <input type="number" id="manualStartTicket" class="scanner-field activation-input text-center" min="0" max="999" value="0">
             </div>
           </div>
         </div>
@@ -333,7 +333,7 @@
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.85rem; color:var(--text-secondary);">
           <div>Pack #: <strong id="adjustPackNum" style="color:var(--color-primary);">#884901</strong></div>
           <div>Pack Size: <strong id="adjustPackSize">150</strong> pk</div>
-          <div>Started At: <strong id="adjustStartTicket">#01</strong></div>
+          <div>Started At: <strong id="adjustStartTicket">#00</strong></div>
           <div>Days Active: <strong id="adjustDaysActive">1</strong> d</div>
         </div>
       </div>
@@ -344,7 +344,7 @@
         </label>
         <div style="display:flex; gap:10px; align-items:center;">
           <button class="btn btn-secondary" id="btnCountMinus" style="font-size:1.3rem; width:44px; height:44px; padding:0;">-</button>
-          <input type="number" id="inputAdjustCount" class="box-num-input" style="text-align:center; font-size:1.4rem; font-weight:800; font-family:var(--font-mono); width:110px; height:44px;" min="0" max="999" value="1">
+          <input type="number" id="inputAdjustCount" class="box-num-input" style="text-align:center; font-size:1.4rem; font-weight:800; font-family:var(--font-mono); width:110px; height:44px;" min="0" max="999" value="0">
           <button class="btn btn-secondary" id="btnCountPlus" style="font-size:1.3rem; width:44px; height:44px; padding:0;">+</button>
           <button class="btn btn-primary" id="btnSellOneTicket" style="margin-left:auto; height:44px;">
             Sell 1 (+1)
