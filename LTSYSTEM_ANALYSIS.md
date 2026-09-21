@@ -105,4 +105,4 @@ The computer prints out the final **Day Report**:
 * **Total Payouts to Customers:** Scratcher Payouts ($99) + Draw Payouts ($0) = **$99.00**
 * **Cash Left in Drawer:** Exactly what cash should be in your register!
 
-You click **"Start New Shift"** $\rightarrow$ Everything resets clean for the next person!
+You click **"Start New Shift"** $\rightarrow$ Shift sales, cash counters, and terminal reconciliation reset to **$0.00** clean for the next cashier, while all active ticket packs remain safely loaded in their dispenser boxes with previous closing numbers becoming the new shift's opening numbers!
