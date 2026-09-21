@@ -130,8 +130,23 @@ const inventoryModal = document.getElementById('inventoryModal');
 const closeInventoryBtn = document.getElementById('closeInventoryBtn');
 const inventoryBarcodeInput = document.getElementById('inventoryBarcodeInput');
 const inventoryAddManualBtn = document.getElementById('inventoryAddManualBtn');
-const inventoryTableBody = document.getElementById('inventoryTableBody');
 const inventoryDoneBtn = document.getElementById('inventoryDoneBtn');
+const invBoxTicketBarcodeInput = document.getElementById('invBoxTicketBarcodeInput');
+const btnInvBoxTicketScan = document.getElementById('btnInvBoxTicketScan');
+
+const setBoxModal = document.getElementById('setBoxModal');
+const closeSetBoxModalBtn = document.getElementById('closeSetBoxModalBtn');
+const btnCancelSetBox = document.getElementById('btnCancelSetBox');
+const btnSetBoxConfirm = document.getElementById('btnSetBoxConfirm');
+const setBoxNumberInput = document.getElementById('setBoxNumberInput');
+
+const boxBarcodesModal = document.getElementById('boxBarcodesModal');
+const closeBoxBarcodesBtn = document.getElementById('closeBoxBarcodesBtn');
+const closeBoxBarcodesBtn2 = document.getElementById('closeBoxBarcodesBtn2');
+
+const adjustTicketsInBox = document.getElementById('adjustTicketsInBox');
+const adjustBarcodesCount = document.getElementById('adjustBarcodesCount');
+const btnAdjustViewBarcodes = document.getElementById('btnAdjustViewBarcodes');
 
 const historyModal = document.getElementById('historyModal');
 const closeHistoryBtn = document.getElementById('closeHistoryBtn');
@@ -308,7 +323,20 @@ function sanitizeAndMigrateSlots() {
       slot.currentTicket = 0;
       modified = true;
     }
+    if (!slot.scannedBarcodes) {
+      slot.scannedBarcodes = [];
+      modified = true;
+    }
+    if (slot.ticketsInBox === undefined) {
+      slot.ticketsInBox = slot.scannedBarcodes.length;
+      modified = true;
+    }
   });
+
+  if (!state.inventoryBarcodes) {
+    state.inventoryBarcodes = {};
+    modified = true;
+  }
 
   // Also clean stale lastScannedBarcode string in state if it contained duplicated prices
   if (state.lastScannedBarcode) {
@@ -632,6 +660,13 @@ function openBoxAdjustModal(slot) {
   adjustDaysActive.textContent = `${slot.daysActive || 1} d`;
   inputAdjustCount.value = slot.currentTicket !== undefined && slot.currentTicket !== null ? slot.currentTicket : 0;
 
+  if (adjustTicketsInBox) {
+    adjustTicketsInBox.textContent = slot.ticketsInBox !== undefined ? slot.ticketsInBox : (slot.scannedBarcodes ? slot.scannedBarcodes.length : 0);
+  }
+  if (adjustBarcodesCount) {
+    adjustBarcodesCount.textContent = (slot.scannedBarcodes || []).length;
+  }
+
   sfx.keypad();
   boxAdjustModal.showModal();
 }
@@ -641,6 +676,11 @@ function setupBoxAdjustModal() {
 
   closeBoxAdjustBtn?.addEventListener('click', () => boxAdjustModal.close());
   cancelBoxAdjustBtn?.addEventListener('click', () => boxAdjustModal.close());
+  btnAdjustViewBarcodes?.addEventListener('click', () => {
+    if (currentAdjustingSlot) {
+      openBoxBarcodesModal(currentAdjustingSlot);
+    }
+  });
 
   btnCountMinus?.addEventListener('click', () => {
     sfx.keypad();
@@ -1831,7 +1871,7 @@ function renderInventoryTable() {
   if (filtered.length === 0) {
     const emptyRow = document.createElement('tr');
     emptyRow.innerHTML = `
-      <td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px; font-size:0.9rem;">
+      <td colspan="10" style="text-align:center; color:var(--text-muted); padding:28px; font-size:0.9rem;">
         ${activeSlots.length === 0 ? 'No activated tickets in dispensers. Tap any empty box to activate a ticket pack.' : `No activated tickets match "${query}".`}
       </td>
     `;
@@ -1847,12 +1887,24 @@ function renderInventoryTable() {
     const current = slot.currentTicket !== undefined ? slot.currentTicket : 0;
     const remaining = Math.max(0, totalPackSize - current);
     const remainingVal = remaining * (slot.price || 1);
+    const scannedCount = (slot.scannedBarcodes || []).length;
+    const ticketsInBox = slot.ticketsInBox !== undefined ? slot.ticketsInBox : scannedCount;
 
     row.innerHTML = `
       <td style="font-weight: 800; color: var(--color-primary); font-size: 0.95rem;">Box #${slot.boxNumber}</td>
       <td style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${cleanName}</td>
       <td style="font-family: monospace; font-weight: 700; color: var(--text-secondary); font-size: 0.85rem;">#${slot.packNumber || '---'}</td>
       <td style="font-weight: 800; color: var(--text-primary); font-size: 0.9rem;">$${slot.price}.00</td>
+      <td>
+        <span class="badge-tickets-box">
+          🎟️ ${ticketsInBox} tix
+        </span>
+      </td>
+      <td>
+        <button type="button" class="btn-view-box-barcodes" data-box="${slot.boxNumber}" title="View all scanned barcodes for Box #${slot.boxNumber}">
+          🏷️ ${scannedCount} Barcodes 🔍
+        </button>
+      </td>
       <td>
         <span style="font-weight: 800; color: var(--color-primary); font-size: 0.9rem;">#${String(current).padStart(2, '0')}</span>
         <small style="color: var(--text-muted); font-size: 0.75rem;">/ ${totalPackSize}</small>
@@ -1872,6 +1924,10 @@ function renderInventoryTable() {
         </button>
       </td>
     `;
+
+    row.querySelector('.btn-view-box-barcodes')?.addEventListener('click', () => {
+      openBoxBarcodesModal(slot);
+    });
 
     row.querySelector('.btn-manage-box')?.addEventListener('click', () => {
       inventoryModal.close();
@@ -1931,6 +1987,363 @@ function renderSafeBackstockTable() {
 
     safeTableBody.appendChild(row);
   });
+}
+
+// -------------------------------------------------------------
+// Inventory Barcode Tracking, Duplicate Detection & Box Setting
+// -------------------------------------------------------------
+
+let pendingSetBoxBarcode = null;
+let pendingSetBoxGame = null;
+
+function isBarcodeAlreadyScanned(barcode) {
+  if (!barcode) return false;
+  const clean = String(barcode).trim();
+  if (!clean) return false;
+
+  // 1. Check in state.inventoryBarcodes
+  if (state.inventoryBarcodes && state.inventoryBarcodes[clean]) {
+    return true;
+  }
+
+  // 2. Check across all dispenser slots
+  for (const slot of (state.slots || [])) {
+    if (slot.scannedBarcodes && slot.scannedBarcodes.some(b => (typeof b === 'string' ? b : b.barcode) === clean)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function findScannedBarcodeInfo(barcode) {
+  if (!barcode) return null;
+  const clean = String(barcode).trim();
+  if (state.inventoryBarcodes && state.inventoryBarcodes[clean]) {
+    return state.inventoryBarcodes[clean];
+  }
+  for (const slot of (state.slots || [])) {
+    if (slot.scannedBarcodes) {
+      const match = slot.scannedBarcodes.find(b => (typeof b === 'string' ? b : b.barcode) === clean);
+      if (match) {
+        return {
+          boxNumber: slot.boxNumber,
+          gameName: slot.gameName,
+          price: slot.price,
+          scannedAt: (typeof match === 'object' && match.scannedAt) ? match.scannedAt : 'Earlier'
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function handleTicketBarcodeScan(rawBarcode, source = 'main') {
+  const barcode = String(rawBarcode).trim();
+  if (!barcode) {
+    sfx.alert();
+    showToast('Please scan or enter a ticket barcode.', 'error');
+    return;
+  }
+
+  // 1. Duplicate check: Has this barcode already been scanned into inventory?
+  if (isBarcodeAlreadyScanned(barcode)) {
+    const existing = findScannedBarcodeInfo(barcode);
+    sfx.alert();
+    const errorMsg = `⚠️ Already Scanned! Ticket [${barcode}] was already put into Box #${existing?.boxNumber || '?'}. Skipping duplicate.`;
+    showToast(errorMsg, 'error');
+
+    if (voice && typeof voice.speak === 'function') {
+      voice.speak('Ticket already scanned. Skipping duplicate.');
+    }
+
+    const fb = document.getElementById('invScanFeedback');
+    if (fb) {
+      fb.style.display = 'flex';
+      fb.className = 'inv-scan-feedback error';
+      fb.innerHTML = `❌ <strong>ALREADY SCANNED:</strong> Ticket <code>${barcode}</code> was already put into <strong>Box #${existing?.boxNumber}</strong> (${existing?.gameName || 'Game'}). <strong>Skipped duplicate!</strong>`;
+    }
+
+    const invInput = document.getElementById('invBoxTicketBarcodeInput');
+    if (invInput) {
+      invInput.value = '';
+      invInput.focus();
+    }
+    return; // SKIPS DUPLICATE!
+  }
+
+  // 2. New ticket: Pop up modal asking which inventory box to put it in!
+  openSetBoxModal(barcode);
+}
+
+function openSetBoxModal(barcode) {
+  if (!setBoxModal) return;
+  pendingSetBoxBarcode = barcode;
+
+  const barcodeDisplay = document.getElementById('setBoxBarcodeDisplay');
+  const gameDisplay = document.getElementById('setBoxGameDisplay');
+  const boxInput = document.getElementById('setBoxNumberInput');
+  const suggestionsDiv = document.getElementById('setBoxQuickSuggestions');
+
+  if (barcodeDisplay) barcodeDisplay.textContent = barcode;
+
+  // Auto-detect game by barcode
+  const matchedGame = findGameByBarcode(barcode, state.customGames);
+  pendingSetBoxGame = matchedGame;
+
+  if (gameDisplay) {
+    if (matchedGame) {
+      gameDisplay.innerHTML = `<span style="color:#10b981; font-weight:800;">✓ Matched:</span> ${matchedGame.name} · <strong style="color:var(--color-primary);">$${matchedGame.price}.00</strong>`;
+    } else {
+      gameDisplay.innerHTML = `<span style="color:#f59e0b; font-weight:700;">✨ New Lottery Game / Custom Ticket</span>`;
+    }
+  }
+
+  // Suggest box: existing active box with same game, or first empty box
+  let suggestedBox = null;
+  if (matchedGame) {
+    const existingSlot = state.slots.find(s => s.status === 'ACTIVE' && (s.gameId === matchedGame.id || s.gameName === matchedGame.name));
+    if (existingSlot) suggestedBox = existingSlot.boxNumber;
+  }
+  if (!suggestedBox) {
+    suggestedBox = findFirstEmptyBox() || 1;
+  }
+
+  if (boxInput) {
+    boxInput.value = suggestedBox;
+  }
+
+  // Quick suggestions buttons
+  if (suggestionsDiv) {
+    suggestionsDiv.innerHTML = '';
+    const suggestedBoxes = [];
+    if (suggestedBox) suggestedBoxes.push({ num: suggestedBox, label: `Suggested Box #${suggestedBox}` });
+
+    const emptySlots = (state.slots || []).filter(s => s.status === 'EMPTY').slice(0, 3);
+    emptySlots.forEach(s => {
+      if (!suggestedBoxes.some(sb => sb.num === s.boxNumber)) {
+        suggestedBoxes.push({ num: s.boxNumber, label: `Empty Box #${s.boxNumber}` });
+      }
+    });
+
+    suggestedBoxes.forEach(sb => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline';
+      btn.style.padding = '4px 10px';
+      btn.style.fontSize = '0.78rem';
+      btn.style.fontWeight = '700';
+      btn.textContent = sb.label;
+      btn.addEventListener('click', () => {
+        if (boxInput) boxInput.value = sb.num;
+        sfx.keypad();
+      });
+      suggestionsDiv.appendChild(btn);
+    });
+  }
+
+  sfx.beep();
+  setBoxModal.showModal();
+
+  setTimeout(() => {
+    boxInput?.focus();
+    boxInput?.select();
+  }, 100);
+}
+
+function confirmSetBoxForTicket() {
+  const boxInput = document.getElementById('setBoxNumberInput');
+  const boxNum = parseInt(boxInput?.value, 10);
+  if (isNaN(boxNum) || boxNum < 1) {
+    sfx.alert();
+    showToast('Please enter a valid Box # (1 to 100).', 'error');
+    boxInput?.focus();
+    return;
+  }
+
+  if (!pendingSetBoxBarcode) {
+    setBoxModal?.close();
+    return;
+  }
+
+  const barcode = pendingSetBoxBarcode;
+  const success = handleSetBoxForTicket(boxNum, barcode, pendingSetBoxGame);
+  if (success) {
+    setBoxModal?.close();
+    pendingSetBoxBarcode = null;
+    pendingSetBoxGame = null;
+
+    const invInput = document.getElementById('invBoxTicketBarcodeInput');
+    if (invInput) {
+      invInput.value = '';
+      invInput.focus();
+    }
+    const fb = document.getElementById('invScanFeedback');
+    if (fb) {
+      fb.style.display = 'flex';
+      fb.className = 'inv-scan-feedback success';
+      const slot = state.slots.find(s => s.boxNumber === boxNum);
+      fb.innerHTML = `✓ <strong>TICKET SAVED:</strong> Barcode <code>${barcode}</code> put into <strong>Box #${boxNum}</strong>! (Total tickets in box: ${slot?.ticketsInBox || 1})`;
+    }
+  }
+}
+
+function handleSetBoxForTicket(boxNumber, barcode, detectedGame) {
+  const boxNum = parseInt(boxNumber, 10);
+  if (isNaN(boxNum) || boxNum < 1) {
+    showToast('Please enter a valid Box # (1 or higher).', 'error');
+    return false;
+  }
+
+  // Duplicate safety check
+  if (isBarcodeAlreadyScanned(barcode)) {
+    const existing = findScannedBarcodeInfo(barcode);
+    showToast(`⚠️ Already Scanned! Ticket [${barcode}] is already in Box #${existing?.boxNumber || '?'}. Skipping duplicate.`, 'error');
+    sfx.alert();
+    return false;
+  }
+
+  // Expand slots if box number exceeds totalSlots
+  if (boxNum > state.totalSlots) {
+    for (let i = state.totalSlots + 1; i <= boxNum; i++) {
+      state.slots.push({
+        boxNumber: i,
+        status: 'EMPTY',
+        gameId: null,
+        gameName: null,
+        price: null,
+        packNumber: null,
+        packSize: null,
+        startTicket: 0,
+        currentTicket: 0,
+        ticketsInBox: 0,
+        scannedBarcodes: [],
+        activatedThisShift: false,
+        daysActive: 0,
+        scannedInEndShift: false
+      });
+    }
+    state.totalSlots = boxNum;
+  }
+
+  let slot = state.slots.find(s => s.boxNumber === boxNum);
+  if (!slot) {
+    showToast(`Box #${boxNum} not found.`, 'error');
+    return false;
+  }
+
+  if (!slot.scannedBarcodes) slot.scannedBarcodes = [];
+
+  // Parse ticket number from barcode if available
+  const cleanDigits = barcode.replace(/[^0-9]/g, '');
+  let ticketNum = null;
+  if (barcode.includes('-')) {
+    const parts = barcode.split('-');
+    const lastPart = parts[parts.length - 1];
+    if (/^\d+$/.test(lastPart)) ticketNum = parseInt(lastPart, 10);
+  } else if (cleanDigits.length >= 10) {
+    ticketNum = parseInt(cleanDigits.slice(-3), 10);
+  }
+
+  const barcodeRecord = {
+    barcode: barcode,
+    scannedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    date: new Date().toISOString().split('T')[0],
+    ticketNumber: ticketNum !== null && !isNaN(ticketNum) ? ticketNum : slot.scannedBarcodes.length
+  };
+
+  slot.scannedBarcodes.push(barcodeRecord);
+  slot.ticketsInBox = slot.scannedBarcodes.length;
+
+  // If slot was empty, activate it with detected or fallback game
+  if (slot.status === 'EMPTY' || !slot.gameName) {
+    const game = detectedGame || findGameByBarcode(barcode, state.customGames) || SAMPLE_GAMES[0];
+    const std = getStandardPackDetails(game.price || 2);
+    slot.status = 'ACTIVE';
+    slot.gameId = game.id;
+    slot.gameName = cleanGameTitle(game.name);
+    slot.price = game.price || 2;
+    slot.packNumber = cleanDigits.length >= 6 ? cleanDigits.slice(-7) : barcode;
+    slot.packSize = game.packSize || std.packSize;
+    slot.startTicket = 0;
+    slot.currentTicket = 0;
+    slot.activatedThisShift = true;
+    slot.daysActive = 1;
+  }
+
+  // Record in global inventoryBarcodes
+  if (!state.inventoryBarcodes) state.inventoryBarcodes = {};
+  state.inventoryBarcodes[barcode] = {
+    boxNumber: boxNum,
+    barcode: barcode,
+    gameName: slot.gameName,
+    price: slot.price,
+    scannedAt: barcodeRecord.scannedAt
+  };
+
+  saveState(state);
+  sfx.success();
+  showToast(`✓ Ticket [${barcode}] saved to Box #${boxNum}! Total tickets in box: ${slot.ticketsInBox}`, 'success');
+
+  renderInventoryTable();
+  renderDispenserRack();
+  renderHeaderAndMetrics();
+  updateInventoryTabCounters();
+
+  return true;
+}
+
+function openBoxBarcodesModal(slot) {
+  if (!boxBarcodesModal) return;
+  const title = document.getElementById('boxBarcodesTitle');
+  const countBadge = document.getElementById('boxBarcodesCountBadge');
+  const gameInfo = document.getElementById('boxBarcodesGameInfo');
+  const tbody = document.getElementById('boxBarcodesTableBody');
+
+  if (title) title.textContent = `📦 Box #${slot.boxNumber} Saved Barcodes`;
+  const barcodes = slot.scannedBarcodes || [];
+  const count = barcodes.length;
+  if (countBadge) countBadge.textContent = `${count} Barcodes (${slot.ticketsInBox || count} Tickets)`;
+  if (gameInfo) {
+    gameInfo.innerHTML = `<strong>${cleanGameTitle(slot.gameName)}</strong> · Price: <strong>$${slot.price}.00</strong> · Pack #: <code>${slot.packNumber || '---'}</code>`;
+  }
+
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (barcodes.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:24px;">No barcodes saved in Box #${slot.boxNumber} yet. Scan tickets to put them into this box.</td></tr>`;
+    } else {
+      barcodes.forEach((b, idx) => {
+        const bCode = typeof b === 'string' ? b : b.barcode;
+        const bTime = typeof b === 'object' && b.scannedAt ? b.scannedAt : '---';
+        const bTix = typeof b === 'object' && b.ticketNumber !== undefined ? `#${String(b.ticketNumber).padStart(2, '0')}` : `#${String(idx + 1).padStart(2, '0')}`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="color:var(--text-muted); font-weight:700;">${idx + 1}</td>
+          <td style="font-family:var(--font-mono); font-weight:700; color:#38bdf8;">${bCode}</td>
+          <td style="font-weight:700; color:var(--color-primary);">${bTix}</td>
+          <td style="color:var(--text-secondary); font-size:0.8rem;">${bTime}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  boxBarcodesModal.showModal();
+}
+
+function setupSetBoxModalLogic() {
+  closeSetBoxModalBtn?.addEventListener('click', () => setBoxModal?.close());
+  btnCancelSetBox?.addEventListener('click', () => setBoxModal?.close());
+  btnSetBoxConfirm?.addEventListener('click', confirmSetBoxForTicket);
+  setBoxNumberInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmSetBoxForTicket();
+    }
+  });
+
+  closeBoxBarcodesBtn?.addEventListener('click', () => boxBarcodesModal?.close());
+  closeBoxBarcodesBtn2?.addEventListener('click', () => boxBarcodesModal?.close());
 }
 
 function setupInventoryModalLogic() {
@@ -2070,6 +2483,17 @@ function setupInventoryModalLogic() {
     showToast(`✨ Brand New Ticket Registered: ${formattedName} · Book Value: $${bookValue} · Ticket Value: $${price} (${packSize} pk) stored in safe!`, 'success');
   });
 
+  invBoxTicketBarcodeInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTicketBarcodeScan(invBoxTicketBarcodeInput.value.trim(), 'inventory');
+    }
+  });
+
+  btnInvBoxTicketScan?.addEventListener('click', () => {
+    handleTicketBarcodeScan(invBoxTicketBarcodeInput?.value.trim(), 'inventory');
+  });
+
   inventoryBarcodeInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -2085,6 +2509,23 @@ function handleInventoryPackIntake() {
   if (!rawInput) {
     sfx.alert();
     showToast('Please scan or enter a ticket barcode.', 'error');
+    return;
+  }
+
+  // Duplicate check for safe intake
+  if (isBarcodeAlreadyScanned(rawInput)) {
+    const existing = findScannedBarcodeInfo(rawInput);
+    sfx.alert();
+    showToast(`⚠️ Already Scanned! Ticket [${rawInput}] is already in Box #${existing?.boxNumber || '?'}. Skipping duplicate.`, 'error');
+    const fb = document.getElementById('invOldAutoFeedback');
+    if (fb) {
+      fb.style.display = 'block';
+      fb.style.background = 'rgba(239, 68, 68, 0.15)';
+      fb.style.borderColor = '#ef4444';
+      fb.style.color = '#ef4444';
+      fb.innerHTML = `❌ <strong>ALREADY SCANNED:</strong> Ticket <code>${rawInput}</code> is already in <strong>Box #${existing?.boxNumber}</strong>. Skipped duplicate.`;
+    }
+    inventoryBarcodeInput.value = '';
     return;
   }
 
@@ -2172,6 +2613,14 @@ function setupHardwareScannerListener() {
         return;
       }
 
+      // If setBoxModal is open, confirm set box
+      if (setBoxModal && setBoxModal.open) {
+        scanBuffer = '';
+        confirmSetBoxForTicket();
+        e.preventDefault();
+        return;
+      }
+
       // Global scanner capture: if scanBuffer has accumulated barcode digits/text
       if (scanBuffer.length >= 2) {
         processScannedBarcode(scanBuffer.trim());
@@ -2229,11 +2678,20 @@ function processScannedBarcode(rawBarcode) {
   sfx.beep();
   state.lastScannedBarcode = rawBarcode;
 
-  // Scenario 1: Update Inventory Modal is open -> register pack into safe inventory
+  // Scenario 1: Update Inventory Modal is open -> handle ticket scan
   if (inventoryModal && inventoryModal.open) {
-    inventoryBarcodeInput.value = rawBarcode;
-    handleInventoryPackIntake();
+    handleTicketBarcodeScan(rawBarcode, 'inventory');
     return;
+  }
+
+  // Scenario 1b: Set Box Modal is open -> if user scans box barcode, confirm set box
+  if (setBoxModal && setBoxModal.open) {
+    const parsedBoxNum = parseBoxBarcode(rawBarcode);
+    if (parsedBoxNum && parsedBoxNum >= 1 && parsedBoxNum <= 100) {
+      if (setBoxNumberInput) setBoxNumberInput.value = parsedBoxNum;
+      confirmSetBoxForTicket();
+      return;
+    }
   }
 
   // Scenario 2: Ticket Activation Modal is open -> clerk can scan a box barcode or new pack
@@ -2343,28 +2801,18 @@ function processScannedBarcode(rawBarcode) {
       return;
     }
 
-    // 3. If not an active box, this is a pack activation: look in safe inventory or detect game
-    let packInfo = null;
-    const invIndex = state.inventory.findIndex(p => p.packNumber && cleanNum.includes(p.packNumber));
-    if (invIndex !== -1) {
-      packInfo = state.inventory.splice(invIndex, 1)[0];
-    } else {
-      const matchedGame = findGameByBarcode(rawBarcode, state.customGames) || SAMPLE_GAMES[0];
-      const std = getStandardPackDetails(matchedGame.price);
-      const bookVal = matchedGame.bookValue || std.bookValue;
-      packInfo = {
-        packNumber: cleanNum.slice(-7) || String(Math.floor(100000 + Math.random() * 900000)),
-        gameId: matchedGame.id,
-        gameName: matchedGame.name,
-        price: matchedGame.price,
-        bookValue: bookVal,
-        packSize: matchedGame.packSize || std.packSize
-      };
+    // 3. If not an active box or sale, handle inventory ticket scan!
+    // Check duplicate first:
+    if (isBarcodeAlreadyScanned(rawBarcode)) {
+      const existing = findScannedBarcodeInfo(rawBarcode);
+      sfx.alert();
+      showToast(`⚠️ Already Scanned! Ticket [${rawBarcode}] was already put into Box #${existing?.boxNumber || '?'}. Skipping duplicate.`, 'error');
+      return;
     }
 
-    const emptyBox = findFirstEmptyBox();
-    openActivationForBox(emptyBox, packInfo);
-    showToast(`Pack #${packInfo.packNumber} (${packInfo.gameName}) scanned! Assign to Box #${emptyBox} (or enter 63).`, 'info');
+    // If new ticket, prompt to set which box to put it in!
+    handleTicketBarcodeScan(rawBarcode, 'main');
+    return;
   }
 
   saveState(state);
@@ -3123,6 +3571,9 @@ function setupEventListeners() {
 
   // Box Adjust Modal
   setupBoxAdjustModal();
+
+  // Set Box & Saved Barcodes Modals
+  setupSetBoxModalLogic();
 
   // Floating Demo Drawer
   demoFabBtn.addEventListener('click', () => {

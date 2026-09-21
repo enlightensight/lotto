@@ -91,6 +91,8 @@ export function getInitialState() {
       packSize: null,
       startTicket: 0,
       currentTicket: 0,
+      ticketsInBox: 0,
+      scannedBarcodes: [],
       activatedThisShift: false,
       daysActive: 0,
       scannedInEndShift: false
@@ -107,6 +109,7 @@ export function getInitialState() {
     totalSlots: TOTAL_SLOTS,
     slots,
     inventory: [], // Clean inventory in safe
+    inventoryBarcodes: {}, // Map of barcode -> { boxNumber, scannedAt, gameName, price }
     customGames: [], // Registered brand new games
     onlineSales: 0, // Georgia Lottery online terminal sales (Powerball, Mega Millions, Cash 3, Cash 4)
     cashes: 0, // Retailer winning ticket customer cash payouts
@@ -138,6 +141,7 @@ export function loadState() {
       const parsed = JSON.parse(raw);
       if (!parsed.customGames) parsed.customGames = [];
       if (!parsed.soldOutThisShift) parsed.soldOutThisShift = [];
+      if (!parsed.inventoryBarcodes) parsed.inventoryBarcodes = {};
       if (parsed.onlineSales === undefined) parsed.onlineSales = 0;
       if (parsed.cashes === undefined) parsed.cashes = 0;
       if (parsed.onlineCashes === undefined) parsed.onlineCashes = 0;

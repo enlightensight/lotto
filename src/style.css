@@ -3827,10 +3827,80 @@ body.dark-mode .scan-chip.chip-action.verified {
   border-color: rgba(34, 197, 94, 0.5);
 }
 
-body.dark-mode .scan-chip.chip-action.sold {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.5);
+
+/* Box Inventory Ticket Barcode Scanner & Duplicate Alerts */
+.inv-quick-scan-container {
+  background: var(--bg-surface-elevated, #162444);
+  border: 2px solid var(--color-primary);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  transition: all 0.2s ease;
 }
+
+.inv-quick-scan-container:focus-within {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+.inv-scan-feedback {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.inv-scan-feedback.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  animation: shake 0.3s ease;
+}
+
+.inv-scan-feedback.success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #10b981;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.badge-tickets-box {
+  background: rgba(59, 130, 246, 0.15);
+  color: #38bdf8;
+  border: 1px solid #38bdf8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.btn-view-box-barcodes {
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-view-box-barcodes:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
 
 

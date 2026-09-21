@@ -335,6 +335,8 @@
           <div>Pack Size: <strong id="adjustPackSize">150</strong> pk</div>
           <div>Started At: <strong id="adjustStartTicket">#00</strong></div>
           <div>Days Active: <strong id="adjustDaysActive">1</strong> d</div>
+          <div>Tickets in Box: <strong id="adjustTicketsInBox" style="color:#10b981;">0</strong></div>
+          <div>Saved Barcodes: <button type="button" id="btnAdjustViewBarcodes" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700;"><span id="adjustBarcodesCount">0</span> Barcodes 🔍</button></div>
         </div>
       </div>
 
@@ -611,6 +613,34 @@
           </div>
         </div>
 
+        <!-- Box Inventory Ticket Scanner Bar with Duplicate Prevention & Auto-Box Prompt -->
+        <div class="inv-quick-scan-container" style="background: var(--bg-surface-elevated, #162444); border: 2px solid var(--color-primary); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+              <span>🏷️ Box Inventory Ticket Scanner</span>
+              <span style="font-size: 0.72rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; padding: 2px 6px; border-radius: 4px; font-weight: 800;">
+                ✓ Duplicate Protection Active
+              </span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">
+              Saves barcodes & ticket count per box · Skips duplicates
+            </span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input 
+              type="text" 
+              id="invBoxTicketBarcodeInput" 
+              class="scanner-field" 
+              placeholder="🏷️ Scan ticket barcode to put into box (e.g. 1417-088901-001)..." 
+              style="flex: 1; font-size: 1rem; font-family: var(--font-mono); padding: 10px 14px;"
+            >
+            <button type="button" class="btn btn-primary" id="btnInvBoxTicketScan" style="font-weight: 800; padding: 10px 20px; white-space: nowrap;">
+              ⚡ Put into Box
+            </button>
+          </div>
+          <div id="invScanFeedback" style="display: none; margin-top: 10px; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;"></div>
+        </div>
+
         <!-- Filter & Search Bar -->
         <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
           <div style="display: flex; gap: 10px; flex: 1; min-width: 260px;">
@@ -634,14 +664,16 @@
           <table class="report-table" style="width: 100%; margin: 0;">
             <thead id="inventoryTableHead">
               <tr>
-                <th style="width: 75px;">Box</th>
+                <th style="width: 70px;">Box</th>
                 <th>Game / Ticket Name</th>
-                <th style="width: 130px;">Pack #</th>
-                <th style="width: 75px;">Price</th>
-                <th style="width: 110px;">Current Ticket</th>
-                <th style="width: 110px;">Remaining</th>
-                <th style="width: 95px;">Status</th>
-                <th style="width: 100px; text-align: center;">Action</th>
+                <th style="width: 120px;">Pack #</th>
+                <th style="width: 65px;">Price</th>
+                <th style="width: 100px;">Tickets in Box</th>
+                <th style="width: 125px;">Saved Barcodes</th>
+                <th style="width: 95px;">Current Ticket</th>
+                <th style="width: 95px;">Remaining</th>
+                <th style="width: 85px;">Status</th>
+                <th style="width: 90px; text-align: center;">Action</th>
               </tr>
             </thead>
             <tbody id="inventoryTableBody">
@@ -793,6 +825,95 @@
         💡 Showing all live lottery tickets currently activated in dispenser boxes.
       </span>
       <button class="btn btn-secondary" id="inventoryDoneBtn">Close</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Set Box for Scanned Ticket (with Duplicate Prevention & SET button) -->
+  <dialog id="setBoxModal" style="width: 480px; max-width: 95vw; border-radius: 14px; overflow: hidden; border: 2px solid var(--color-primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div class="modal-header" style="background: var(--bg-surface); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <div class="modal-title" style="font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; color: var(--color-primary);">
+        <span>📦 Put Ticket into Inventory Box</span>
+      </div>
+      <button type="button" class="modal-close-btn" id="closeSetBoxModalBtn">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <!-- Scanned Barcode Card -->
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 18px; text-align: center;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Scanned Ticket Barcode</div>
+        <div id="setBoxBarcodeDisplay" style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: #38bdf8; letter-spacing: 1px; word-break: break-all;">
+          ---
+        </div>
+        <div id="setBoxGameDisplay" style="font-size: 0.92rem; font-weight: 700; color: var(--text-primary); margin-top: 6px;">
+          Detecting Game...
+        </div>
+      </div>
+
+      <!-- Question Prompt -->
+      <div style="margin-bottom: 16px; text-align: center;">
+        <label for="setBoxNumberInput" style="display: block; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">
+          Which inventory box should this ticket be put into?
+        </label>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 12px;">
+          <span style="font-weight: 800; font-size: 1.25rem; color: var(--color-primary);">BOX #</span>
+          <input 
+            type="number" 
+            id="setBoxNumberInput" 
+            class="box-num-input" 
+            min="1" 
+            max="100" 
+            value="1" 
+            style="width: 120px; height: 50px; font-size: 1.8rem; font-weight: 800; text-align: center; font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: 8px;"
+          >
+          <button type="button" id="btnSetBoxConfirm" class="btn btn-primary" style="height: 50px; padding: 0 28px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; background: #10b981; border-color: #10b981;">
+            SET
+          </button>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 10px;">
+          💡 Enter box number (1-65) and click <strong>SET</strong> (or press Enter).
+        </p>
+      </div>
+
+      <!-- Quick Box Selection Shortcuts -->
+      <div style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">QUICK SUGGESTIONS:</div>
+        <div id="setBoxQuickSuggestions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <!-- Filled dynamically -->
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding: 12px 20px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <button type="button" class="btn btn-secondary" id="btnCancelSetBox">Cancel</button>
+      <span style="font-size: 0.75rem; color: #10b981; font-weight: 600;">✓ Duplicate tickets are automatically skipped</span>
+    </div>
+  </dialog>
+
+  <!-- MODAL: View Saved Barcodes for a Box -->
+  <dialog id="boxBarcodesModal" style="width: 580px; max-width: 95vw; border-radius: 14px; overflow: hidden;">
+    <div class="modal-header" style="background: var(--bg-surface); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <div class="modal-title" style="font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+        <span id="boxBarcodesTitle">📦 Box #1 Saved Barcodes</span>
+        <span id="boxBarcodesCountBadge" class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 800;">0 Tickets</span>
+      </div>
+      <button type="button" class="modal-close-btn" id="closeBoxBarcodesBtn">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 16px; max-height: 420px; overflow-y: auto;">
+      <div id="boxBarcodesGameInfo" style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-secondary); background: var(--bg-app); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></div>
+      <table class="report-table" style="width: 100%; margin: 0;">
+        <thead>
+          <tr>
+            <th style="width: 50px;">#</th>
+            <th>Scanned Barcode</th>
+            <th style="width: 90px;">Ticket #</th>
+            <th style="width: 110px;">Time Scanned</th>
+          </tr>
+        </thead>
+        <tbody id="boxBarcodesTableBody">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="padding: 12px 16px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+      <button type="button" class="btn btn-secondary" id="closeBoxBarcodesBtn2">Close</button>
     </div>
   </dialog>
 
