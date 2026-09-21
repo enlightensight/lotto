@@ -182,7 +182,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
 }
 
 /**
- * Generates an interactive preview inside the Day Report Modal
+ * Generates an interactive preview inside the Day Report Modal (Matching Video 03:38 - 04:00)
  */
 export function renderDayReportModalPreview(reportData, state = null, onRefresh = null) {
   const container = document.getElementById('dayReportPreviewContainer');
@@ -195,87 +195,25 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   // First ensure print section has the latest data
   populateDayReportDOM(reportData, printSection);
 
-  // Clear preview container
-  container.innerHTML = '';
+  // 1. Update Video-Authentic Header Elements
+  const shiftEl = document.getElementById('drReportShiftNumber');
+  if (shiftEl) shiftEl.textContent = `Current Shift : ${state?.shiftNumber || 1}`;
 
-  // 1. Primary Top Control Bar
-  const toolbar = document.createElement('div');
-  toolbar.className = 'dr-preview-toolbar';
-  toolbar.innerHTML = `
-    <div class="dr-preview-tag">
-      <span class="dr-dot-live"></span>
-      <strong>OFFICIAL GEORGIA LOTTERY RETAILER DAY REPORT</strong>
-      <span class="dr-badge-pages">2 Pages (US Letter 8.5" &times; 11")</span>
-    </div>
-    
-    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <!-- Zoom Buttons -->
-      <div class="dr-preview-actions">
-        <span style="font-size: 0.76rem; color: #cbd5e1;">Zoom:</span>
-        <button type="button" class="dr-zoom-btn" id="drZoomFitBtn" title="Fit to window">Fit</button>
-        <button type="button" class="dr-zoom-btn active" id="drZoom100Btn" title="Actual size (100%)">100%</button>
-      </div>
-    </div>
-  `;
-  container.appendChild(toolbar);
-
-  // 2. Financial Reconciliation Quick Adjust Bar
-  if (state) {
-    const finBar = document.createElement('div');
-    finBar.className = 'dr-fin-reconcile-panel';
-    finBar.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <strong style="color:#38bdf8;">💵 Georgia Lottery Terminal Reconciliation:</strong>
-        <span style="color:#94a3b8; font-size:0.75rem;">(Note: "Online" = Powerball/Terminal Draw Games; "Cashes" = Winning Ticket Payouts to Customers)</span>
-      </div>
-      <div class="dr-fin-reconcile-inputs">
-        <div class="dr-fin-field">
-          <label for="drInputOnlineSales" title="Powerball, Mega Millions, Cash 3, Cash 4, Fantasy 5 terminal sales">Online (Powerball/Draw):</label>
-          <div class="dr-fin-input-wrapper">
-            <span>$</span>
-            <input type="number" id="drInputOnlineSales" class="dr-fin-input" step="1" min="0" value="${state.onlineSales || 0}">
-          </div>
-        </div>
-        <div class="dr-fin-field">
-          <label for="drInputCashes" title="Winning scratcher payouts paid in cash to customers">Scratcher Cashes (Payouts):</label>
-          <div class="dr-fin-input-wrapper">
-            <span>$</span>
-            <input type="number" id="drInputCashes" class="dr-fin-input" step="1" min="0" value="${state.cashes || 0}">
-          </div>
-        </div>
-        <div class="dr-fin-field">
-          <label for="drInputOnlineCashes" title="Winning terminal draw payouts paid in cash to customers">Online Cashes (Draw Payouts):</label>
-          <div class="dr-fin-input-wrapper">
-            <span>$</span>
-            <input type="number" id="drInputOnlineCashes" class="dr-fin-input" step="1" min="0" value="${state.onlineCashes || 0}">
-          </div>
-        </div>
-        <div class="dr-fin-hint">
-          Scratchers: <strong>$${Number(reportData.totalScratcherSales || 0).toFixed(2)}</strong> | Total Sales: <strong>$${Number(reportData.totalSales || 0).toFixed(2)}</strong> | Total Payouts: <strong>$${Number(reportData.totalCashes || 0).toFixed(2)}</strong>
-        </div>
-      </div>
-    `;
-    container.appendChild(finBar);
-
-    // Event listeners for financial inputs
-    const inOnline = finBar.querySelector('#drInputOnlineSales');
-    const inCashes = finBar.querySelector('#drInputCashes');
-    const inOnlineCashes = finBar.querySelector('#drInputOnlineCashes');
-
-    const updateFins = () => {
-      state.onlineSales = parseFloat(inOnline?.value) || 0;
-      state.cashes = parseFloat(inCashes?.value) || 0;
-      state.onlineCashes = parseFloat(inOnlineCashes?.value) || 0;
-      saveState(state);
-      if (onRefresh) onRefresh();
-    };
-
-    inOnline?.addEventListener('input', updateFins);
-    inCashes?.addEventListener('input', updateFins);
-    inOnlineCashes?.addEventListener('input', updateFins);
+  const totalSaleEl = document.getElementById('drReportTotalSaleTitle');
+  if (totalSaleEl) {
+    const tot = reportData.totalSales || reportData.totalScratcherSales || 0;
+    totalSaleEl.textContent = `Total Sale = $ ${Math.round(tot)}`;
   }
 
-  // 3. Sheets Wrapper
+  const statEl = document.getElementById('drReportLargeStat');
+  if (statEl) {
+    const activeCount = (reportData.boxes || []).filter(b => !b.isEmpty).length;
+    statEl.textContent = activeCount || 65;
+  }
+
+  // 2. Clear and Render Sheets
+  container.innerHTML = '';
+
   const sheetsWrapper = document.createElement('div');
   sheetsWrapper.className = 'dr-sheets-wrapper';
   sheetsWrapper.id = 'drSheetsWrapper';
@@ -294,24 +232,67 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
 
   container.appendChild(sheetsWrapper);
 
+  // 3. Floating Toolbar Logic (Matching Video 03:38)
+  const floatPrint = document.getElementById('drFloatPrintBtn');
+  const floatSave = document.getElementById('drFloatSaveBtn');
+  const floatPrev = document.getElementById('drFloatPrevBtn');
+  const floatNext = document.getElementById('drFloatNextBtn');
+  const floatIndicator = document.getElementById('drFloatPageIndicator');
+  const floatZoomOut = document.getElementById('drFloatZoomOutBtn');
+  const floatZoomIn = document.getElementById('drFloatZoomInBtn');
+  const floatFit = document.getElementById('drFloatFitBtn');
 
-
-  // 5. Zoom Listeners
-  const fitBtn = toolbar.querySelector('#drZoomFitBtn');
-  const fullBtn = toolbar.querySelector('#drZoom100Btn');
-
-  if (fitBtn && fullBtn) {
-    fitBtn.addEventListener('click', () => {
-      fitBtn.classList.add('active');
-      fullBtn.classList.remove('active');
-      sheetsWrapper.classList.add('dr-zoom-fit');
-    });
-    fullBtn.addEventListener('click', () => {
-      fullBtn.classList.add('active');
-      fitBtn.classList.remove('active');
-      sheetsWrapper.classList.remove('dr-zoom-fit');
-    });
+  if (floatPrint) {
+    floatPrint.onclick = () => printDayReport(reportData);
   }
+  if (floatSave) {
+    floatSave.onclick = () => printDayReport(reportData);
+  }
+  if (floatPrev) {
+    floatPrev.onclick = () => {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+      if (floatIndicator) floatIndicator.textContent = '1 / 2';
+    };
+  }
+  if (floatNext) {
+    floatNext.onclick = () => {
+      container.scrollTo({ top: p1Sheet.offsetHeight + 24, behavior: 'smooth' });
+      if (floatIndicator) floatIndicator.textContent = '2 / 2';
+    };
+  }
+
+  let currentZoom = 1.0;
+  if (floatZoomIn) {
+    floatZoomIn.onclick = () => {
+      currentZoom = Math.min(1.35, currentZoom + 0.1);
+      sheetsWrapper.style.transform = `scale(${currentZoom})`;
+      sheetsWrapper.style.transformOrigin = 'top center';
+    };
+  }
+  if (floatZoomOut) {
+    floatZoomOut.onclick = () => {
+      currentZoom = Math.max(0.65, currentZoom - 0.1);
+      sheetsWrapper.style.transform = `scale(${currentZoom})`;
+      sheetsWrapper.style.transformOrigin = 'top center';
+    };
+  }
+  if (floatFit) {
+    floatFit.onclick = () => {
+      currentZoom = (currentZoom === 1.0) ? 0.85 : 1.0;
+      sheetsWrapper.style.transform = `scale(${currentZoom})`;
+      sheetsWrapper.style.transformOrigin = 'top center';
+    };
+  }
+
+  // Update page indicator on scroll
+  container.onscroll = () => {
+    if (!floatIndicator) return;
+    if (container.scrollTop > p1Sheet.offsetHeight / 2) {
+      floatIndicator.textContent = '2 / 2';
+    } else {
+      floatIndicator.textContent = '1 / 2';
+    }
+  };
 }
 
 /**
@@ -404,6 +385,31 @@ export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = 
 
   if (closeBottomBtn && modal) {
     closeBottomBtn.addEventListener('click', () => modal.close());
+  }
+
+  const btnDone = document.getElementById('btnReportDone');
+  if (btnDone && modal) {
+    btnDone.addEventListener('click', () => {
+      modal.close();
+      if (sfx && typeof sfx.success === 'function') sfx.success();
+      if (showToast) showToast('✓ Shift Report closed.', 'info');
+    });
+  }
+
+  const btnCancel = document.getElementById('drReportCancelBtn');
+  if (btnCancel && modal) {
+    btnCancel.addEventListener('click', () => modal.close());
+  }
+
+  const btnStartNew = document.getElementById('drReportStartNewShiftBtn');
+  if (btnStartNew && modal) {
+    btnStartNew.addEventListener('click', () => {
+      modal.close();
+      const startShiftModal = document.getElementById('startShiftConfirmModal');
+      if (startShiftModal) {
+        startShiftModal.showModal();
+      }
+    });
   }
 
   if (printBtn) {

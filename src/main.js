@@ -1709,7 +1709,8 @@ function confirmEndShift() {
     inputActualCash.value = drawerCash.toFixed(2);
   }
   openTerminalReconcileModal(() => {
-    openShiftReportModal();
+    // Open the authentic Georgia Lottery Day Report directly (Matching Video 03:38)
+    openDayReportModal(() => state, sfx);
   });
 }
 

@@ -1685,7 +1685,7 @@
           <div class="dr-user-id" id="drP1UserId">User ID: master</div>
         </div>
         <div class="dr-header-right">
-          <div class="dr-report-heading">Day Report</div>
+          <div class="dr-report-heading" id="drReportHeadingText">Shift Report</div>
         </div>
       </div>
       <div class="dr-timestamp-line" id="drP1Timestamp">
@@ -1823,30 +1823,62 @@
     </div>
   </div>
 
-  <!-- MODAL: Official 2-Page Day Report Screen Preview -->
-  <dialog id="dayReportModal" class="day-report-dialog" style="width: 880px; max-width: 96vw; max-height: 94vh; border-radius: 12px; overflow: hidden;">
-    <div class="modal-header" style="background: #0f172a; color: #fff; padding: 12px 20px;">
-      <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
-        <span>📄 Official Georgia Lottery Day Report</span>
-        <span style="font-size: 0.75rem; background: #0284c7; padding: 2px 8px; border-radius: 4px; color: #fff;">Georgia Lottery Retailer &bull; 70 Boxes</span>
+  <!-- MODAL: Authentic LTSYSTEM Report View (Matching Video 03:38 - 04:00) -->
+  <dialog id="dayReportModal" class="dr-ltsystem-report-modal">
+    <!-- Top LTSYSTEM Header in Report View -->
+    <div class="dr-lt-header-wrapper">
+      <div class="dr-lt-top-row">
+        <div class="dr-lt-shift-box">
+          <span class="dr-lt-shift-label" id="drReportShiftNumber">Current Shift : 1</span>
+          <div class="dr-lt-shift-btns">
+            <button type="button" class="dr-lt-btn-cancel" id="drReportCancelBtn">Cancel</button>
+            <button type="button" class="dr-lt-btn-undo" id="drReportUndoBtn">Undo</button>
+          </div>
+        </div>
+        <div class="dr-lt-action-btns">
+          <button type="button" class="dr-lt-btn-shift-report" id="drReportStatusBtn">Shift Report</button>
+          <button type="button" class="dr-lt-btn-start-new" id="drReportStartNewShiftBtn">Start new shift</button>
+        </div>
+        <button type="button" class="dr-lt-modal-close" id="closeDayReportModalBtn" title="Close Preview">&times;</button>
       </div>
-      <button class="modal-close-btn" id="closeDayReportModalBtn" style="color:#94a3b8;">&times;</button>
+
+      <div class="dr-lt-readout-row">
+        <div class="dr-lt-readout-left">
+          <div class="dr-lt-total-sale-text" id="drReportTotalSaleTitle">Total Sale = $ 984</div>
+        </div>
+        <div class="dr-lt-readout-right">
+          <div class="dr-lt-big-stat" id="drReportLargeStat">65</div>
+        </div>
+      </div>
     </div>
-    <div class="modal-body" style="padding: 16px; background: #cbd5e1; overflow-y: auto; max-height: calc(94vh - 120px);">
-      <div class="dr-preview-wrapper" id="dayReportPreviewContainer">
-        <!-- Rendered duplicate of sheets Page 1 & Page 2 for screen viewing -->
-      </div>
+
+    <!-- Main Report Document Body -->
+    <div class="dr-lt-body" id="dayReportPreviewContainer">
+      <!-- Pages 1 & 2 Sheets Rendered Here -->
     </div>
-    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f8fafc;">
-      <span style="font-size: 0.8rem; color: #64748b;">
-        🖨️ Formatted for US Letter (8.5 &times; 11") 2-Page Portrait Print
-      </span>
-      <div style="display: flex; gap: 10px;">
-        <button type="button" class="btn btn-secondary" id="closeDayReportBottomBtn">Close</button>
-        <button type="button" class="btn btn-primary" id="btnPrintDayReportModalBtn" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: 800;">
-          🖨️ Print Day Report (2-Page)
-        </button>
-      </div>
+
+    <!-- Floating PDF Control Bar (Matching Video Floating Toolbar 03:38) -->
+    <div class="dr-floating-toolbar" id="drFloatingToolbar">
+      <button type="button" class="dr-tool-btn" id="drFloatSaveBtn" title="Save / Download PDF">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </button>
+      <button type="button" class="dr-tool-btn" id="drFloatPrintBtn" title="Print Day Report">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
+      <div class="dr-tool-div"></div>
+      <button type="button" class="dr-tool-btn" id="drFloatPrevBtn" title="Previous Page">▲</button>
+      <button type="button" class="dr-tool-btn" id="drFloatNextBtn" title="Next Page">▼</button>
+      <span class="dr-tool-page" id="drFloatPageIndicator">1 / 2</span>
+      <div class="dr-tool-div"></div>
+      <button type="button" class="dr-tool-btn" id="drFloatZoomOutBtn" title="Zoom Out">−</button>
+      <button type="button" class="dr-tool-btn" id="drFloatZoomInBtn" title="Zoom In">+</button>
+      <button type="button" class="dr-tool-btn" id="drFloatFitBtn" title="Toggle Fit">⛶</button>
+    </div>
+
+    <!-- Bottom Bar with Blue Done Button (Matching Video Bottom Right 03:38) -->
+    <div class="dr-lt-bottom-bar">
+      <div class="dr-lt-bottom-spacer"></div>
+      <button type="button" class="btn-lt-done" id="btnReportDone">Done</button>
     </div>
   </dialog>
 
