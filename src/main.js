@@ -2328,13 +2328,42 @@ const startNewShift = promptStartNewShift;
 // Update Inventory (Pack Intake) Workflow
 // -------------------------------------------------------------
 
-function openInventoryModal() {
+let pendingNewTicketBarcode = null;
+
+function openInventoryModal(mode = 'intake') {
   renderInventoryTable();
   sfx.keypad();
+  
+  const modalTitle = document.querySelector('#inventoryModal .inv-title-text');
+  const badgeLive = document.querySelector('#inventoryModal .inv-badge-live');
+  const scannerCard = document.querySelector('#inventoryModal .inv-scanner-card');
+  const scanInput = document.getElementById('invBoxTicketBarcodeInput');
+
+  if (mode === 'intake') {
+    if (modalTitle) modalTitle.innerHTML = '⚡ Stock Intake & Update Inventory';
+    if (badgeLive) badgeLive.innerHTML = '<span class="inv-live-dot" style="background:#38bdf8;"></span> Enter New Ticket';
+    if (scannerCard) {
+      scannerCard.style.border = '2px solid var(--color-primary, #38bdf8)';
+      scannerCard.style.boxShadow = '0 0 15px rgba(56, 189, 248, 0.25)';
+    }
+    if (scanInput && pendingNewTicketBarcode) {
+      scanInput.value = pendingNewTicketBarcode;
+    }
+  } else {
+    if (modalTitle) modalTitle.innerHTML = '📦 Store Lottery Inventory';
+    if (badgeLive) badgeLive.innerHTML = '<span class="inv-live-dot"></span> Activated Dispenser Boxes';
+    if (scannerCard) {
+      scannerCard.style.border = '';
+      scannerCard.style.boxShadow = '';
+    }
+  }
+
   inventoryModal.showModal();
   setTimeout(() => {
-    const scanInput = document.getElementById('invBoxTicketBarcodeInput');
     scanInput?.focus();
+    if (scanInput && scanInput.value) {
+      scanInput.select();
+    }
   }, 100);
 }
 
@@ -2632,6 +2661,11 @@ function confirmSetBoxForTicket() {
     pendingSetBoxBarcode = null;
     pendingSetBoxGame = null;
     pendingRestorePack = null;
+    pendingNewTicketBarcode = null;
+
+    if (lastScanReadoutContainer) {
+      lastScanReadoutContainer.classList.remove('alert-yellow');
+    }
 
     // Matching LTSYSTEM Video 01:21: If fixing a sold-out ticket, immediately open Fix Ticket Position keypad!
     if (restorePack) {
@@ -3148,8 +3182,12 @@ function processScannedBarcode(rawBarcode) {
     });
     const isInInventoryBarcodes = Boolean(state.inventoryBarcodes && state.inventoryBarcodes[rawBarcode]);
 
+    pendingNewTicketBarcode = rawBarcode;
+
     if (!matchedGame && !isInInventory && !isInInventoryBarcodes) {
-      // Un-inventoried / un-recognized ticket: Block with yellow alert banner and modal
+      // Un-inventoried / un-recognized ticket:
+      // Show yellow alert banner on readout - DO NOT auto-popup modal over the screen during normal scanning.
+      // Update inventory should only open or pop up when a new ticket has to enter!
       sfx.alert();
       voice.speakUpdateInventory();
       if (lastScanReadoutContainer) {
@@ -3159,17 +3197,28 @@ function processScannedBarcode(rawBarcode) {
         scanActionTitle.textContent = 'THIS TICKET IS NOT IN THE INVENTORY OR NOT IN DATABASE';
       }
       if (lastScanDisplay) {
-        lastScanDisplay.textContent = '';
+        lastScanDisplay.textContent = rawBarcode;
       }
       if (notInInvBarcodeDetails) {
         notInInvBarcodeDetails.textContent = rawBarcode;
       }
-      ticketNotInInventoryModal?.showModal();
+      showToast(`⚠️ THIS TICKET IS NOT IN THE INVENTORY! Click "⚡ Stock Intake / Update Inventory" to enter this new ticket.`, 'warning');
       return;
     }
 
-    // If new ticket, prompt to set which box to put it in!
-    handleTicketBarcodeScan(rawBarcode, 'main');
+    // Barcode matched known game or existing inventory, but is not in an active dispenser slot:
+    // Update readout and inform clerk to enter ticket via Stock Intake / Update Inventory or tap an empty box
+    sfx.beep();
+    if (lastScanReadoutContainer) {
+      lastScanReadoutContainer.classList.remove('alert-yellow');
+    }
+    if (scanActionTitle) {
+      scanActionTitle.textContent = matchedGame ? `MATCHED: ${cleanGameTitle(matchedGame.name)} ($${matchedGame.price})` : 'TICKET IN INVENTORY';
+    }
+    if (lastScanDisplay) {
+      lastScanDisplay.textContent = `${rawBarcode} · Not in active dispenser`;
+    }
+    showToast(`ℹ️ Ticket [${rawBarcode}] is not in an active box. Click "⚡ Stock Intake / Update Inventory" or tap an empty box to enter it.`, 'info');
     return;
   }
 
@@ -3556,12 +3605,19 @@ function setupEventListeners() {
   });
   reportNewShiftBtn.addEventListener('click', startNewShift);
 
-  // Inventory Modal buttons
-  tabUpdateInventory?.addEventListener('click', () => openInventoryModal());
-  document.getElementById('tabInventoryStatus')?.addEventListener('click', () => openInventoryModal());
+  // Inventory Modal buttons: Update Inventory opens intake for entering new tickets, Inventory Status opens status overview
+  tabUpdateInventory?.addEventListener('click', () => openInventoryModal('intake'));
+  document.getElementById('tabInventoryStatus')?.addEventListener('click', () => openInventoryModal('status'));
   closeInventoryBtn?.addEventListener('click', () => inventoryModal.close());
   inventoryDoneBtn?.addEventListener('click', () => inventoryModal.close());
   setupInventoryModalLogic();
+
+  // Clicking yellow alert banner on readout opens Update Inventory for the scanned new ticket
+  lastScanReadoutContainer?.addEventListener('click', () => {
+    if (lastScanReadoutContainer.classList.contains('alert-yellow')) {
+      openInventoryModal('intake');
+    }
+  });
 
   // Summary Metric Tabs Click Handlers
   document.getElementById('tabSettlement')?.addEventListener('click', () => {
