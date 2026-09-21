@@ -2188,38 +2188,46 @@ function renderInventoryTable() {
     const remainingVal = remaining * (slot.price || 1);
     const scannedCount = (slot.scannedBarcodes || []).length;
     const ticketsInBox = slot.ticketsInBox !== undefined ? slot.ticketsInBox : scannedCount;
+    const pct = Math.min(100, Math.round((current / totalPackSize) * 100));
+    const cleanPack = String(slot.packNumber || '---').trim();
 
     row.innerHTML = `
-      <td style="font-weight: 800; color: var(--color-primary); font-size: 0.95rem;">Box #${slot.boxNumber}</td>
-      <td style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${cleanName}</td>
-      <td style="font-family: monospace; font-weight: 700; color: var(--text-secondary); font-size: 0.85rem;">#${slot.packNumber || '---'}</td>
-      <td style="font-weight: 800; color: var(--text-primary); font-size: 0.9rem;">$${slot.price}.00</td>
+      <td><span class="inv-box-badge">Box #${slot.boxNumber}</span></td>
+      <td><span class="inv-game-title">${cleanName}</span></td>
+      <td><span class="inv-pack-pill">#${cleanPack}</span></td>
+      <td><span class="inv-price-badge">$${slot.price}.00</span></td>
       <td>
-        <span class="badge-tickets-box">
-          🎟️ ${ticketsInBox} tix
+        <span class="inv-tix-in-box">
+          <span>🎟️</span> ${ticketsInBox} tix
         </span>
       </td>
       <td>
-        <button type="button" class="btn-view-box-barcodes" data-box="${slot.boxNumber}" title="View all scanned barcodes for Box #${slot.boxNumber}">
-          🏷️ ${scannedCount} Barcodes 🔍
+        <button type="button" class="inv-barcodes-btn btn-view-box-barcodes" data-box="${slot.boxNumber}" title="View all ${scannedCount} scanned barcodes for Box #${slot.boxNumber}">
+          <span>🏷️</span> ${scannedCount} Barcodes 🔍
         </button>
       </td>
       <td>
-        <span style="font-weight: 800; color: var(--color-primary); font-size: 0.9rem;">#${String(current).padStart(2, '0')}</span>
-        <small style="color: var(--text-muted); font-size: 0.75rem;">/ ${totalPackSize}</small>
+        <div class="inv-ticket-progress">
+          <div class="inv-ticket-num">#${String(current).padStart(2, '0')} <span class="inv-ticket-max">/ ${totalPackSize}</span></div>
+          <div class="inv-progress-bar-bg">
+            <div class="inv-progress-bar-fill" style="width: ${pct}%;"></div>
+          </div>
+        </div>
       </td>
       <td>
-        <span style="font-weight: 700; color: #10b981; font-size: 0.85rem;">${remaining} tix</span>
-        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">$${remainingVal.toFixed(2)}</div>
+        <div class="inv-remaining-wrap">
+          <span class="inv-remaining-tix">${remaining} tix</span>
+          <span class="inv-remaining-val">$${remainingVal.toFixed(2)}</span>
+        </div>
       </td>
       <td>
-        <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 0.72rem; display: inline-block;">
-          ⚡ ACTIVATED
+        <span class="inv-status-active">
+          <span class="inv-status-dot"></span> ACTIVE
         </span>
       </td>
       <td style="text-align: center;">
-        <button class="btn btn-outline btn-manage-box" style="padding: 4px 10px; font-size: 0.75rem; font-weight: 700; border-color: var(--border-color);" data-box="${slot.boxNumber}">
-          ⚙️ Box #${slot.boxNumber}
+        <button type="button" class="inv-manage-btn btn-manage-box" data-box="${slot.boxNumber}">
+          <span>⚙️</span> Box #${slot.boxNumber}
         </button>
       </td>
     `;
