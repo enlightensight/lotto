@@ -37,6 +37,17 @@ export function populateDayReportDOM(reportData, rootElement = document) {
     if (!tbodyEl) return;
     tbodyEl.innerHTML = '';
 
+    if (!boxes || boxes.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="7" style="text-align: center; padding: 18px 12px; color: #64748b; font-style: italic; font-size: 11px;">
+          No active scratcher dispenser boxes recorded in this shift. (Tap any box on main screen to activate packs)
+        </td>
+      `;
+      tbodyEl.appendChild(tr);
+      return;
+    }
+
     boxes.forEach(item => {
       // Do NOT write empty slots on receipts or reports!
       if (item.isEmpty) {
