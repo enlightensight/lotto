@@ -2252,6 +2252,9 @@ function executeStartNewShift(newCashier = null, newFloat = 0) {
 
   // Compute shift summary before closing (including active slots + sold out packs)
   const { totalSold, totalRevenue } = getShiftSalesTotals();
+  const shiftActivations = state.slots.filter(s => isBoxActive(s) && s.activatedThisShift).length;
+  const shiftSlotsSnapshot = JSON.parse(JSON.stringify(state.slots));
+  const shiftSoldOutSnapshot = JSON.parse(JSON.stringify(state.soldOutThisShift || []));
 
   state.slots.forEach(s => {
     if (isBoxActive(s)) {
@@ -2281,8 +2284,10 @@ function executeStartNewShift(newCashier = null, newFloat = 0) {
     onlineSales: state.onlineSales || 0,
     onlineCashes: state.onlineCashes || 0,
     drawerFloat: state.drawerFloat || 0,
-    activationsCount: state.slots.filter(s => isBoxActive(s) && s.activatedThisShift).length,
-    emptySlotsCount: state.slots.filter(s => !isBoxActive(s)).length
+    activationsCount: shiftActivations,
+    emptySlotsCount: state.slots.filter(s => !isBoxActive(s)).length,
+    slotsSnapshot: shiftSlotsSnapshot,
+    soldOutSnapshot: shiftSoldOutSnapshot
   });
 
   // Advance shift number & worker
@@ -3201,6 +3206,16 @@ function openHistoryModal(filter = 'all') {
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   };
 
+  // Setup filter button active states and click handlers
+  document.querySelectorAll('.history-filter-btn').forEach(btn => {
+    const f = btn.getAttribute('data-filter');
+    btn.classList.toggle('active', f === filter);
+    btn.onclick = () => {
+      sfx.keypad();
+      openHistoryModal(f);
+    };
+  });
+
   let list = state.shiftHistory || [];
   if (filter === 'today') {
     list = list.filter(h => isToday(h.endedAt || h.startedAt));
@@ -3210,9 +3225,14 @@ function openHistoryModal(filter = 'all') {
     list = list.filter(h => isThisMonth(h.endedAt || h.startedAt));
   }
 
+  const historyTotalBadge = document.getElementById('historyTotalBadge');
+  if (historyTotalBadge) {
+    historyTotalBadge.textContent = `${list.length} Shift${list.length === 1 ? '' : 's'}`;
+  }
+
   if (list.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = `<td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic;">No shifts recorded for ${filter === 'today' ? 'today' : filter === 'week' ? 'this week' : filter === 'month' ? 'this month' : 'this period'}.</td>`;
+    row.innerHTML = `<td colspan="7" style="text-align:center; padding:28px 14px; color:var(--text-muted); font-style:italic;">No shifts recorded for ${filter === 'today' ? 'today' : filter === 'week' ? 'this week' : filter === 'month' ? 'this month' : 'this period'}.</td>`;
     historyTableBody.appendChild(row);
   } else {
     list.forEach(h => {
@@ -3223,18 +3243,99 @@ function openHistoryModal(filter = 'all') {
 
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td style="font-weight:700; color:var(--color-primary);">Shift #${h.shiftNumber}</td>
-        <td>${h.cashier || 'Clerk'}</td>
-        <td style="white-space:nowrap; font-family:'JetBrains Mono', monospace; font-size:0.85rem;">${dateFormatted}</td>
-        <td>${h.totalTicketsSold || 0}</td>
-        <td style="color:var(--color-success); font-weight:700;">$${Number(h.totalSalesRevenue || 0).toFixed(2)}</td>
-        <td>${h.activationsCount || 0}</td>
+        <td style="padding: 10px 14px;">
+          <span style="font-weight: 800; color: var(--color-primary); background: rgba(56, 189, 248, 0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.25);">
+            Shift #${h.shiftNumber}
+          </span>
+        </td>
+        <td style="padding: 10px 14px; font-weight: 600;">${h.cashier || 'Clerk'}</td>
+        <td style="padding: 10px 14px; white-space:nowrap; font-family:'JetBrains Mono', monospace; font-size:0.85rem; color: var(--text-secondary);">${dateFormatted}</td>
+        <td style="padding: 10px 14px; text-align: right; font-weight: 700;">${h.totalTicketsSold || 0}</td>
+        <td style="padding: 10px 14px; text-align: right; color:var(--color-success); font-weight:800;">$${Number(h.totalSalesRevenue || 0).toFixed(2)}</td>
+        <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: ${h.activationsCount > 0 ? '#38bdf8' : 'var(--text-muted)'};">${h.activationsCount || 0}</td>
+        <td style="padding: 10px 14px; text-align: center;">
+          <button type="button" class="btn-history-view" title="View detailed report for Shift #${h.shiftNumber}">
+            <span>📄</span> Report
+          </button>
+        </td>
       `;
+      row.querySelector('.btn-history-view')?.addEventListener('click', () => {
+        openPastShiftReportModal(h);
+      });
       historyTableBody.appendChild(row);
     });
   }
   sfx.keypad();
   historyModal.showModal();
+}
+
+function openPastShiftReportModal(h) {
+  if (!shiftReportModal || !h) return;
+  historyModal?.close();
+  voice.speakReport();
+
+  repShiftNum.textContent = `Shift #${h.shiftNumber} (Audit History)`;
+  repCashier.textContent = h.cashier || 'Clerk';
+
+  reportBodyRows.innerHTML = '';
+  let totalSold = h.totalTicketsSold || 0;
+  let totalRevenue = h.totalSalesRevenue || 0;
+
+  if (h.slotsSnapshot && Array.isArray(h.slotsSnapshot)) {
+    h.slotsSnapshot.forEach(s => {
+      if (s && s.status === 'ACTIVE' && s.packNumber) {
+        const sold = Math.max(0, (s.currentTicket || 0) - (s.startTicket || 0));
+        const amount = sold * (s.price || 0);
+
+        const row = document.createElement('tr');
+        if (sold > 0) {
+          row.style.background = 'rgba(16, 185, 129, 0.12)';
+          row.style.borderLeft = '4px solid var(--color-success)';
+        }
+        row.innerHTML = `
+          <td style="font-weight:700; color:var(--color-primary);">
+            Box ${s.boxNumber}
+            ${sold > 0 ? `<span style="background:var(--color-success); color:#000; font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">SOLD ${sold}x</span>` : ''}
+          </td>
+          <td>${s.gameName}</td>
+          <td>$${s.price}</td>
+          <td>${String(s.startTicket || 0).padStart(2, '0')}</td>
+          <td style="font-weight:700;">${String(s.currentTicket || 0).padStart(2, '0')}</td>
+          <td style="color:${sold > 0 ? 'var(--color-success)' : 'var(--text-primary)'}; font-weight:800;">${sold}</td>
+          <td style="color:var(--color-success); font-weight:700;">$${amount.toFixed(2)}</td>
+        `;
+        reportBodyRows.appendChild(row);
+      }
+    });
+  } else {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic;">
+      Historical Shift #${h.shiftNumber} &bull; Total Sold: ${totalSold} tickets &bull; Revenue: $${Number(totalRevenue).toFixed(2)}
+    </td>`;
+    reportBodyRows.appendChild(row);
+  }
+
+  repTicketsSold.textContent = totalSold;
+  repTotalRevenue.textContent = `$${Number(totalRevenue).toFixed(2)}`;
+  repSumSold.textContent = totalSold;
+  repSumAmount.textContent = `$${Number(totalRevenue).toFixed(2)}`;
+
+  // Populate print slip
+  const dateObj = h.endedAt ? new Date(h.endedAt) : (h.startedAt ? new Date(h.startedAt) : new Date());
+  const prDateEl = document.getElementById('prDate');
+  if (prDateEl) prDateEl.textContent = dateObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const prTimeEl = document.getElementById('prTime');
+  if (prTimeEl) prTimeEl.textContent = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  const prShiftEl = document.getElementById('prShift');
+  if (prShiftEl) prShiftEl.textContent = `#${h.shiftNumber} (${h.cashier || 'Clerk'}) [AUDIT]`;
+  const prTotalSalesEl = document.getElementById('prTotalSales');
+  if (prTotalSalesEl) prTotalSalesEl.textContent = `$${Number(totalRevenue).toFixed(2)}`;
+  const prTotalTicketsEl = document.getElementById('prTotalTickets');
+  if (prTotalTicketsEl) prTotalTicketsEl.textContent = totalSold;
+
+  sfx.chime();
+  shiftReportModal.showModal();
+  showToast(`Viewing Audit Report for Shift #${h.shiftNumber}`, 'info');
 }
 
 // -------------------------------------------------------------
@@ -3330,9 +3431,9 @@ function setupEventListeners() {
       `"${h.cashier || ''}"`,
       `"${h.startedAt || ''}"`,
       `"${h.endedAt || ''}"`,
-      h.totalTicketsSold,
-      h.totalSalesRevenue.toFixed(2),
-      h.activationsCount
+      h.totalTicketsSold || 0,
+      Number(h.totalSalesRevenue || 0).toFixed(2),
+      h.activationsCount || 0
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
