@@ -2176,14 +2176,14 @@ dialog::backdrop {
 }
 
 
-/* Toast Notification (Arron Portal Clean Alert Toast) */
+/* Toast Notification (Repositioned to bottom-right so it never blocks top navigation or shift controls) */
 .toast-container {
   position: fixed;
-  top: 24px;
+  bottom: 24px;
   right: 24px;
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: 8px;
   pointer-events: none;
 }
@@ -2192,16 +2192,18 @@ dialog::backdrop {
   background: #ffffff;
   border: 1px solid var(--border-color);
   border-left: 4px solid var(--color-success);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-md);
   padding: 12px 18px;
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 10px;
-  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  animation: toast-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast.toast-error {
@@ -2212,9 +2214,13 @@ dialog::backdrop {
   border-left-color: var(--color-primary);
 }
 
-@keyframes slide-in {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+.toast.toast-warning {
+  border-left-color: #f59e0b;
+}
+
+@keyframes toast-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 /* ============================================================

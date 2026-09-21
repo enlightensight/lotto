@@ -1485,7 +1485,7 @@ function quickSellTicket(slot, barcodeScanned = null) {
     showToast(`🚨 Box #${slot.boxNumber} (${cleanName}) is SOLD OUT! Full pack of ${packSize} tickets sold ($${totalAmt.toFixed(2)}).`, 'warning');
   } else {
     sfx.success();
-    showToast(`🛒 ${bcPrefix}Sold 1x $${Number(slot.price).toFixed(2)} · ${cleanName} (Box #${slot.boxNumber})! Now #${String(slot.currentTicket).padStart(2, '0')}`, 'success');
+    showToast(`Sold 1x $${Number(slot.price).toFixed(2)} · ${cleanName} (Box #${slot.boxNumber}) · Now at #${String(slot.currentTicket).padStart(2, '0')}`, 'success');
   }
 
   saveState(state);
@@ -3047,9 +3047,9 @@ function showToast(message, type = 'info') {
 
   setTimeout(() => {
     toast.style.opacity = '0';
-    toast.style.transform = 'translateY(-10px)';
+    toast.style.transform = 'translateY(10px)';
     setTimeout(() => toast.remove(), 300);
-  }, 3500);
+  }, 3200);
 }
 
 // -------------------------------------------------------------
