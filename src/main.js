@@ -3189,8 +3189,7 @@ function processScannedBarcode(rawBarcode) {
 
     if (!matchedGame && !isInInventory && !isInInventoryBarcodes) {
       // Un-inventoried / un-recognized ticket:
-      // Show yellow alert banner on readout - DO NOT auto-popup modal over the screen during normal scanning.
-      // Update inventory should only open or pop up when a new ticket has to enter!
+      // New unrecognized ticket scanned — auto-open Update Inventory modal for intake!
       sfx.alert();
       voice.speakUpdateInventory();
       if (lastScanReadoutContainer) {
@@ -3205,7 +3204,9 @@ function processScannedBarcode(rawBarcode) {
       if (notInInvBarcodeDetails) {
         notInInvBarcodeDetails.textContent = rawBarcode;
       }
-      showToast(`⚠️ THIS TICKET IS NOT IN THE INVENTORY! Click "⚡ Stock Intake / Update Inventory" to enter this new ticket.`, 'warning');
+      // Auto-open inventory modal for new ticket entry
+      openInventoryModal('intake');
+      showToast(`⚠️ New ticket scanned! Update Inventory opened to enter this ticket.`, 'warning');
       return;
     }
 
@@ -3608,19 +3609,19 @@ function setupEventListeners() {
   });
   reportNewShiftBtn.addEventListener('click', startNewShift);
 
-  // Inventory Modal buttons: Update Inventory opens intake for entering new tickets, Inventory Status opens status overview
-  tabUpdateInventory?.addEventListener('click', () => openInventoryModal('intake'));
-  document.getElementById('tabInventoryStatus')?.addEventListener('click', () => openInventoryModal('status'));
+  // Inventory Modal buttons: Update Inventory should ONLY open when new ticket is scanned
+  // Manual clicks on these tabs just show an informational message
+  tabUpdateInventory?.addEventListener('click', () => {
+    sfx.keypad();
+    showToast('📦 Scan a new ticket barcode to open Update Inventory. It opens automatically when a new ticket is scanned.', 'info');
+  });
+  document.getElementById('tabInventoryStatus')?.addEventListener('click', () => {
+    sfx.keypad();
+    showToast('📦 Scan a new ticket barcode to open Update Inventory. It opens automatically when a new ticket is scanned.', 'info');
+  });
   closeInventoryBtn?.addEventListener('click', () => inventoryModal.close());
   inventoryDoneBtn?.addEventListener('click', () => inventoryModal.close());
   setupInventoryModalLogic();
-
-  // Clicking yellow alert banner on readout opens Update Inventory for the scanned new ticket
-  lastScanReadoutContainer?.addEventListener('click', () => {
-    if (lastScanReadoutContainer.classList.contains('alert-yellow')) {
-      openInventoryModal('intake');
-    }
-  });
 
   // Summary Metric Tabs Click Handlers
   document.getElementById('tabSettlement')?.addEventListener('click', () => {
