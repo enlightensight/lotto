@@ -671,51 +671,92 @@ body {
   margin-left: 6px;
 }
 
+.shift-arrow-track,
 .shift-badge-arrow-btn {
-  background: transparent;
-  border: none;
-  padding: 3px 6px;
-  margin-left: 6px;
+  background: linear-gradient(180deg, #94a3b8 0%, #cbd5e1 45%, #e2e8f0 100%);
+  border: 1.5px solid #475569;
+  border-radius: 2px;
+  width: 72px;
+  min-width: 72px;
+  height: 26px;
+  min-height: 26px;
+  margin-left: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  justify-content: flex-end;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow: inset 1.5px 1.5px 3px rgba(0, 0, 0, 0.55), inset -1px -1px 2px rgba(255, 255, 255, 0.7);
+  padding: 0 2px;
+  user-select: none;
 }
 
+.shift-arrow-track:hover,
 .shift-badge-arrow-btn:hover {
-  background: rgba(56, 189, 248, 0.2);
+  border-color: #334155;
+  box-shadow: inset 1.5px 1.5px 3px rgba(0, 0, 0, 0.65), inset -1px -1px 2px rgba(255, 255, 255, 0.9), 0 0 6px rgba(56, 189, 248, 0.35);
+}
+
+.ltsystem-arrow-slider {
+  width: 54px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  transform: translateX(0);
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.shift-arrow-track:hover .ltsystem-arrow-slider,
+.shift-badge-arrow-btn:hover .ltsystem-arrow-slider {
   transform: translateX(-3px);
 }
 
-.shift-badge-arrow-btn:active {
+.shift-arrow-track:active .ltsystem-arrow-slider,
+.shift-badge-arrow-btn:active .ltsystem-arrow-slider {
   transform: translateX(-6px);
 }
 
+.ltsystem-arrow-svg {
+  width: 54px;
+  height: 20px;
+  display: block;
+}
+
+/* Authentic Real LTSYSTEM Refresh Animation:
+   Glides swiftly to the left of the sunken track, holds momentarily, and smoothly glides back */
+.shift-arrow-track.refreshing,
 .shift-badge-arrow-btn.refreshing {
   pointer-events: none;
 }
 
+.shift-arrow-track.refreshing .ltsystem-arrow-slider,
+.shift-badge-arrow-btn.refreshing .ltsystem-arrow-slider,
 .shift-badge-arrow-btn.refreshing .refresh-arrow-svg {
-  animation: swift-left-and-back 0.55s cubic-bezier(0.25, 1, 0.5, 1);
+  animation: ltsystem-arrow-swift-left 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
-@keyframes swift-left-and-back {
+@keyframes ltsystem-arrow-swift-left {
   0% {
     transform: translateX(0);
   }
-  35% {
-    transform: translateX(-16px) scaleX(1.12);
+  38% {
+    transform: translateX(-35px);
   }
-  65% {
-    transform: translateX(-18px) scale(0.95);
+  58% {
+    transform: translateX(-35px);
   }
   85% {
-    transform: translateX(3px) scale(1.02);
+    transform: translateX(-4px);
   }
   100% {
-    transform: translateX(0) scale(1);
+    transform: translateX(0);
   }
 }
 

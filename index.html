@@ -56,18 +56,24 @@
           Current Shift : <strong id="currentShiftNumber">1</strong>
           <span class="cashier-label" id="currentCashier">[MASTER]</span>
         </div>
-        <button type="button" class="shift-badge-arrow-btn" id="systemRefreshBtn" title="Click to Refresh System & Synchronize State">
-          <svg class="refresh-arrow-svg" width="34" height="18" viewBox="0 0 50 24" fill="none">
-            <defs>
-              <linearGradient id="arrowGrad" x1="100%" y1="0%" x2="0%" y2="0%">
-                <stop offset="0%" stop-color="#1e3a8a"/>
-                <stop offset="50%" stop-color="#2563eb"/>
-                <stop offset="100%" stop-color="#60a5fa"/>
-              </linearGradient>
-            </defs>
-            <path d="M22 2 L2 12 L22 22 L22 16 L48 16 L48 8 L22 8 Z" fill="url(#arrowGrad)" stroke="#1d4ed8" stroke-width="1.5"/>
-          </svg>
-        </button>
+        <div class="shift-arrow-track" id="systemRefreshBtn" role="button" tabindex="0" title="Click to Refresh System & Synchronize State">
+          <div class="ltsystem-arrow-slider">
+            <svg class="ltsystem-arrow-svg" viewBox="0 0 54 20" fill="none">
+              <defs>
+                <linearGradient id="ltsystemArrowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#38bdf8"/>
+                  <stop offset="18%" stop-color="#2563eb"/>
+                  <stop offset="60%" stop-color="#1d4ed8"/>
+                  <stop offset="100%" stop-color="#172554"/>
+                </linearGradient>
+              </defs>
+              <!-- Real LTSYSTEM block arrow: sharp triangular head + wide rectangular shaft -->
+              <polygon points="14,1 0,10 14,19 14,15 53,15 53,5 14,5" fill="url(#ltsystemArrowGrad)" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>
+              <line x1="14" y1="5" x2="52" y2="5" stroke="#93c5fd" stroke-width="1" stroke-linecap="round"/>
+              <rect x="15" y="7" width="36" height="5" fill="#60a5fa" opacity="0.45" rx="1"/>
+            </svg>
+          </div>
+        </div>
       </div>
 
       <!-- Row 2: Cancel and Undo Buttons -->
