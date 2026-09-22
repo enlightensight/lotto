@@ -1446,52 +1446,6 @@ body {
   text-align: center;
 }
 
-.empty-rack-notice {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 36px 20px;
-  text-align: center;
-  background: #f8fafc;
-  border: 2px dashed #cbd5e1;
-  border-radius: 8px;
-  margin: 20px auto;
-  max-width: 540px;
-  width: 100%;
-}
-
-.empty-rack-icon {
-  font-size: 2.8rem;
-  margin-bottom: 8px;
-}
-
-.empty-rack-title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin-bottom: 4px;
-}
-
-.empty-rack-sub {
-  font-size: 0.9rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-[data-theme="dark"] .empty-rack-notice {
-  background: rgba(17, 28, 53, 0.6);
-  border-color: #24355a;
-}
-
-[data-theme="dark"] .empty-rack-title {
-  color: #f8fafc;
-}
-
-[data-theme="dark"] .empty-rack-sub {
-  color: #94a3b8;
-}
 
 @media (max-height: 720px) {
   .box-card {

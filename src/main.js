@@ -549,13 +549,7 @@ function renderDispenserRack() {
   const activeSlots = state.slots.filter(isBoxActive);
 
   if (activeSlots.length === 0) {
-    dispensersGrid.innerHTML = `
-      <div class="empty-rack-notice">
-        <div class="empty-rack-icon">🎟️</div>
-        <div class="empty-rack-title">No Active Tickets on Counter</div>
-        <div class="empty-rack-sub">Scan a lottery ticket pack barcode to activate and display a box here.</div>
-      </div>
-    `;
+    dispensersGrid.innerHTML = '';
     return;
   }
 
