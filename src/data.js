@@ -108,6 +108,8 @@ export function getInitialState() {
     shiftStartedAt: new Date().toISOString(),
     totalSlots: TOTAL_SLOTS,
     slots,
+    visibleBoxNumbers: [], // Stays empty until tickets are scanned/activated
+    boxAccessTimes: {},
     inventory: [], // Clean inventory in safe
     inventoryBarcodes: {}, // Map of barcode -> { boxNumber, scannedAt, gameName, price }
     customGames: [], // Registered brand new games

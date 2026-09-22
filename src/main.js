@@ -546,16 +546,18 @@ function renderHeaderAndMetrics() {
 const VISIBLE_RACK_CAPACITY = 20;
 
 function ensureVisibleBoxesInitialized() {
-  if (!Array.isArray(state.visibleBoxNumbers) || state.visibleBoxNumbers.length !== VISIBLE_RACK_CAPACITY) {
+  if (!Array.isArray(state.visibleBoxNumbers)) {
+    // Only populate with genuinely active boxes that have a pack
     const activeBoxNums = (state.slots || [])
       .filter(s => s.status === 'ACTIVE' && s.packNumber)
       .map(s => s.boxNumber);
-
-    const list = [...activeBoxNums];
-    for (let i = 1; i <= state.totalSlots && list.length < VISIBLE_RACK_CAPACITY; i++) {
-      if (!list.includes(i)) list.push(i);
-    }
-    state.visibleBoxNumbers = list.slice(0, VISIBLE_RACK_CAPACITY);
+    state.visibleBoxNumbers = activeBoxNums.slice(0, VISIBLE_RACK_CAPACITY);
+  } else {
+    // Purge any box numbers that are no longer active or have no pack
+    state.visibleBoxNumbers = state.visibleBoxNumbers.filter(bNum => {
+      const s = (state.slots || []).find(x => x.boxNumber === bNum);
+      return s && s.status === 'ACTIVE' && s.packNumber;
+    });
   }
   if (!state.boxAccessTimes) {
     state.boxAccessTimes = {};
@@ -565,6 +567,12 @@ function ensureVisibleBoxesInitialized() {
 function bringBoxToVisibleRack(boxNumber) {
   if (!boxNumber) return;
   ensureVisibleBoxesInitialized();
+
+  // Verify the slot is active and has a pack
+  const slot = (state.slots || []).find(s => s.boxNumber === boxNumber);
+  if (!slot || slot.status !== 'ACTIVE' || !slot.packNumber) {
+    return;
+  }
 
   const now = Date.now();
   state.boxAccessTimes[boxNumber] = now;
@@ -576,21 +584,25 @@ function bringBoxToVisibleRack(boxNumber) {
     return;
   }
 
-  // Box is NOT visible in the rack: Replace the oldest / least recently accessed box!
-  // "if new ticket scanned that will replaced the place of old one that way there is no need of scrolling and no need of making box size small ok"
-  let oldestIdx = 0;
-  let oldestTime = Infinity;
+  // Not in visible rack yet:
+  if (state.visibleBoxNumbers.length < VISIBLE_RACK_CAPACITY) {
+    state.visibleBoxNumbers.push(boxNumber);
+  } else {
+    // Rack is full (20 boxes): Replace the oldest / least recently accessed box!
+    let oldestIdx = 0;
+    let oldestTime = Infinity;
 
-  state.visibleBoxNumbers.forEach((bNum, i) => {
-    const t = state.boxAccessTimes[bNum] || 0;
-    if (t < oldestTime) {
-      oldestTime = t;
-      oldestIdx = i;
-    }
-  });
+    state.visibleBoxNumbers.forEach((bNum, i) => {
+      const t = state.boxAccessTimes[bNum] || 0;
+      if (t < oldestTime) {
+        oldestTime = t;
+        oldestIdx = i;
+      }
+    });
 
-  // Replace that position with the newly scanned box!
-  state.visibleBoxNumbers[oldestIdx] = boxNumber;
+    state.visibleBoxNumbers[oldestIdx] = boxNumber;
+  }
+
   saveState(state);
 }
 
@@ -598,78 +610,57 @@ function renderDispenserRack() {
   dispensersGrid.innerHTML = '';
   ensureVisibleBoxesInitialized();
 
+  // If no boxes are scanned/active yet, the rack must stay completely empty!
+  if (!state.visibleBoxNumbers || state.visibleBoxNumbers.length === 0) {
+    return;
+  }
+
   // Exactly 2 rows x 10 columns layout matching real LTSYSTEM counter rack (Zero scroll in any direction)
   dispensersGrid.style.gridTemplateColumns = 'repeat(10, minmax(0, 1fr))';
   dispensersGrid.style.gridTemplateRows = 'repeat(2, minmax(0, 1fr))';
 
   state.visibleBoxNumbers.forEach(boxNum => {
-    const slot = state.slots.find(s => s.boxNumber === boxNum) || {
-      boxNumber: boxNum,
-      status: 'EMPTY',
-      gameName: null,
-      price: null,
-      packNumber: null,
-      currentTicket: 0,
-      startTicket: 0
-    };
+    const slot = state.slots.find(s => s.boxNumber === boxNum);
+    if (!slot || slot.status !== 'ACTIVE' || !slot.packNumber) {
+      return; // Do NOT render empty slot cards in the rack!
+    }
 
     const card = document.createElement('div');
     const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
     const isLastScanned = state.lastScannedSlot === slot.boxNumber;
-    const isBoxEmpty = slot.status !== 'ACTIVE' || !slot.packNumber;
 
     let ageBoxClass = '';
-    if (!isBoxEmpty) {
-      if (slot.daysActive >= 21) {
-        ageBoxClass = 'age-21-box';
-      } else if (slot.daysActive >= 12) {
-        ageBoxClass = 'age-12-box';
-      } else if (slot.daysActive >= 7) {
-        ageBoxClass = 'age-7-box';
-      }
+    if (slot.daysActive >= 21) {
+      ageBoxClass = 'age-21-box';
+    } else if (slot.daysActive >= 12) {
+      ageBoxClass = 'age-12-box';
+    } else if (slot.daysActive >= 7) {
+      ageBoxClass = 'age-7-box';
     }
 
-    card.className = `box-card ${isBoxEmpty ? 'empty-slot' : 'active'} ${ageBoxClass} ${isLastScanned ? 'selected-box-card' : ''} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
+    card.className = `box-card active ${ageBoxClass} ${isLastScanned ? 'selected-box-card' : ''} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
     card.dataset.box = slot.boxNumber;
 
-    if (isBoxEmpty) {
-      card.innerHTML = `
-        <div class="card-header-row">
-          <span class="box-num-label">Box ${slot.boxNumber}</span>
-          <span class="empty-badge">EMPTY</span>
-        </div>
-        <div class="card-center-body">
-          <div class="empty-slot-plus">+</div>
-          <div class="empty-slot-title">Empty Slot</div>
-          <div class="empty-slot-sub">Click to Activate</div>
-        </div>
-        <div class="card-dashed-line"></div>
-        <div class="card-footer-row">
-          <span class="empty-hint-text">No Pack</span>
-        </div>
-      `;
-    } else {
-      const cleanName = cleanGameTitle(slot.gameName);
-      const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
-      const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
-      card.innerHTML = `
-        <div class="card-header-row">
-          <span class="price-tag">$${slot.price}</span>
-          <span class="box-num-label">Box ${slot.boxNumber}</span>
-        </div>
-        <div class="card-center-body">
-          <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
-          <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
-          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
-        </div>
-        <div class="card-dashed-line"></div>
-        <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
-          <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
-          ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
-          ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
-        </div>
-      `;
-    }
+    const cleanName = cleanGameTitle(slot.gameName);
+    const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
+    const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
+    card.innerHTML = `
+      <div class="card-header-row">
+        <span class="price-tag">$${slot.price}</span>
+        <span class="box-num-label">Box ${slot.boxNumber}</span>
+      </div>
+      <div class="card-center-body">
+        <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
+        <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
+        ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
+      </div>
+      <div class="card-dashed-line"></div>
+      <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
+        <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
+        ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
+        ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
+      </div>
+    `;
 
     card.addEventListener('click', (e) => {
       if (e.target.closest('.quick-sell-btn')) {
