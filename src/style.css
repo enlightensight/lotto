@@ -281,6 +281,15 @@
   border-top-color: #1e293b;
 }
 
+[data-theme="dark"] .slots-ribbon-container {
+  background: #080d18;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .slots-ribbon {
+  background: #1e293b;
+}
+
 [data-theme="dark"] .legend-item {
   color: #cbd5e1;
 }
@@ -605,8 +614,8 @@ body {
    SHIFT OPERATIONS CONTROL BAR (2-Column Reference Layout)
    ============================================================= */
 .shift-control-bar {
-  background: var(--bg-surface);
-  border-bottom: 2px solid var(--border-color);
+  background: #f8fafc;
+  border-bottom: 2px solid #cbd5e1;
   padding: 8px 12px;
   display: flex;
   align-items: stretch;
@@ -1146,9 +1155,9 @@ body {
    SUMMARY METRICS BAR (7 Full-Width Columns matching Screenshot)
    ============================================================= */
 .metrics-tabs-bar {
-  background: #262626;
-  border-top: 1.5px solid #404040;
-  border-bottom: 1.5px solid #404040;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  border-top: 1.5px solid #cbd5e1;
+  border-bottom: 1.5px solid #cbd5e1;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   height: 48px;
@@ -1160,14 +1169,14 @@ body {
 .metric-tab {
   background: transparent;
   border: none;
-  border-right: 1px solid #4a4a4a;
+  border-right: 1px solid #cbd5e1;
   border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 3px 6px;
-  color: #ffffff;
+  color: #0f172a;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -1177,12 +1186,25 @@ body {
 }
 
 .metric-tab:hover {
-  background: #333333;
+  background: #e2e8f0;
 }
 
 .metric-tab:active {
-  background: #1a1a1a;
+  background: #cbd5e1;
   transform: translateY(1px);
+}
+
+.metric-tab.update-inventory-tab {
+  background: rgba(2, 132, 199, 0.08);
+  border-left: 1px solid #0284c7;
+}
+
+.metric-tab.update-inventory-tab .tab-name {
+  color: #0284c7;
+}
+
+.metric-tab.update-inventory-tab .tab-val {
+  color: #0369a1;
 }
 
 @keyframes pulseHighlight {
@@ -1199,7 +1221,7 @@ body {
 .metric-tab .tab-name {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #475569;
   text-align: center;
   line-height: 1.2;
 }
@@ -1207,7 +1229,7 @@ body {
 .metric-tab .tab-val {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #ffffff;
+  color: #0f172a;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.2;
   margin-top: 1px;
@@ -1705,16 +1727,18 @@ body {
    ============================================================= */
 .slots-ribbon-container {
   width: 100%;
-  background: #000000;
-  border: 1.5px solid #000000;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 2px;
   padding: 1px;
+  box-sizing: border-box;
 }
 
 .slots-ribbon {
   display: grid;
   grid-template-columns: repeat(54, 1fr);
   gap: 1px;
-  background: #000000;
+  background: #cbd5e1;
 }
 
 .ribbon-cell {
