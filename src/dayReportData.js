@@ -255,8 +255,19 @@ export function generateLiveDayReport(state) {
           subRows
         });
       }
+    } else {
+      // Empty slot — explicitly included per user request
+      boxes.push({
+        box: boxNum,
+        pack: '---',
+        name: 'EMPTY',
+        open: '-',
+        close: '-',
+        price: '-',
+        total: 0,
+        isEmpty: true
+      });
     }
-    // Empty boxes are completely omitted from receipts and reports!
   }
 
   // Financial Summary & Reconciled Totals

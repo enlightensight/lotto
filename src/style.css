@@ -2707,18 +2707,6 @@ dialog::backdrop {
 
   body.print-day-report .day-report-sheet.page-1 {
     display: block !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  body.print-day-report .day-report-sheet.page-2 {
-    display: block !important;
-    page-break-before: always !important;
-    break-before: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   body.print-day-report .dr-table {
@@ -3330,13 +3318,9 @@ dialog::backdrop {
   width: 55px;
 }
 
-/* Empty row - hidden per user directive (Do NOT write empty slots on receipts) */
-.dr-empty-row {
-  display: none !important;
-}
-
-.dr-empty-cell {
-  display: none !important;
+/* Empty row displayed in report table */
+.dr-row-empty td {
+  color: #64748b !important;
 }
 
 /* Color Highlighting matching Day Report PDF */

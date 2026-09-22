@@ -49,8 +49,20 @@ export function populateDayReportDOM(reportData, rootElement = document) {
     }
 
     boxes.forEach(item => {
-      // Do NOT write empty slots on receipts or reports!
+      // Empty slot row — displayed per user request
       if (item.isEmpty) {
+        const tr = document.createElement('tr');
+        tr.className = 'dr-row-empty';
+        tr.innerHTML = `
+          <td class="dr-box-num">${item.box}</td>
+          <td class="dr-pack-num" style="color: #64748b;">${item.pack && item.pack !== '---' ? item.pack : '---'}</td>
+          <td class="dr-game-name" style="color: #64748b;">${item.name || 'EMPTY'}</td>
+          <td class="dr-num-cell" style="color: #64748b;">${item.open ?? '-'}</td>
+          <td class="dr-num-cell" style="color: #64748b;">${item.close ?? '-'}</td>
+          <td class="dr-num-cell" style="color: #64748b;">${item.price ? '$' + item.price : '-'}</td>
+          <td class="dr-num-cell" style="color: #64748b;">${item.total !== undefined ? item.total : '0'}</td>
+        `;
+        tbodyEl.appendChild(tr);
         return;
       }
 
@@ -97,25 +109,10 @@ export function populateDayReportDOM(reportData, rootElement = document) {
     });
   }
 
-  // Filter only active dispenser boxes (skip empty slots completely)
-  const activeBoxes = (reportData.boxes || []).filter(b => !b.isEmpty);
-  const p1Boxes = activeBoxes.slice(0, 45);
-  const p2Boxes = activeBoxes.slice(45);
-
-  // 2. Table Page 1
-  const p1Tbody = rootElement.querySelector('#drP1TableBody') || rootElement.querySelectorAll('.dr-table tbody')[0];
-  renderBoxRows(p1Boxes, p1Tbody);
-
-  // 3. Table Page 2 (Only if there are more than 45 active boxes)
-  const p2Tbody = rootElement.querySelector('#drP2TableBody') || rootElement.querySelectorAll('.dr-table tbody')[1];
-  const p2Table = p2Tbody ? p2Tbody.closest('.dr-table') : null;
-  if (p2Boxes.length > 0) {
-    if (p2Table) p2Table.style.display = 'table';
-    renderBoxRows(p2Boxes, p2Tbody);
-  } else {
-    if (p2Table) p2Table.style.display = 'none';
-    if (p2Tbody) p2Tbody.innerHTML = '';
-  }
+  // Render ALL boxes (active and empty) on the single full 1-page report
+  const allBoxes = reportData.boxes || [];
+  const p1Tbody = rootElement.querySelector('#drP1TableBody') || rootElement.querySelector('.dr-table tbody');
+  renderBoxRows(allBoxes, p1Tbody);
 
   // 4. Financial Summary
   const setEl = (id, val) => {
@@ -230,7 +227,6 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   sheetsWrapper.id = 'drSheetsWrapper';
 
   let p1Sheet = null;
-  let p2Sheet = null;
 
   try {
     const p1Source = printSection.querySelector('#dayReportSheetPage1');
@@ -240,21 +236,13 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
       p1Sheet.classList.add('dr-preview-sheet');
       sheetsWrapper.appendChild(p1Sheet);
     }
-
-    const p2Source = printSection.querySelector('#dayReportSheetPage2');
-    if (p2Source) {
-      p2Sheet = p2Source.cloneNode(true);
-      p2Sheet.removeAttribute('id');
-      p2Sheet.classList.add('dr-preview-sheet');
-      sheetsWrapper.appendChild(p2Sheet);
-    }
   } catch (err) {
-    console.error('Error cloning Day Report sheets for preview:', err);
+    console.error('Error cloning Day Report sheet for preview:', err);
   }
 
   container.appendChild(sheetsWrapper);
 
-  // 3. Floating Toolbar Logic (Matching Video 03:38)
+  // 3. Floating Toolbar Logic (Single Full 1-Page Report)
   const floatPrint = document.getElementById('drFloatPrintBtn');
   const floatSave = document.getElementById('drFloatSaveBtn');
   const floatPrev = document.getElementById('drFloatPrevBtn');
@@ -263,6 +251,10 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   const floatZoomOut = document.getElementById('drFloatZoomOutBtn');
   const floatZoomIn = document.getElementById('drFloatZoomInBtn');
   const floatFit = document.getElementById('drFloatFitBtn');
+
+  if (floatIndicator) {
+    floatIndicator.textContent = '1 / 1';
+  }
 
   if (floatPrint) {
     floatPrint.onclick = () => printDayReport(reportData);
@@ -273,14 +265,11 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   if (floatPrev) {
     floatPrev.onclick = () => {
       container.scrollTo({ top: 0, behavior: 'smooth' });
-      if (floatIndicator) floatIndicator.textContent = '1 / 2';
     };
   }
   if (floatNext) {
     floatNext.onclick = () => {
-      const offset = p1Sheet ? (p1Sheet.offsetHeight + 24) : 800;
-      container.scrollTo({ top: offset, behavior: 'smooth' });
-      if (floatIndicator) floatIndicator.textContent = '2 / 2';
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     };
   }
 
@@ -307,14 +296,9 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
     };
   }
 
-  // Update page indicator on scroll
   container.onscroll = () => {
-    if (!floatIndicator) return;
-    const threshold = p1Sheet ? (p1Sheet.offsetHeight / 2) : 400;
-    if (container.scrollTop > threshold) {
-      floatIndicator.textContent = '2 / 2';
-    } else {
-      floatIndicator.textContent = '1 / 2';
+    if (floatIndicator) {
+      floatIndicator.textContent = '1 / 1';
     }
   };
 }
