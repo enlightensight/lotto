@@ -553,9 +553,15 @@ function renderDispenserRack() {
     return;
   }
 
+  // Exactly 2 rows layout matching real LTSYSTEM counter rack (Zero vertical scroll)
+  const cols = Math.max(8, Math.ceil(activeSlots.length / 2));
+  dispensersGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  dispensersGrid.style.gridTemplateRows = 'repeat(2, minmax(0, 1fr))';
+
   activeSlots.forEach(slot => {
     const card = document.createElement('div');
     const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
+    const isLastScanned = state.lastScannedSlot === slot.boxNumber;
 
     let ageBoxClass = '';
     if (slot.daysActive >= 21) {
@@ -566,7 +572,7 @@ function renderDispenserRack() {
       ageBoxClass = 'age-7-box';
     }
 
-    card.className = `box-card active ${ageBoxClass} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
+    card.className = `box-card active ${ageBoxClass} ${isLastScanned ? 'selected-box-card' : ''} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
 
     const cleanName = cleanGameTitle(slot.gameName);
     const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;

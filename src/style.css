@@ -1256,17 +1256,17 @@ body {
   align-items: stretch;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden !important; /* Strictly no vertical scrollbar! */
 }
 
 .dispensers-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 8px;
-  align-content: start;
-  padding-bottom: 4px;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden !important; /* Strictly no vertical scrollbar! */
 }
 
 /* Acrylic Dispenser Box Card */
@@ -1274,8 +1274,9 @@ body {
   background: #ffffff;
   border: 1.5px solid #1e293b;
   border-radius: 0; /* Sharp acrylic box edges! */
-  height: 205px;
-  padding: 6px 10px;
+  height: 100%;
+  min-height: 0;
+  padding: 4px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1286,6 +1287,28 @@ body {
   overflow: hidden;
   box-sizing: border-box;
 }
+
+.box-card.selected-box-card {
+  border: 2.5px solid #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.4), 0 4px 12px rgba(2, 132, 199, 0.25) !important;
+  animation: pulse-selected-card 1.2s ease-in-out;
+}
+
+@keyframes pulse-selected-card {
+  0% {
+    transform: scale(0.98);
+    box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.6);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 6px rgba(2, 132, 199, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.4);
+  }
+}
+
 
 .box-card:hover {
   transform: translateY(-1px);
@@ -1531,12 +1554,11 @@ body {
 /* Tier 1: Large Counter Displays & Full HD Monitors (1440px+ / 800px+ height) */
 @media (min-width: 1440px) and (min-height: 800px) {
   .dispensers-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
+    gap: 8px;
   }
   .box-card {
-    height: 290px;
-    padding: 10px 12px;
+    height: 100%;
+    padding: 6px 10px;
   }
   .box-main-number {
     font-size: 4.4rem;
@@ -1580,12 +1602,11 @@ body {
 /* Tier 2: Ultra-Wide / 1440p / 4K / Giant Displays (1920px+ / 980px+ height) */
 @media (min-width: 1920px) and (min-height: 980px) {
   .dispensers-grid {
-    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
-    gap: 16px;
+    gap: 10px;
   }
   .box-card {
-    height: 350px;
-    padding: 14px 16px;
+    height: 100%;
+    padding: 8px 12px;
   }
   .box-main-number {
     font-size: 5.6rem;
