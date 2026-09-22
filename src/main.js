@@ -373,6 +373,25 @@ function sanitizeAndMigrateSlots() {
     modified = true;
   }
 
+  if (!Array.isArray(state.visibleBoxNumbers)) {
+    state.visibleBoxNumbers = [];
+    modified = true;
+  } else {
+    const filtered = state.visibleBoxNumbers.filter(bNum => {
+      const s = (state.slots || []).find(x => x.boxNumber === bNum);
+      return s && s.status === 'ACTIVE' && s.packNumber;
+    });
+    if (filtered.length !== state.visibleBoxNumbers.length) {
+      state.visibleBoxNumbers = filtered;
+      modified = true;
+    }
+  }
+
+  if (state.dataCleared) {
+    state.visibleBoxNumbers = [];
+    modified = true;
+  }
+
   // Also clean stale lastScannedBarcode and lastScanData string in state if it contained duplicated prices
   if (state.lastScannedBarcode) {
     const cleanedBarcode = state.lastScannedBarcode
@@ -547,11 +566,8 @@ const VISIBLE_RACK_CAPACITY = 20;
 
 function ensureVisibleBoxesInitialized() {
   if (!Array.isArray(state.visibleBoxNumbers)) {
-    // Only populate with genuinely active boxes that have a pack
-    const activeBoxNums = (state.slots || [])
-      .filter(s => s.status === 'ACTIVE' && s.packNumber)
-      .map(s => s.boxNumber);
-    state.visibleBoxNumbers = activeBoxNums.slice(0, VISIBLE_RACK_CAPACITY);
+    // Scan-to-Appear: Rack starts empty until tickets are scanned or boxes are activated!
+    state.visibleBoxNumbers = [];
   } else {
     // Purge any box numbers that are no longer active or have no pack
     state.visibleBoxNumbers = state.visibleBoxNumbers.filter(bNum => {
@@ -2373,6 +2389,8 @@ function executeStartNewShift(newCashier = null, newFloat = 0) {
   state.cashes = 0;
   state.onlineSales = 0;
   state.onlineCashes = 0;
+  state.visibleBoxNumbers = [];
+  state.boxAccessTimes = {};
 
   saveState(state);
   sfx.success();
@@ -2877,6 +2895,22 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     scannedAt: barcodeRecord.scannedAt
   };
 
+  // Scan-to-Appear: Immediately bring this newly assigned box into the dispenser rack!
+  state.lastScannedSlot = boxNum;
+  bringBoxToVisibleRack(boxNum);
+
+  const cleanName = cleanGameTitle(slot.gameName);
+  state.lastScanData = {
+    barcode: barcode,
+    boxNumber: boxNum,
+    gameName: cleanName,
+    price: slot.price,
+    packNumber: slot.packNumber || '---',
+    ticketNumber: slot.currentTicket || 0,
+    action: 'ASSIGNED'
+  };
+  state.lastScannedBarcode = `[${barcode}] Box #${boxNum}: $${Number(slot.price).toFixed(2)} · ${cleanName} (#${String(slot.currentTicket || 0).padStart(2, '0')})`;
+
   saveState(state);
   sfx.success();
   showToast(`✓ Ticket [${barcode}] saved to Box #${boxNum}! Total tickets in box: ${slot.ticketsInBox}`, 'success');
@@ -2884,6 +2918,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
   renderInventoryTable();
   renderDispenserRack();
   renderHeaderAndMetrics();
+  renderSlotsRibbon();
 
   return true;
 }
@@ -3221,6 +3256,12 @@ function processScannedBarcode(rawBarcode) {
       const existing = findScannedBarcodeInfo(rawBarcode);
       sfx.alert();
       voice.speakDuplicateError();
+      if (existing && existing.boxNumber) {
+        bringBoxToVisibleRack(existing.boxNumber);
+        state.lastScannedSlot = existing.boxNumber;
+        renderDispenserRack();
+        renderSlotsRibbon();
+      }
       if (lastScanReadoutContainer) {
         lastScanReadoutContainer.classList.add('alert-yellow');
       }
@@ -3230,59 +3271,17 @@ function processScannedBarcode(rawBarcode) {
       if (lastScanDisplay) {
         const gameTitle = existing?.gameName ? cleanGameTitle(existing.gameName) : 'Game Pack';
         const packPart = existing?.packNumber ? ` #${existing.packNumber}` : '';
-        lastScanDisplay.textContent = `${gameTitle}${packPart}`;
+        lastScanDisplay.textContent = `${gameTitle}${packPart} · Box #${existing?.boxNumber || '?'}`;
       }
       showToast(`⚠️ THIS NUMBER HAS BEEN SCANNED! Ticket [${rawBarcode}] was already put into Box #${existing?.boxNumber || '?'}.`, 'error');
       return;
     }
 
-    // 4. Inventory Gatekeeper: (Video 00:22)
-    // Check if the barcode matches any known game in the database or stock in inventory
-    const matchedGame = findGameByBarcode(rawBarcode, state.customGames);
-    const isInInventory = (state.inventory || []).some(p => {
-      const pNum = String(p.packNumber || '').replace(/[^0-9]/g, '');
-      return pNum && cleanNum.includes(pNum);
-    });
-    const isInInventoryBarcodes = Boolean(state.inventoryBarcodes && state.inventoryBarcodes[rawBarcode]);
-
+    // 4. Scan-to-Appear: New ticket scanned (not in an active box yet)!
+    // Ask which box to put this ticket into
     pendingNewTicketBarcode = rawBarcode;
-
-    if (!matchedGame && !isInInventory && !isInInventoryBarcodes) {
-      // Un-inventoried / un-recognized ticket:
-      // New unrecognized ticket scanned — auto-open Update Inventory modal for intake!
-      sfx.alert();
-      voice.speakUpdateInventory();
-      if (lastScanReadoutContainer) {
-        lastScanReadoutContainer.classList.add('alert-yellow');
-      }
-      if (scanActionTitle) {
-        scanActionTitle.textContent = 'THIS TICKET IS NOT IN THE INVENTORY OR NOT IN DATABASE';
-      }
-      if (lastScanDisplay) {
-        lastScanDisplay.textContent = rawBarcode;
-      }
-      if (notInInvBarcodeDetails) {
-        notInInvBarcodeDetails.textContent = rawBarcode;
-      }
-      // Auto-open inventory modal for new ticket entry
-      openInventoryModal('intake');
-      showToast(`⚠️ New ticket scanned! Update Inventory opened to enter this ticket.`, 'warning');
-      return;
-    }
-
-    // Barcode matched known game or existing inventory, but is not in an active dispenser slot:
-    // Update readout and inform clerk to enter ticket via Stock Intake / Update Inventory or tap an empty box
-    sfx.beep();
-    if (lastScanReadoutContainer) {
-      lastScanReadoutContainer.classList.remove('alert-yellow');
-    }
-    if (scanActionTitle) {
-      scanActionTitle.textContent = matchedGame ? `MATCHED: ${cleanGameTitle(matchedGame.name)} ($${matchedGame.price})` : 'TICKET IN INVENTORY';
-    }
-    if (lastScanDisplay) {
-      lastScanDisplay.textContent = `${rawBarcode} · Not in active dispenser`;
-    }
-    showToast(`ℹ️ Ticket [${rawBarcode}] is not in an active box. Click "⚡ Stock Intake / Update Inventory" or tap an empty box to enter it.`, 'info');
+    openSetBoxModal(rawBarcode);
+    showToast(`📦 New ticket scanned [${rawBarcode}]: Choose which box to put it in.`, 'info');
     return;
   }
 
