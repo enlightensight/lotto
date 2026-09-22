@@ -543,59 +543,133 @@ function renderHeaderAndMetrics() {
   }
 }
 
-function renderDispenserRack() {
-  dispensersGrid.innerHTML = '';
+const VISIBLE_RACK_CAPACITY = 20;
 
-  const activeSlots = state.slots.filter(isBoxActive);
+function ensureVisibleBoxesInitialized() {
+  if (!Array.isArray(state.visibleBoxNumbers) || state.visibleBoxNumbers.length !== VISIBLE_RACK_CAPACITY) {
+    const activeBoxNums = (state.slots || [])
+      .filter(s => s.status === 'ACTIVE' && s.packNumber)
+      .map(s => s.boxNumber);
 
-  if (activeSlots.length === 0) {
-    dispensersGrid.innerHTML = '';
+    const list = [...activeBoxNums];
+    for (let i = 1; i <= state.totalSlots && list.length < VISIBLE_RACK_CAPACITY; i++) {
+      if (!list.includes(i)) list.push(i);
+    }
+    state.visibleBoxNumbers = list.slice(0, VISIBLE_RACK_CAPACITY);
+  }
+  if (!state.boxAccessTimes) {
+    state.boxAccessTimes = {};
+  }
+}
+
+function bringBoxToVisibleRack(boxNumber) {
+  if (!boxNumber) return;
+  ensureVisibleBoxesInitialized();
+
+  const now = Date.now();
+  state.boxAccessTimes[boxNumber] = now;
+
+  const idx = state.visibleBoxNumbers.indexOf(boxNumber);
+  if (idx !== -1) {
+    // Box is already visible in the rack: update access time
+    saveState(state);
     return;
   }
 
-  // Exactly 2 rows layout matching real LTSYSTEM counter rack (Zero vertical scroll)
-  // Ensure each card maintains a comfortable minimum width of 115px so boxes NEVER get small when new boxes are added
-  const cols = Math.max(8, Math.ceil(activeSlots.length / 2));
-  dispensersGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(115px, 1fr))`;
+  // Box is NOT visible in the rack: Replace the oldest / least recently accessed box!
+  // "if new ticket scanned that will replaced the place of old one that way there is no need of scrolling and no need of making box size small ok"
+  let oldestIdx = 0;
+  let oldestTime = Infinity;
+
+  state.visibleBoxNumbers.forEach((bNum, i) => {
+    const t = state.boxAccessTimes[bNum] || 0;
+    if (t < oldestTime) {
+      oldestTime = t;
+      oldestIdx = i;
+    }
+  });
+
+  // Replace that position with the newly scanned box!
+  state.visibleBoxNumbers[oldestIdx] = boxNumber;
+  saveState(state);
+}
+
+function renderDispenserRack() {
+  dispensersGrid.innerHTML = '';
+  ensureVisibleBoxesInitialized();
+
+  // Exactly 2 rows x 10 columns layout matching real LTSYSTEM counter rack (Zero scroll in any direction)
+  dispensersGrid.style.gridTemplateColumns = 'repeat(10, minmax(0, 1fr))';
   dispensersGrid.style.gridTemplateRows = 'repeat(2, minmax(0, 1fr))';
 
-  activeSlots.forEach(slot => {
+  state.visibleBoxNumbers.forEach(boxNum => {
+    const slot = state.slots.find(s => s.boxNumber === boxNum) || {
+      boxNumber: boxNum,
+      status: 'EMPTY',
+      gameName: null,
+      price: null,
+      packNumber: null,
+      currentTicket: 0,
+      startTicket: 0
+    };
+
     const card = document.createElement('div');
     const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
     const isLastScanned = state.lastScannedSlot === slot.boxNumber;
+    const isBoxEmpty = slot.status !== 'ACTIVE' || !slot.packNumber;
 
     let ageBoxClass = '';
-    if (slot.daysActive >= 21) {
-      ageBoxClass = 'age-21-box';
-    } else if (slot.daysActive >= 12) {
-      ageBoxClass = 'age-12-box';
-    } else if (slot.daysActive >= 7) {
-      ageBoxClass = 'age-7-box';
+    if (!isBoxEmpty) {
+      if (slot.daysActive >= 21) {
+        ageBoxClass = 'age-21-box';
+      } else if (slot.daysActive >= 12) {
+        ageBoxClass = 'age-12-box';
+      } else if (slot.daysActive >= 7) {
+        ageBoxClass = 'age-7-box';
+      }
     }
 
-    card.className = `box-card active ${ageBoxClass} ${isLastScanned ? 'selected-box-card' : ''} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
+    card.className = `box-card ${isBoxEmpty ? 'empty-slot' : 'active'} ${ageBoxClass} ${isLastScanned ? 'selected-box-card' : ''} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
     card.dataset.box = slot.boxNumber;
 
-    const cleanName = cleanGameTitle(slot.gameName);
-    const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
-    const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
-    card.innerHTML = `
-      <div class="card-header-row">
-        <span class="price-tag">$${slot.price}</span>
-        <span class="box-num-label">Box ${slot.boxNumber}</span>
-      </div>
-      <div class="card-center-body">
-        <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
-        <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
-        ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
-      </div>
-      <div class="card-dashed-line"></div>
-      <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
-        <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
-        ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
-        ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
-      </div>
-    `;
+    if (isBoxEmpty) {
+      card.innerHTML = `
+        <div class="card-header-row">
+          <span class="box-num-label">Box ${slot.boxNumber}</span>
+          <span class="empty-badge">EMPTY</span>
+        </div>
+        <div class="card-center-body">
+          <div class="empty-slot-plus">+</div>
+          <div class="empty-slot-title">Empty Slot</div>
+          <div class="empty-slot-sub">Click to Activate</div>
+        </div>
+        <div class="card-dashed-line"></div>
+        <div class="card-footer-row">
+          <span class="empty-hint-text">No Pack</span>
+        </div>
+      `;
+    } else {
+      const cleanName = cleanGameTitle(slot.gameName);
+      const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
+      const startTix = slot.startTicket !== undefined ? slot.startTicket : 0;
+      card.innerHTML = `
+        <div class="card-header-row">
+          <span class="price-tag">$${slot.price}</span>
+          <span class="box-num-label">Box ${slot.boxNumber}</span>
+        </div>
+        <div class="card-center-body">
+          <div class="box-main-number">${String(currentTix).padStart(2, '0')}</div>
+          <div class="game-title-strip" title="${cleanName}">${cleanName}</div>
+          ${slot.activatedThisShift ? '<div class="new-activation-text">New Activation</div>' : ''}
+        </div>
+        <div class="card-dashed-line"></div>
+        <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
+          <span class="ticket-number-display ${isScanning ? 'scanning-num' : ''}">${startTix}</span>
+          ${!isScanning ? `<button class="quick-sell-btn" data-box="${slot.boxNumber}" title="Quick Sell 1 Ticket">+1</button>` : ''}
+          ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
+        </div>
+      `;
+    }
 
     card.addEventListener('click', (e) => {
       if (e.target.closest('.quick-sell-btn')) {
@@ -607,30 +681,7 @@ function renderDispenserRack() {
     });
 
     dispensersGrid.appendChild(card);
-
-    if (isLastScanned) {
-      setTimeout(() => {
-        card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }, 50);
-    }
   });
-
-  setTimeout(updateRackNavArrows, 60);
-}
-
-function updateRackNavArrows() {
-  const wrapper = document.getElementById('dispensersGridWrapper');
-  const prevBtn = document.getElementById('rackNavPrev');
-  const nextBtn = document.getElementById('rackNavNext');
-  if (!wrapper || !prevBtn || !nextBtn) return;
-  const isOverflowing = wrapper.scrollWidth > wrapper.clientWidth + 5;
-  if (!isOverflowing) {
-    prevBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
-  } else {
-    prevBtn.style.display = wrapper.scrollLeft > 10 ? 'flex' : 'none';
-    nextBtn.style.display = (wrapper.scrollLeft + wrapper.clientWidth < wrapper.scrollWidth - 10) ? 'flex' : 'none';
-  }
 }
 
 function renderSlotsRibbon() {
@@ -657,11 +708,11 @@ function renderSlotsRibbon() {
     cell.title = `Box #${slot.boxNumber}: ${!isBoxEmpty ? (slot.gameName || 'Active') : 'Empty'}`;
     
     cell.addEventListener('click', () => {
+      bringBoxToVisibleRack(slot.boxNumber);
       handleBoxCardClick(slot);
-      const targetCard = dispensersGrid.querySelector(`[data-box="${slot.boxNumber}"]`);
-      if (targetCard) {
-        targetCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
+      renderHeaderAndMetrics();
+      renderDispenserRack();
+      renderSlotsRibbon();
     });
 
     slotsRibbon.appendChild(cell);
@@ -673,6 +724,9 @@ function renderSlotsRibbon() {
 // -------------------------------------------------------------
 
 function handleBoxCardClick(slot) {
+  if (slot && slot.boxNumber) {
+    bringBoxToVisibleRack(slot.boxNumber);
+  }
   const isBoxActive = Boolean(slot && slot.status === 'ACTIVE' && slot.packNumber);
 
   if (state.shiftStatus === 'SCANNING_END_SHIFT') {
@@ -1634,6 +1688,7 @@ function commitBoxActivation() {
   targetSlot.scannedInEndShift = false;
 
   state.lastScannedSlot = boxNum;
+  bringBoxToVisibleRack(boxNum);
   state.lastScannedBarcode = `Box #${boxNum} Activated: $${Number(chosenPrice).toFixed(2)} · ${cleanName} (Pack #${chosenPack})`;
 
   // Clear the dataCleared flag since user is now actively using the system
@@ -1667,6 +1722,7 @@ function quickSellTicket(slot, barcodeScanned = null) {
   const cleanName = cleanGameTitle(slot.gameName);
   slot.currentTicket = (slot.currentTicket || 0) + 1;
   state.lastScannedSlot = slot.boxNumber;
+  bringBoxToVisibleRack(slot.boxNumber);
   const actualBarcode = barcodeScanned || (slot.packNumber ? `${slot.gameId || '1417'}-${slot.packNumber}-${String(slot.currentTicket).padStart(3, '0')}` : `BOX-${slot.boxNumber}`);
   const bcPrefix = `[${actualBarcode}] `;
   state.lastScannedBarcode = `${bcPrefix}Box #${slot.boxNumber} · $${Number(slot.price).toFixed(2)} · ${cleanName} (Sold 1x → #${String(slot.currentTicket).padStart(2, '0')})`;
@@ -3083,6 +3139,7 @@ function processScannedBarcode(rawBarcode) {
       targetSlot.scannedInEndShift = true;
       const cleanName = cleanGameTitle(targetSlot.gameName);
       state.lastScannedSlot = targetSlot.boxNumber;
+      bringBoxToVisibleRack(targetSlot.boxNumber);
       state.lastScanData = {
         barcode: rawBarcode,
         boxNumber: targetSlot.boxNumber,
@@ -3491,30 +3548,7 @@ function setupEventListeners() {
     });
   }
 
-  const dispensersGridWrapper = document.getElementById('dispensersGridWrapper');
-  const rackNavPrev = document.getElementById('rackNavPrev');
-  const rackNavNext = document.getElementById('rackNavNext');
 
-  if (dispensersGridWrapper) {
-    dispensersGridWrapper.addEventListener('scroll', updateRackNavArrows, { passive: true });
-    dispensersGridWrapper.addEventListener('wheel', (e) => {
-      if (e.deltaY !== 0 && dispensersGridWrapper.scrollWidth > dispensersGridWrapper.clientWidth) {
-        dispensersGridWrapper.scrollLeft += e.deltaY;
-        e.preventDefault();
-        updateRackNavArrows();
-      }
-    }, { passive: false });
-  }
-
-  window.addEventListener('resize', updateRackNavArrows);
-
-  rackNavPrev?.addEventListener('click', () => {
-    dispensersGridWrapper?.scrollBy({ left: -280, behavior: 'smooth' });
-  });
-
-  rackNavNext?.addEventListener('click', () => {
-    dispensersGridWrapper?.scrollBy({ left: 280, behavior: 'smooth' });
-  });
 
   // Settings Modal controls
   const settingsModal = document.getElementById('settingsModal');

@@ -1256,50 +1256,28 @@ body {
   min-height: 0;
   display: flex;
   align-items: stretch;
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
 .dispensers-grid-wrapper {
   display: flex;
-  gap: 6px;
   align-items: stretch;
   flex: 1;
   min-height: 0;
-  overflow-x: auto !important; /* Enable smooth horizontal scrolling when extra boxes exist! */
-  overflow-y: hidden !important; /* Strictly no vertical scrollbar! */
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: #94a3b8 #f1f5f9;
-}
-
-.dispensers-grid-wrapper::-webkit-scrollbar {
-  height: 6px;
-}
-
-.dispensers-grid-wrapper::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 3px;
-}
-
-.dispensers-grid-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.dispensers-grid-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  overflow: hidden !important; /* STRICTLY zero scroll in any direction */
 }
 
 .dispensers-grid {
-  flex: 0 0 auto;
-  min-width: 100%;
+  flex: 1;
+  width: 100%;
   display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   row-gap: 8px; /* Distinct gap between Row 1 and Row 2 - NO OVERLAPPING! */
   column-gap: 6px;
   height: 100%;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden !important; /* STRICTLY zero scroll */
 }
 
 /* Acrylic Dispenser Box Card */
@@ -1310,8 +1288,7 @@ body {
   height: 100% !important;
   max-height: 100% !important;
   min-height: 0 !important;
-  min-width: 115px; /* Ensures box size NEVER gets small when new boxes are added! */
-  padding: 4px 6px;
+  padding: 5px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1321,40 +1298,6 @@ body {
   transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.rack-nav-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 28px;
-  height: 52px;
-  background: rgba(15, 23, 42, 0.75);
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  font-size: 1.6rem;
-  line-height: 1;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s ease, opacity 0.2s ease;
-  opacity: 0.85;
-}
-
-.rack-nav-arrow:hover {
-  background: rgba(15, 23, 42, 0.95);
-  opacity: 1;
-}
-
-.rack-nav-prev {
-  left: 2px;
-}
-
-.rack-nav-next {
-  right: 2px;
 }
 
 .box-card.selected-box-card {
@@ -1403,7 +1346,7 @@ body {
 }
 
 .price-tag {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 900;
   color: #16a34a !important;
   background: transparent !important;
@@ -1417,9 +1360,9 @@ body {
 }
 
 .box-num-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #475569;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   line-height: 1;
@@ -1438,17 +1381,17 @@ body {
 }
 
 .box-main-number {
-  font-size: 3.1rem;
+  font-size: 3.5rem;
   font-weight: 900;
-  line-height: 0.95;
+  line-height: 0.92;
   color: #000000;
   letter-spacing: -1px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .new-activation-text {
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 800;
   color: #000000;
   margin-top: 1px;
   line-height: 1;
@@ -1456,14 +1399,14 @@ body {
 }
 
 .game-title-strip {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #334155;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  margin-top: 1px;
+  margin-top: 2px;
   line-height: 1.1;
 }
 
@@ -1497,10 +1440,10 @@ body {
 
 .ticket-number-display {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 2.35rem;
+  font-size: 2.7rem;
   font-weight: 900;
   color: #2563eb;
-  line-height: 0.95;
+  line-height: 0.92;
 }
 
 .ticket-number-display.scanning-num {
@@ -1516,19 +1459,15 @@ body {
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  padding: 2px 7px;
-  height: 22px;
+  padding: 2px 8px;
+  height: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.15s ease;
-}
-
-.quick-sell-btn:hover {
-  background: #1d4ed8;
 }
 
 /* Scan Badges in Card Footer */
@@ -1559,22 +1498,7 @@ body {
   border: 1px solid #93c5fd;
 }
 
-.quick-sell-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  margin-left: 6px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
 
-.quick-sell-btn:hover {
-  background: #1d4ed8;
-}
 
 /* Age Backgrounds */
 .box-card.age-7-box {
