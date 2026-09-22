@@ -303,7 +303,7 @@
       <button class="modal-close-btn" id="closeBoxAdjustBtn">&times;</button>
     </div>
     <div class="modal-body" style="padding: 20px;">
-      <div style="background:var(--bg-surface-elevated, #162444); padding:16px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color);">
+      <div style="background: var(--bg-surface-elevated); padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border-color);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <span style="font-weight:700; font-size:1.1rem; color:var(--text-primary);" id="adjustGameName">$2 HIT $200</span>
           <span class="price-tag p2" id="adjustPriceTag">$2</span>
@@ -336,7 +336,7 @@
         </div>
         <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="chkSetAsStartingTicket" style="width: 18px; height: 18px; cursor: pointer;">
-          <label for="chkSetAsStartingTicket" style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; cursor: pointer;">
+          <label for="chkSetAsStartingTicket" style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); cursor: pointer;">
             Set as Starting Ticket (Pack starts at this number · 0 sold this shift)
           </label>
         </div>
@@ -812,8 +812,10 @@
 
   <!-- MODAL: Fix Ticket Position (Matching LTSYSTEM Image 6) -->
   <dialog id="fixTicketPositionModal" style="width: 580px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <div style="background: var(--bg-surface-elevated, #1e293b); color: var(--text-primary); padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
-      <span>Fix Ticket Position</span>
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>Fix Ticket Position</span>
+      </div>
       <button type="button" class="modal-close-btn" id="closeFixTicketPosBtn">&times;</button>
     </div>
     <div style="padding: 20px; display: grid; grid-template-columns: 1fr 190px; gap: 20px;">
@@ -864,8 +866,10 @@
 
   <!-- MODAL: Georgia Lottery Terminal Reconciliation (Matching LTSYSTEM Image 15 & 16) -->
   <dialog id="terminalReconcileModal" style="width: 580px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <div style="background: var(--bg-surface-elevated, #1e293b); color: var(--text-primary); padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
-      <span>Processing online Ticket data input</span>
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>Processing online Ticket data input</span>
+      </div>
       <button type="button" class="modal-close-btn" id="closeTerminalReconcileBtn">&times;</button>
     </div>
     <div style="padding: 24px 20px; display: grid; grid-template-columns: 1fr 190px; gap: 20px; align-items: start;">
@@ -924,8 +928,10 @@
 
   <!-- MODAL: Switch Box Assignment -->
   <dialog id="switchBoxModal" style="width: 440px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <div style="background: var(--bg-surface-elevated, #1e293b); color: var(--text-primary); padding: 12px 16px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
-      <span>⇄ Switch Dispenser Boxes</span>
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>⇄ Switch Dispenser Boxes</span>
+      </div>
       <button type="button" class="modal-close-btn" id="closeSwitchBoxBtn">&times;</button>
     </div>
     <div style="padding: 20px; text-align: center;">
@@ -985,11 +991,11 @@
   </dialog>
 
   <!-- MODAL 5: Shift History Modal -->
-  <dialog id="historyModal" style="width: 760px; max-width: 95vw; border-radius: 14px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 45px rgba(0,0,0,0.6);">
-    <div class="modal-header" style="background: var(--bg-surface-elevated, #162444); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-      <div class="modal-title" style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; color: var(--text-primary);">
+  <dialog id="historyModal" style="width: 760px; max-width: 95vw; border-radius: 14px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 45px rgba(0,0,0,0.4);">
+    <div class="modal-header">
+      <div class="modal-title">
         <span>📜 Past Shifts Audit History</span>
-        <span id="historyTotalBadge" style="font-size: 0.75rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: var(--color-primary); padding: 2px 8px; border-radius: 10px;"></span>
+        <span id="historyTotalBadge" class="history-total-badge"></span>
       </div>
       <button class="modal-close-btn" id="closeHistoryBtn" title="Close Dialog">&times;</button>
     </div>
@@ -1003,7 +1009,7 @@
         <button type="button" class="history-filter-btn" data-filter="month">This Month</button>
       </div>
 
-      <div style="max-height: 340px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(0, 0, 0, 0.15);">
+      <div class="history-table-container">
         <table class="report-table" style="margin-bottom: 0;">
           <thead>
             <tr>
@@ -1022,7 +1028,7 @@
         </table>
       </div>
     </div>
-    <div class="modal-footer" style="padding: 12px 20px; background: var(--bg-surface-elevated, #162444); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
       <button type="button" class="btn btn-outline" id="exportHistoryCsvBtn" style="font-weight: 700; font-size: 0.85rem; padding: 7px 16px; border-radius: 6px;">📥 Export CSV</button>
       <button type="button" class="btn btn-secondary" id="closeHistoryBottomBtn" style="font-weight: 700; font-size: 0.85rem; padding: 7px 22px; border-radius: 6px;">Close</button>
     </div>
