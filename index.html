@@ -154,10 +154,14 @@
 
   <!-- Main Dispenser Rack Grid -->
   <main class="main-workspace">
-    <div class="dispensers-grid-wrapper">
-      <div class="dispensers-grid" id="dispensersGrid">
-        <!-- Acrylic Dispenser Boxes dynamically rendered -->
+    <div class="dispensers-grid-container">
+      <button type="button" class="rack-nav-arrow rack-nav-prev" id="rackNavPrev" aria-label="Scroll rack left" title="Scroll Left">‹</button>
+      <div class="dispensers-grid-wrapper" id="dispensersGridWrapper">
+        <div class="dispensers-grid" id="dispensersGrid">
+          <!-- Acrylic Dispenser Boxes dynamically rendered -->
+        </div>
       </div>
+      <button type="button" class="rack-nav-arrow rack-nav-next" id="rackNavNext" aria-label="Scroll rack right" title="Scroll Right">›</button>
     </div>
 
     <!-- Bottom Status Strip with Legend and Rack Controls -->

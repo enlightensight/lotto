@@ -554,8 +554,9 @@ function renderDispenserRack() {
   }
 
   // Exactly 2 rows layout matching real LTSYSTEM counter rack (Zero vertical scroll)
+  // Ensure each card maintains a comfortable minimum width of 115px so boxes NEVER get small when new boxes are added
   const cols = Math.max(8, Math.ceil(activeSlots.length / 2));
-  dispensersGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  dispensersGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(115px, 1fr))`;
   dispensersGrid.style.gridTemplateRows = 'repeat(2, minmax(0, 1fr))';
 
   activeSlots.forEach(slot => {
@@ -573,6 +574,7 @@ function renderDispenserRack() {
     }
 
     card.className = `box-card active ${ageBoxClass} ${isLastScanned ? 'selected-box-card' : ''} ${isScanning ? (slot.scannedInEndShift ? 'scanned-done' : 'scanning-target') : ''}`;
+    card.dataset.box = slot.boxNumber;
 
     const cleanName = cleanGameTitle(slot.gameName);
     const currentTix = slot.currentTicket !== undefined ? slot.currentTicket : 0;
@@ -605,7 +607,30 @@ function renderDispenserRack() {
     });
 
     dispensersGrid.appendChild(card);
+
+    if (isLastScanned) {
+      setTimeout(() => {
+        card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }, 50);
+    }
   });
+
+  setTimeout(updateRackNavArrows, 60);
+}
+
+function updateRackNavArrows() {
+  const wrapper = document.getElementById('dispensersGridWrapper');
+  const prevBtn = document.getElementById('rackNavPrev');
+  const nextBtn = document.getElementById('rackNavNext');
+  if (!wrapper || !prevBtn || !nextBtn) return;
+  const isOverflowing = wrapper.scrollWidth > wrapper.clientWidth + 5;
+  if (!isOverflowing) {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+  } else {
+    prevBtn.style.display = wrapper.scrollLeft > 10 ? 'flex' : 'none';
+    nextBtn.style.display = (wrapper.scrollLeft + wrapper.clientWidth < wrapper.scrollWidth - 10) ? 'flex' : 'none';
+  }
 }
 
 function renderSlotsRibbon() {
@@ -633,6 +658,10 @@ function renderSlotsRibbon() {
     
     cell.addEventListener('click', () => {
       handleBoxCardClick(slot);
+      const targetCard = dispensersGrid.querySelector(`[data-box="${slot.boxNumber}"]`);
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
     });
 
     slotsRibbon.appendChild(cell);
@@ -3454,6 +3483,38 @@ function setupEventListeners() {
   if (btnTrimRackBtn) {
     btnTrimRackBtn.addEventListener('click', trimRackToStandard);
   }
+
+  const btnAddDispenserBoxBtn = document.getElementById('btnAddDispenserBoxBtn');
+  if (btnAddDispenserBoxBtn) {
+    btnAddDispenserBoxBtn.addEventListener('click', () => {
+      openActivationForBox(findFirstEmptyBox());
+    });
+  }
+
+  const dispensersGridWrapper = document.getElementById('dispensersGridWrapper');
+  const rackNavPrev = document.getElementById('rackNavPrev');
+  const rackNavNext = document.getElementById('rackNavNext');
+
+  if (dispensersGridWrapper) {
+    dispensersGridWrapper.addEventListener('scroll', updateRackNavArrows, { passive: true });
+    dispensersGridWrapper.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0 && dispensersGridWrapper.scrollWidth > dispensersGridWrapper.clientWidth) {
+        dispensersGridWrapper.scrollLeft += e.deltaY;
+        e.preventDefault();
+        updateRackNavArrows();
+      }
+    }, { passive: false });
+  }
+
+  window.addEventListener('resize', updateRackNavArrows);
+
+  rackNavPrev?.addEventListener('click', () => {
+    dispensersGridWrapper?.scrollBy({ left: -280, behavior: 'smooth' });
+  });
+
+  rackNavNext?.addEventListener('click', () => {
+    dispensersGridWrapper?.scrollBy({ left: 280, behavior: 'smooth' });
+  });
 
   // Settings Modal controls
   const settingsModal = document.getElementById('settingsModal');
