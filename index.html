@@ -42,7 +42,6 @@
         <span id="themeToggleIcon">🌙</span>
         <span id="themeToggleText">Dark Mode</span>
       </button>
-      <span class="system-tag">POS LIVE</span>
     </div>
   </header>
 
@@ -435,143 +434,168 @@
   </dialog>
 
   <!-- MODAL 3: Shift Audit Report & Settlement -->
-  <dialog id="shiftReportModal" style="width: 720px;">
-    <div class="modal-header">
+  <!-- MODAL 3: Shift Audit Report & Settlement -->
+  <dialog id="shiftReportModal" class="shift-report-dialog">
+    <div class="modal-header shift-report-header">
       <div class="modal-title">
-        <span>📊 Shift Settlement Audit Report</span>
+        <span class="report-header-icon">📊</span>
+        <div>
+          <div class="report-title-main">Shift Settlement Audit Report</div>
+          <div class="report-subtitle-main">Dispenser Sales Audit &amp; Cash Drawer Balancing</div>
+        </div>
       </div>
-      <button class="modal-close-btn" id="closeReportBtn">&times;</button>
+      <button class="modal-close-btn" id="closeReportBtn" title="Close Report">&times;</button>
     </div>
     <div class="modal-body report-content">
-      <div class="report-header-banner">
-        <div class="report-stat-item">
-          <div class="label">Shift Number</div>
-          <div class="value" id="repShiftNum">Shift #1</div>
+      <!-- Top Stats Banner -->
+      <div class="shift-report-banner">
+        <div class="shift-stat-card">
+          <div class="stat-card-icon">📑</div>
+          <div class="stat-card-body">
+            <div class="stat-label">Shift Number</div>
+            <div class="stat-value" id="repShiftNum">Shift #1</div>
+          </div>
         </div>
-        <div class="report-stat-item">
-          <div class="label">Cashier</div>
-          <div class="value" id="repCashier">MASTER</div>
+        <div class="shift-stat-card">
+          <div class="stat-card-icon">👤</div>
+          <div class="stat-card-body">
+            <div class="stat-label">Cashier</div>
+            <div class="stat-value" id="repCashier">MASTER</div>
+          </div>
         </div>
-        <div class="report-stat-item">
-          <div class="label">Tickets Sold</div>
-          <div class="value" id="repTicketsSold">0</div>
+        <div class="shift-stat-card">
+          <div class="stat-card-icon">🎟️</div>
+          <div class="stat-card-body">
+            <div class="stat-label">Tickets Sold</div>
+            <div class="stat-value" id="repTicketsSold">0</div>
+          </div>
         </div>
-        <div class="report-stat-item">
-          <div class="label">Total Lottery Sales</div>
-          <div class="value" id="repTotalRevenue" style="color: #34d399;">$0.00</div>
+        <div class="shift-stat-card stat-card-highlight">
+          <div class="stat-card-icon">💰</div>
+          <div class="stat-card-body">
+            <div class="stat-label">Total Lottery Sales</div>
+            <div class="stat-value stat-revenue-val" id="repTotalRevenue">$0.00</div>
+          </div>
         </div>
       </div>
 
-      <!-- Cash Drawer Reconciliation Card - Prominently at Top -->
-      <div class="cash-reconciliation-card" style="background:var(--bg-app); border:2px solid var(--color-primary); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
-        <div style="font-size:0.95rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span>💵</span> <span>Cash Drawer Balancing & Reconciliation</span>
+      <!-- Cash Drawer Reconciliation Card -->
+      <div class="cash-reconciliation-card">
+        <div class="reconcile-card-header">
+          <div class="reconcile-header-left">
+            <span class="reconcile-header-icon">💵</span>
+            <span class="reconcile-header-title">Cash Drawer Balancing &amp; Reconciliation</span>
           </div>
-          <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Shift Drawer Audit</span>
+          <span class="reconcile-header-badge">Shift Drawer Audit</span>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:12px; margin-bottom:4px;" class="drawer-reconcile-grid">
-          <!-- Left: Sales (+), Payouts (-), Starting Float (+), Expected Total -->
-          <div style="background:rgba(255,255,255,0.04); padding:12px 14px; border-radius:8px; border:1px solid var(--border-color);">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:6px;">
-              <span style="color:var(--text-secondary);">(+) Scratcher Ticket Sales:</span>
-              <strong id="recLottoSales" style="color:var(--color-success); font-size:0.95rem;">$0.00</strong>
+        <div class="drawer-reconcile-grid">
+          <!-- Left: Flow Breakdown -->
+          <div class="reconcile-pane flow-pane">
+            <div class="reconcile-pane-heading">REGISTER CASH FLOW</div>
+            <div class="reconcile-item-row">
+              <span class="reconcile-item-label">(+) Scratcher Ticket Sales:</span>
+              <strong id="recLottoSales" class="reconcile-amount-success">$0.00</strong>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:6px;">
-              <span style="color:var(--text-secondary);" title="Prize cash paid out to customers for winning tickets">(-) Winning Payouts (Cashes):</span>
-              <div style="display:flex; align-items:center; gap:4px;">
-                <span style="color:#ef4444; font-weight:700;">-$</span>
-                <input type="number" id="inputShiftPayouts" step="1" min="0" value="0.00" style="width:80px; text-align:right; font-weight:700; color:#ef4444; background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:4px; padding:2px 6px;">
+            <div class="reconcile-item-row">
+              <span class="reconcile-item-label" title="Prize cash paid out to customers for winning tickets">(-) Winning Payouts (Cashes):</span>
+              <div class="reconcile-input-box payout-box">
+                <span class="reconcile-prefix prefix-red">-$</span>
+                <input type="number" id="inputShiftPayouts" step="1" min="0" value="0.00" class="reconcile-num-input input-red">
               </div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; margin-bottom:6px;">
-              <span style="color:var(--text-muted);" title="Starting cash in register at start of shift">(+) Starting Bank Float (Optional):</span>
-              <div style="display:flex; align-items:center; gap:4px;">
-                <span style="color:var(--text-muted); font-weight:700;">+$</span>
-                <input type="number" id="inputDrawerFloat" step="1" min="0" value="0.00" style="width:80px; text-align:right; font-weight:600; color:var(--text-primary); background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:4px; padding:2px 6px;">
+            <div class="reconcile-item-row">
+              <span class="reconcile-item-label" title="Starting cash in register at start of shift">(+) Starting Bank Float (Optional):</span>
+              <div class="reconcile-input-box">
+                <span class="reconcile-prefix prefix-dim">+$</span>
+                <input type="number" id="inputDrawerFloat" step="1" min="0" value="0.00" class="reconcile-num-input">
               </div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; padding-top:6px; border-top:1px dashed var(--border-color); font-weight:800;">
-              <span style="color:var(--text-primary);">(=) Expected Cash in Drawer:</span>
-              <strong id="recExpectedCash" style="color:var(--color-primary); font-size:1.05rem;">$0.00</strong>
+            <div class="reconcile-item-row expected-row">
+              <span class="reconcile-item-label font-bold">(=) Expected Cash in Drawer:</span>
+              <strong id="recExpectedCash" class="reconcile-amount-expected">$0.00</strong>
             </div>
-            <div id="recPayoutNote" style="font-size:0.75rem; color:#f59e0b; margin-top:5px; display:none; line-height:1.3;">
+            <div id="recPayoutNote" class="reconcile-payout-warning" style="display:none;">
               ⚠️ <strong>Payouts exceed sales:</strong> Cash drawer paid out more in winning tickets than it took in from sales.
             </div>
           </div>
 
-          <!-- Right: Actual Cash Counted & Result -->
-          <div style="background:rgba(255,255,255,0.04); padding:12px 14px; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <div>
-                  <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">Physical Cash in Drawer:</span>
-                  <div style="font-size:0.72rem; color:var(--text-muted);">Count all bills & coins</div>
-                </div>
-                <div style="display:flex; align-items:center; gap:4px;">
-                  <span style="font-size:1.1rem; font-weight:800; color:var(--text-primary);">$</span>
-                  <input type="number" id="inputActualCashCounted" step="0.01" placeholder="Enter Cash" class="scanner-field" style="width:115px; font-size:1.05rem; font-weight:800; text-align:right; border:2px solid var(--color-primary); padding:4px 8px;">
-                </div>
+          <!-- Right: Counted Cash -->
+          <div class="reconcile-pane count-pane">
+            <div class="reconcile-pane-heading">PHYSICAL CASH COUNT</div>
+            <div class="cash-count-group">
+              <div class="cash-count-meta">
+                <span class="cash-count-title">Physical Cash in Drawer:</span>
+                <span class="cash-count-hint">Count all bills &amp; coins in drawer</span>
               </div>
-            </div>
-            <div style="padding-top:6px; border-top:1px dashed var(--border-color);">
-              <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.95rem;">
-                <span style="color:var(--text-secondary);">Drawer Balance:</span>
-                <span id="repDrawerBalance" style="font-family:var(--font-mono); font-size:1.05rem; color:var(--text-muted);">Enter Counted Cash</span>
+              <div class="cash-count-input-wrapper">
+                <span class="cash-symbol">$</span>
+                <input type="number" id="inputActualCashCounted" step="0.01" placeholder="0.00" class="cash-count-input" inputmode="decimal">
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <table class="report-table">
-        <thead>
-          <tr>
-            <th>Box</th>
-            <th>Game Title</th>
-            <th>Price</th>
-            <th>Start #</th>
-            <th>Close #</th>
-            <th>Sold</th>
-            <th>Amount ($)</th>
-          </tr>
-        </thead>
-        <tbody id="reportBodyRows">
-          <!-- Populated dynamically -->
-        </tbody>
-        <tfoot>
-          <tr class="report-total-row">
-            <td colspan="5">TOTAL LOTTO SHIFT SALES</td>
-            <td id="repSumSold">0</td>
-            <td id="repSumAmount">$0.00</td>
-          </tr>
-        </tfoot>
-      </table>
+      <!-- Report Table -->
+      <div class="report-table-card">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th style="width: 14%;">BOX</th>
+              <th style="width: 32%;">GAME TITLE</th>
+              <th style="width: 10%; text-align: center;">PRICE</th>
+              <th style="width: 11%; text-align: center;">START #</th>
+              <th style="width: 11%; text-align: center;">CLOSE #</th>
+              <th style="width: 10%; text-align: right;">SOLD</th>
+              <th style="width: 12%; text-align: right;">AMOUNT ($)</th>
+            </tr>
+          </thead>
+          <tbody id="reportBodyRows">
+            <!-- Populated dynamically -->
+          </tbody>
+          <tfoot>
+            <tr class="report-total-row">
+              <td colspan="5">TOTAL LOTTO SHIFT SALES</td>
+              <td id="repSumSold" style="text-align: right;">0</td>
+              <td id="repSumAmount" style="text-align: right;">$0.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
 
-
-      <div style="background:var(--bg-app); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:14px; margin-top:14px;">
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
-          <span style="color:var(--text-muted);">Email Dispatch:</span>
-          <span style="color:var(--color-primary); font-weight:600;" id="repTargetEmails">manager@eltesystemsoftware.com</span>
+      <!-- Email Dispatch Strip -->
+      <div class="report-email-strip">
+        <div class="email-strip-details">
+          <span class="email-strip-icon">📧</span>
+          <div>
+            <div class="email-strip-title">Shift Reconciliation Dispatch</div>
+            <div class="email-strip-subtitle">Automated report routed to: <strong id="repTargetEmails">manager@eltesystemsoftware.com</strong></div>
+          </div>
         </div>
-        <p style="font-size:0.75rem; color:var(--text-light);">
-          Automatic daily reconciliation reports sent to store owner and accounting per system settings.
-        </p>
+        <div class="email-strip-status">
+          <span class="email-status-chip">✓ System Ready</span>
+        </div>
       </div>
     </div>
-    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn btn-warning" id="reportPrintBtn" title="Optimized for 80mm thermal receipt roll" style="font-weight:700;">
-          🧾 Print 80mm Receipt
+
+    <!-- Footer Actions -->
+    <div class="modal-footer shift-report-footer">
+      <div class="footer-left-group">
+        <button class="btn btn-print-receipt" id="reportPrintBtn" title="Optimized for 80mm thermal receipt roll">
+          <span>🧾</span> Print 80mm Receipt
         </button>
-        <button class="btn btn-outline" id="reportPrintFullBtn" title="Full 2-Page Official Day Report (AMIGO FOOD MART)" style="border:1px solid var(--border-color); color:var(--text-secondary); background:var(--bg-app); font-weight:700;">
-          📄 Day Report (2-Page)
+        <button class="btn btn-view-day-report" id="reportPrintFullBtn" title="Full 2-Page Official Day Report (AMIGO FOOD MART)">
+          <span>📄</span> Day Report (2-Page)
         </button>
       </div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn btn-primary" id="reportEmailBtn">📧 Email Report</button>
-        <button class="btn btn-start-shift" id="reportNewShiftBtn">🚀 Start New Shift</button>
+      <div class="footer-right-group">
+        <button class="btn btn-email-report" id="reportEmailBtn">
+          <span>📧</span> Email Report
+        </button>
+        <button class="btn btn-start-shift" id="reportNewShiftBtn">
+          <span>🚀</span> Start New Shift
+        </button>
       </div>
     </div>
   </dialog>
@@ -695,33 +719,104 @@
     </div>
   </dialog>
 
-  <!-- MODAL: Set Box for Scanned Ticket (with Duplicate Prevention & SET button) -->
-  <dialog id="setBoxModal" style="width: 480px; max-width: 95vw; border-radius: 14px; overflow: hidden; border: 2px solid var(--color-primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <div class="modal-header" style="background: var(--bg-surface); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-      <div class="modal-title" style="font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; color: var(--color-primary);">
+  <!-- MODAL: Set Box for Scanned Ticket (with Name, Price & SET button) -->
+  <dialog id="setBoxModal" style="width: 500px; max-width: 95vw; border-radius: 14px; overflow: hidden; border: 2px solid var(--color-primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div class="modal-header" style="background: var(--bg-surface); padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <div class="modal-title" style="font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--color-primary);">
         <span>📦 Put Ticket into Inventory Box</span>
       </div>
       <button type="button" class="modal-close-btn" id="closeSetBoxModalBtn">&times;</button>
     </div>
-    <div class="modal-body" style="padding: 20px;">
+    <div class="modal-body" style="padding: 14px 18px;">
       <!-- Scanned Barcode Card -->
-      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 18px; text-align: center;">
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Scanned Ticket Barcode</div>
-        <div id="setBoxBarcodeDisplay" style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: #38bdf8; letter-spacing: 1px; word-break: break-all;">
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; text-align: center;">
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">Scanned Ticket Barcode</div>
+        <div id="setBoxBarcodeDisplay" style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 800; color: #38bdf8; letter-spacing: 1px; word-break: break-all;">
           ---
         </div>
-        <div id="setBoxGameDisplay" style="font-size: 0.92rem; font-weight: 700; color: var(--text-primary); margin-top: 6px;">
+        <div id="setBoxGameDisplay" style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;">
           Detecting Game...
         </div>
       </div>
 
-      <!-- Question Prompt -->
-      <div style="margin-bottom: 16px; text-align: center;">
-        <label for="setBoxNumberInput" style="display: block; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">
-          Which inventory box should this ticket be put into?
+      <!-- Ticket Name Input -->
+      <div style="margin-bottom: 10px;">
+        <label for="setBoxGameNameInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">
+          🏷️ Ticket / Game Name
         </label>
-        <div style="display: flex; justify-content: center; align-items: center; gap: 12px;">
-          <span style="font-weight: 800; font-size: 1.25rem; color: var(--color-primary);">BOX #</span>
+        <input 
+          type="text" 
+          id="setBoxGameNameInput" 
+          list="standardGamesList"
+          placeholder="e.g. 5X MONEY, JUMBO BUCKS..." 
+          style="width: 100%; height: 38px; padding: 0 12px; font-size: 0.95rem; font-weight: 700; border: 1.5px solid var(--border-color); border-radius: 6px; background: var(--bg-app); color: var(--text-primary); outline: none;"
+        >
+        <datalist id="standardGamesList">
+          <option value="5X MONEY">
+          <option value="JR JUMBO">
+          <option value="LOTERIA">
+          <option value="HIT 100">
+          <option value="SPICY HOT CASH">
+          <option value="JACKPOTS">
+          <option value="10X MONEY">
+          <option value="JUMBO BUCKS">
+          <option value="CROSS WORD">
+          <option value="2026 HAPPY NEW">
+          <option value="LUCKY 7S">
+          <option value="25X TRA">
+          <option value="GOLD $500000">
+          <option value="FROGGER">
+          <option value="50X MONEY">
+          <option value="HIT 500">
+          <option value="PLATINUM">
+          <option value="100X MONEY">
+          <option value="HIT 1000">
+          <option value="200X MONEY">
+          <option value="GRANT 50">
+          <option value="MILLIONAIRE MA">
+          <option value="500X THE MONEY">
+          <option value="CASH 500000 $">
+          <option value="JUMBO BUCK EXT">
+        </datalist>
+      </div>
+
+      <!-- Ticket Price Input with Quick Select Pills -->
+      <div style="margin-bottom: 10px;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">
+          💵 Ticket Price ($)
+        </label>
+        <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px;" id="setBoxPricePillsContainer">
+          <button type="button" class="set-box-price-pill" data-price="1">$1</button>
+          <button type="button" class="set-box-price-pill" data-price="2">$2</button>
+          <button type="button" class="set-box-price-pill" data-price="3">$3</button>
+          <button type="button" class="set-box-price-pill" data-price="5">$5</button>
+          <button type="button" class="set-box-price-pill" data-price="10">$10</button>
+          <button type="button" class="set-box-price-pill" data-price="20">$20</button>
+          <button type="button" class="set-box-price-pill" data-price="25">$25</button>
+          <button type="button" class="set-box-price-pill" data-price="30">$30</button>
+          <button type="button" class="set-box-price-pill" data-price="50">$50</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-weight: 800; font-size: 0.85rem; color: var(--text-muted);">Custom Price:</span>
+          <span style="font-weight: 800; font-size: 1rem; color: var(--color-primary);">$</span>
+          <input 
+            type="number" 
+            id="setBoxPriceInput" 
+            min="1" 
+            max="100" 
+            value="1" 
+            style="width: 80px; height: 32px; font-size: 1rem; font-weight: 800; text-align: center; font-family: var(--font-mono); border: 1.5px solid var(--border-color); border-radius: 6px; background: var(--bg-app); color: var(--color-primary);"
+          >
+        </div>
+      </div>
+
+      <!-- Box Number & Confirm -->
+      <div style="margin-bottom: 10px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px;">
+        <label for="setBoxNumberInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; text-align: center;">
+          📦 Put into Inventory Box #
+        </label>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+          <span style="font-weight: 800; font-size: 1.15rem; color: var(--color-primary);">BOX #</span>
           <div style="display: flex; align-items: center; gap: 4px;">
             <input 
               type="number" 
@@ -730,33 +825,29 @@
               min="1" 
               max="100" 
               value="1" 
-              style="width: 120px; height: 50px; font-size: 1.8rem; font-weight: 800; text-align: center; font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: 8px;"
+              style="width: 90px; height: 42px; font-size: 1.5rem; font-weight: 800; text-align: center; font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary);"
             >
             <div class="stepper-arrows" style="display: flex; flex-direction: column; gap: 2px;">
-              <button type="button" class="stepper-btn" id="setBoxStepUp" style="height: 23px; width: 28px; padding: 0; font-size: 0.75rem;">▲</button>
-              <button type="button" class="stepper-btn" id="setBoxStepDown" style="height: 23px; width: 28px; padding: 0; font-size: 0.75rem;">▼</button>
+              <button type="button" class="stepper-btn" id="setBoxStepUp" style="height: 19px; width: 24px; padding: 0; font-size: 0.68rem;">▲</button>
+              <button type="button" class="stepper-btn" id="setBoxStepDown" style="height: 19px; width: 24px; padding: 0; font-size: 0.68rem;">▼</button>
             </div>
           </div>
-          <button type="button" id="btnSetBoxConfirm" class="btn btn-primary" style="height: 50px; padding: 0 28px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; background: #10b981; border-color: #10b981;">
-            SET
+          <button type="button" id="btnSetBoxConfirm" class="btn btn-primary" style="height: 42px; padding: 0 20px; font-size: 1rem; font-weight: 900; letter-spacing: 0.5px; background: #10b981; border-color: #10b981; display: flex; align-items: center; gap: 6px;">
+            <span>✓</span> SET
           </button>
         </div>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 10px;">
-          💡 Enter box number (1-65) and click <strong>SET</strong> (or press Enter).
-        </p>
       </div>
 
       <!-- Quick Box Selection Shortcuts -->
-      <div style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">QUICK SUGGESTIONS:</div>
-        <div id="setBoxQuickSuggestions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">QUICK SUGGESTIONS:</div>
+        <div id="setBoxQuickSuggestions" style="display: flex; gap: 6px; flex-wrap: wrap;">
           <!-- Filled dynamically -->
         </div>
       </div>
     </div>
-    <div class="modal-footer" style="padding: 12px 20px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+    <div class="modal-footer" style="padding: 10px 18px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center;">
       <button type="button" class="btn btn-secondary" id="btnCancelSetBox">Cancel</button>
-      <span style="font-size: 0.75rem; color: #10b981; font-weight: 600;">✓ Duplicate tickets are automatically skipped</span>
     </div>
   </dialog>
 
@@ -1096,56 +1187,92 @@
   </dialog>
 
   <!-- MODAL: Start New Shift Handover -->
-  <dialog id="startShiftConfirmModal" style="width: 480px; border-radius: 12px; overflow: hidden; padding: 0;">
-    <div class="modal-header" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; padding: 14px 20px; display:flex; justify-content:space-between; align-items:center;">
-      <div class="modal-title" style="display: flex; align-items: center; gap: 8px; font-weight:800;">
-        <span style="font-size:1.2rem;">🚀</span> <span id="startShiftModalTitle">Start New Shift #2</span>
+  <dialog id="startShiftConfirmModal" class="start-shift-modal">
+    <div class="start-shift-header">
+      <div class="start-shift-title">
+        <span class="start-shift-icon">🚀</span>
+        <span id="startShiftModalTitle">Start New Shift #2</span>
       </div>
-      <button class="modal-close-btn" id="closeStartShiftConfirmBtn" style="background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer;">&times;</button>
+      <button type="button" class="start-shift-close-btn" id="closeStartShiftConfirmBtn" title="Close dialog">&times;</button>
     </div>
-    <div class="modal-body" style="padding: 20px;">
-      <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.3); border-radius:8px; padding:12px; margin-bottom:16px;">
-        <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Shift Handover &amp; Rollover:</div>
-        <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4;">
-          ✓ Closing ticket numbers from previous shift automatically become new opening numbers.<br>
-          ✓ Previous shift sales and payouts logged into history.<br>
-          ✓ New shift starts with fresh $0.00 sales and payouts.
+
+    <div class="start-shift-body">
+      <!-- Rollover Info Banner -->
+      <div class="start-shift-banner">
+        <div class="banner-header">
+          <span class="banner-icon">🔄</span>
+          <strong>Automatic Shift Rollover:</strong>
+        </div>
+        <div class="banner-text">
+          Closing numbers become opening numbers &bull; Sales archived &bull; New shift resets to $0.00
         </div>
       </div>
 
-      <!-- Worker ID & Password Login -->
-      <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:14px; margin-bottom:16px;">
-        <div style="font-size:0.85rem; font-weight:800; color:#10b981; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-          🔐 Worker Login Required
+      <!-- Worker Login Section -->
+      <div class="start-shift-login-card">
+        <div class="login-card-title">
+          <span>🔐</span> Worker Authentication
         </div>
-        <div style="margin-bottom: 10px;">
-          <label style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:4px;">Worker ID:</label>
-          <input type="text" id="inputNewShiftWorkerId" class="scanner-field" placeholder="Enter Worker ID (e.g. W001, EMP01)" style="width:100%; font-size:1rem; font-weight:700; padding:8px 12px;" autocomplete="username">
+        <div class="login-inputs-grid">
+          <div class="form-group">
+            <label for="inputNewShiftWorkerId">Worker ID:</label>
+            <input 
+              type="text" 
+              id="inputNewShiftWorkerId" 
+              class="shift-input" 
+              placeholder="e.g. master, W001" 
+              autocomplete="username"
+            >
+          </div>
+          <div class="form-group">
+            <label for="inputNewShiftPassword">Password:</label>
+            <input 
+              type="password" 
+              id="inputNewShiftPassword" 
+              class="shift-input" 
+              placeholder="Enter password" 
+              autocomplete="current-password"
+            >
+          </div>
         </div>
-        <div>
-          <label style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:4px;">Password:</label>
-          <input type="password" id="inputNewShiftPassword" class="scanner-field" placeholder="Enter password" style="width:100%; font-size:1rem; font-weight:700; padding:8px 12px;" autocomplete="current-password">
-        </div>
-        <div id="shiftLoginError" style="display:none; margin-top:8px; padding:6px 10px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; color:#ef4444; font-size:0.8rem; font-weight:700;">
+        <div id="shiftLoginError" class="shift-login-error">
           ❌ Invalid Worker ID or Password. Please try again.
         </div>
       </div>
 
-      <div style="margin-bottom: 14px;">
-        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Worker / Cashier Name for this Shift:</label>
-        <input type="text" id="inputNewShiftCashierName" class="scanner-field" placeholder="e.g. Sarah, Alex, John" style="width:100%; font-size:1.05rem; font-weight:700; padding:8px 12px;">
-      </div>
-      <div style="margin-bottom: 8px;">
-        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Opening Cash Drawer Float (Optional):</label>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-weight:700; color:var(--text-muted);">$</span>
-          <input type="number" id="inputNewShiftDrawerFloat" step="1" min="0" value="0.00" class="scanner-field" style="width:120px; font-size:1rem; font-weight:700; padding:6px 10px;">
+      <!-- Worker Name & Drawer Float (2 Columns) -->
+      <div class="shift-details-grid">
+        <div class="form-group">
+          <label for="inputNewShiftCashierName">Cashier / Worker Name:</label>
+          <input 
+            type="text" 
+            id="inputNewShiftCashierName" 
+            class="shift-input" 
+            placeholder="e.g. Sarah, Alex, John"
+          >
+        </div>
+        <div class="form-group">
+          <label for="inputNewShiftDrawerFloat">Opening Float (Optional):</label>
+          <div class="float-input-wrapper">
+            <span class="currency-symbol">$</span>
+            <input 
+              type="number" 
+              id="inputNewShiftDrawerFloat" 
+              step="1" 
+              min="0" 
+              value="0.00" 
+              class="shift-input float-input"
+            >
+          </div>
         </div>
       </div>
     </div>
-    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
-      <button class="btn btn-secondary" id="cancelStartShiftConfirmBtn">Cancel</button>
-      <button class="btn btn-primary" id="confirmStartShiftBtn" style="background:var(--color-primary); font-weight:800;">🚀 Start Shift Now</button>
+
+    <div class="start-shift-footer">
+      <button type="button" class="btn btn-secondary" id="cancelStartShiftConfirmBtn">Cancel</button>
+      <button type="button" class="btn-start-shift-submit" id="confirmStartShiftBtn">
+        <span>🚀</span> Start Shift Now
+      </button>
     </div>
   </dialog>
 
@@ -1745,7 +1872,7 @@
           <div class="dr-user-id" id="drP1UserId">User ID: master</div>
         </div>
         <div class="dr-header-right">
-          <div class="dr-report-heading" id="drReportHeadingText">Shift Report</div>
+          <div class="dr-report-heading" id="drReportHeadingText">Day Report</div>
         </div>
       </div>
       <div class="dr-timestamp-line" id="drP1Timestamp">
@@ -1861,60 +1988,86 @@
 
   <!-- MODAL: Authentic LTSYSTEM Report View (Matching Video 03:38 - 04:00) -->
   <dialog id="dayReportModal" class="dr-ltsystem-report-modal">
-    <!-- Top LTSYSTEM Header in Report View -->
-    <div class="dr-lt-header-wrapper">
-      <div class="dr-lt-top-row">
-        <div class="dr-lt-shift-box">
-          <span class="dr-lt-shift-label" id="drReportShiftNumber">Current Shift : 1</span>
-          <div class="dr-lt-shift-btns">
-            <button type="button" class="dr-lt-btn-cancel" id="drReportCancelBtn">Cancel</button>
-            <button type="button" class="dr-lt-btn-undo" id="drReportUndoBtn">Undo</button>
-          </div>
+    <!-- 1. Unified Single Top Header Bar -->
+    <div class="dr-unified-header">
+      <div class="dr-modal-head-left">
+        <div class="dr-title-badge">
+          <span class="dr-title-icon">📄</span>
+          <span class="dr-title-text">Day Report</span>
         </div>
-        <div class="dr-lt-action-btns">
-          <button type="button" class="dr-lt-btn-shift-report" id="drReportStatusBtn">Shift Report</button>
-          <button type="button" class="dr-lt-btn-start-new" id="drReportStartNewShiftBtn">Start new shift</button>
+        <div class="dr-shift-pill" id="drReportShiftNumber">
+          <span class="dr-shift-dot"></span>
+          <span>Current Shift : 1</span>
         </div>
-        <button type="button" class="dr-lt-modal-close" id="closeDayReportModalBtn" title="Close Preview">&times;</button>
       </div>
 
-      <div class="dr-lt-readout-row">
-        <div class="dr-lt-readout-left">
-          <div class="dr-lt-total-sale-text" id="drReportTotalSaleTitle">Total Sale = $ 0.00</div>
+      <div class="dr-modal-head-center">
+        <div class="dr-metric-pill sales" title="Total Lottery Sales this Shift">
+          <span class="dr-metric-label">Total Sale</span>
+          <span class="dr-metric-val" id="drReportTotalSaleTitle">$0.00</span>
         </div>
-        <div class="dr-lt-readout-right">
-          <div class="dr-lt-big-stat" id="drReportLargeStat">0</div>
+        <div class="dr-metric-pill boxes" id="drReportLargeStat" title="Active Dispenser Boxes in Rack">
+          <span class="dr-metric-dot"></span>
+          <span class="dr-metric-label">Active Boxes</span>
+          <span class="dr-metric-val">0</span>
+        </div>
+      </div>
+
+      <div class="dr-modal-head-right">
+        <button type="button" class="dr-header-btn undo" id="drReportUndoBtn" title="Undo Last Action">
+          <span>↶</span> Undo
+        </button>
+        <button type="button" class="dr-header-btn new-shift" id="drReportStartNewShiftBtn" title="Start New Shift">
+          <span>✨</span> Start New Shift
+        </button>
+        <button type="button" class="dr-header-close" id="closeDayReportModalBtn" title="Close Preview">&times;</button>
+      </div>
+    </div>
+
+    <!-- 2. Integrated Slim Document Toolbar (No floating overlap over table!) -->
+    <div class="dr-integrated-toolbar">
+      <div class="dr-toolbar-left">
+        <button type="button" class="dr-tool-action-btn primary" id="drFloatPrintBtn" title="Print Official Day Report">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span>Print Day Report</span>
+        </button>
+        <button type="button" class="dr-tool-action-btn" id="drFloatSaveBtn" title="Save / Download PDF">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span>Save PDF</span>
+        </button>
+      </div>
+
+      <div class="dr-toolbar-center">
+        <span class="dr-page-indicator">
+          <span>Page </span><strong id="drFloatPageIndicator">1 / 1</strong>
+        </span>
+      </div>
+
+      <div class="dr-toolbar-right">
+        <div class="dr-zoom-control">
+          <button type="button" class="dr-zoom-btn" id="drFloatZoomOutBtn" title="Zoom Out">−</button>
+          <span class="dr-zoom-readout" id="drZoomLevelText">100%</span>
+          <button type="button" class="dr-zoom-btn" id="drFloatZoomInBtn" title="Zoom In">+</button>
+          <button type="button" class="dr-zoom-btn" id="drFloatFitBtn" title="Fit to Page">⛶</button>
         </div>
       </div>
     </div>
 
-    <!-- Main Report Document Body -->
+    <!-- 3. Main Report Document Body -->
     <div class="dr-lt-body" id="dayReportPreviewContainer">
-      <!-- Full 1-Page Sheet Rendered Here -->
+      <!-- Full 1-Page Sheet Rendered Cleanly Here Without Obstruction -->
     </div>
 
-    <!-- Floating PDF Control Bar (Matching Video Floating Toolbar 03:38) -->
-    <div class="dr-floating-toolbar" id="drFloatingToolbar">
-      <button type="button" class="dr-tool-btn" id="drFloatSaveBtn" title="Save / Download PDF">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      </button>
-      <button type="button" class="dr-tool-btn" id="drFloatPrintBtn" title="Print Day Report">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      </button>
-      <div class="dr-tool-div"></div>
-      <button type="button" class="dr-tool-btn" id="drFloatPrevBtn" title="Previous Page">▲</button>
-      <button type="button" class="dr-tool-btn" id="drFloatNextBtn" title="Next Page">▼</button>
-      <span class="dr-tool-page" id="drFloatPageIndicator">1 / 1</span>
-      <div class="dr-tool-div"></div>
-      <button type="button" class="dr-tool-btn" id="drFloatZoomOutBtn" title="Zoom Out">−</button>
-      <button type="button" class="dr-tool-btn" id="drFloatZoomInBtn" title="Zoom In">+</button>
-      <button type="button" class="dr-tool-btn" id="drFloatFitBtn" title="Toggle Fit">⛶</button>
-    </div>
-
-    <!-- Bottom Bar with Blue Done Button (Matching Video Bottom Right 03:38) -->
+    <!-- 4. Bottom Bar with Blue Done Button -->
     <div class="dr-lt-bottom-bar">
-      <div class="dr-lt-bottom-spacer"></div>
-      <button type="button" class="btn-lt-done" id="btnReportDone">Done</button>
+      <div class="dr-lt-bottom-spec-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Official Georgia Lottery Day Report • AMIGO FOOD MART</span>
+      </div>
+      <div class="dr-bottom-actions" style="display: flex; align-items: center; gap: 10px;">
+        <button type="button" class="dr-btn-cancel-flat" id="drReportCancelBtn">Cancel</button>
+        <button type="button" class="btn-lt-done" id="btnReportDone">✓ Done</button>
+      </div>
     </div>
   </dialog>
 

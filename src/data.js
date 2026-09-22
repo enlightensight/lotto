@@ -35,19 +35,169 @@ export const SAMPLE_GAMES = [
 export function getStandardPackDetails(price) {
   const p = Number(price) || 1;
   if (p >= 50) {
-    return { bookValue: 900, packSize: 18 };
+    const bookValue = 900;
+    const packSize = Math.max(1, Math.floor(bookValue / p));
+    return { bookValue, packSize };
   }
   const bookValue = 300;
   const packSize = Math.max(1, Math.floor(bookValue / p));
   return { bookValue, packSize };
 }
 
+// Robust Georgia Lottery Barcode Parser
+// Parses standard Georgia / Scientific Games scratch-off barcodes:
+// e.g. "1898-0019425-068(041)", "1898-0019425-068", "18980019425068041", "18980019425068"
+export function parseLotteryBarcode(raw) {
+  if (!raw) return null;
+  let s = String(raw).trim();
+  if (!s) return null;
+
+  // Strip scanner symbology prefix (e.g. "]C1", "]I0", "]e0")
+  s = s.replace(/^\][a-zA-Z0-9]{2}/, '').trim();
+
+  // Pattern 1: Delimited format: Game - Pack - Ticket (Check)
+  // e.g. "1898-0019425-068(041)", "1898-0019425-068 (041)", "1898-0019425-068-041", "1898-0019425-068"
+  const delimitedMatch = s.match(/^(\d{3,5})[-_\s]+(\d{5,8})[-_\s]+(\d{1,3})(?:[-_\s]*\(?(\d{1,4})\)?)?$/);
+  if (delimitedMatch) {
+    const gameNumber = delimitedMatch[1];
+    const packNumber = delimitedMatch[2];
+    const ticketNumber = parseInt(delimitedMatch[3], 10);
+    const checkCode = delimitedMatch[4] || null;
+    return {
+      isValid: true,
+      gameNumber,
+      packNumber,
+      packClean: packNumber.replace(/^0+/, '') || packNumber,
+      ticketNumber: isNaN(ticketNumber) ? 0 : ticketNumber,
+      checkCode,
+      raw
+    };
+  }
+
+  // Pattern 2: Delimited with only two segments (e.g. Pack - Ticket or Game - Pack)
+  const twoPartMatch = s.match(/^(\d{3,8})[-_\s]+(\d{1,3})(?:[-_\s]*\(?(\d{1,4})\)?)?$/);
+  if (twoPartMatch) {
+    const firstPart = twoPartMatch[1];
+    const tix = parseInt(twoPartMatch[2], 10);
+    const check = twoPartMatch[3] || null;
+    // If firstPart is 4 digits, could be game prefix
+    return {
+      isValid: true,
+      gameNumber: firstPart.length <= 4 ? firstPart : null,
+      packNumber: firstPart.length > 4 ? firstPart : null,
+      packClean: firstPart.replace(/^0+/, '') || firstPart,
+      ticketNumber: isNaN(tix) ? 0 : tix,
+      checkCode: check,
+      raw
+    };
+  }
+
+  // Pattern 3: Pure continuous digits
+  const digits = s.replace(/[^0-9]/g, '');
+
+  // 17 digits: 4 game + 7 pack + 3 ticket + 3 check (Georgia Lottery 17-digit)
+  if (digits.length === 17) {
+    return {
+      isValid: true,
+      gameNumber: digits.slice(0, 4),
+      packNumber: digits.slice(4, 11),
+      packClean: digits.slice(4, 11).replace(/^0+/, '') || digits.slice(4, 11),
+      ticketNumber: parseInt(digits.slice(11, 14), 10),
+      checkCode: digits.slice(14, 17),
+      raw
+    };
+  }
+
+  // 14 digits: 4 game + 7 pack + 3 ticket (Georgia Lottery 14-digit)
+  if (digits.length === 14) {
+    return {
+      isValid: true,
+      gameNumber: digits.slice(0, 4),
+      packNumber: digits.slice(4, 11),
+      packClean: digits.slice(4, 11).replace(/^0+/, '') || digits.slice(4, 11),
+      ticketNumber: parseInt(digits.slice(11, 14), 10),
+      checkCode: null,
+      raw
+    };
+  }
+
+  // 16 digits: 3 game + 7 pack + 3 ticket + 3 check
+  if (digits.length === 16) {
+    return {
+      isValid: true,
+      gameNumber: digits.slice(0, 3),
+      packNumber: digits.slice(3, 10),
+      packClean: digits.slice(3, 10).replace(/^0+/, '') || digits.slice(3, 10),
+      ticketNumber: parseInt(digits.slice(10, 13), 10),
+      checkCode: digits.slice(13, 16),
+      raw
+    };
+  }
+
+  // 13 digits: 3 game + 7 pack + 3 ticket
+  if (digits.length === 13) {
+    return {
+      isValid: true,
+      gameNumber: digits.slice(0, 3),
+      packNumber: digits.slice(3, 10),
+      packClean: digits.slice(3, 10).replace(/^0+/, '') || digits.slice(3, 10),
+      ticketNumber: parseInt(digits.slice(10, 13), 10),
+      checkCode: null,
+      raw
+    };
+  }
+
+  // Check against known game barcode prefixes in SAMPLE_GAMES
+  for (const g of SAMPLE_GAMES) {
+    if (g.barcodePrefix && digits.startsWith(g.barcodePrefix)) {
+      const rest = digits.slice(g.barcodePrefix.length);
+      if (rest.length >= 7) {
+        const pack = rest.slice(0, 7);
+        const tixStr = rest.slice(7, 10);
+        const tix = tixStr ? parseInt(tixStr, 10) : 0;
+        return {
+          isValid: true,
+          gameNumber: g.barcodePrefix,
+          packNumber: pack,
+          packClean: pack.replace(/^0+/, '') || pack,
+          ticketNumber: isNaN(tix) ? 0 : tix,
+          checkCode: rest.slice(10, 13) || null,
+          raw
+        };
+      }
+    }
+  }
+
+  return {
+    isValid: false,
+    gameNumber: digits.length >= 4 ? digits.slice(0, 4) : null,
+    packNumber: digits.length >= 7 ? digits.slice(-7) : (digits || null),
+    packClean: digits.replace(/^0+/, '') || digits,
+    ticketNumber: null,
+    checkCode: null,
+    raw
+  };
+}
+
 export function findGameByBarcode(rawCode, customGames = []) {
   if (!rawCode) return null;
   const s = String(rawCode).trim();
   const digits = s.replace(/[^0-9]/g, '');
+  const parsed = parseLotteryBarcode(rawCode);
 
-  // 1. Check custom games first
+  // 1. Check if parsed gameNumber matches custom games
+  if (parsed && parsed.gameNumber && customGames && customGames.length > 0) {
+    const matchCG = customGames.find(g => g.barcodePrefix === parsed.gameNumber);
+    if (matchCG) return matchCG;
+  }
+
+  // 2. Check if parsed gameNumber matches SAMPLE_GAMES
+  if (parsed && parsed.gameNumber) {
+    const matchSG = SAMPLE_GAMES.find(g => g.barcodePrefix === parsed.gameNumber);
+    if (matchSG) return matchSG;
+  }
+
+  // 3. Check custom games first by prefix or name
   if (customGames && customGames.length > 0) {
     for (const g of customGames) {
       if (g.barcodePrefix && (s.startsWith(g.barcodePrefix) || digits.startsWith(g.barcodePrefix))) {
@@ -59,14 +209,14 @@ export function findGameByBarcode(rawCode, customGames = []) {
     }
   }
 
-  // 2. Match against SAMPLE_GAMES by barcodePrefix (e.g. 1417, 1322, 1843...)
+  // 4. Match against SAMPLE_GAMES by barcodePrefix (e.g. 1417, 1322, 1898...)
   for (const g of SAMPLE_GAMES) {
     if (g.barcodePrefix && (s.startsWith(g.barcodePrefix) || digits.startsWith(g.barcodePrefix))) {
       return g;
     }
   }
 
-  // 3. Check if name is in the code
+  // 5. Check if name is in the code
   for (const g of SAMPLE_GAMES) {
     if (s.toLowerCase().includes(g.name.toLowerCase())) {
       return g;

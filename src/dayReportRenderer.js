@@ -27,6 +27,11 @@ export function populateDayReportDOM(reportData, rootElement = document) {
   const p1UserId = rootElement.querySelector('#drP1UserId') || rootElement.querySelector('.dr-user-id');
   if (p1UserId) p1UserId.textContent = `User ID: ${reportData.userId || 'master'}`;
 
+  const p1Heading = rootElement.querySelector('#drReportHeadingText') || rootElement.querySelector('.dr-report-heading');
+  if (p1Heading) {
+    p1Heading.textContent = 'Day Report';
+  }
+
   const p1Timestamp = rootElement.querySelector('#drP1Timestamp') || rootElement.querySelector('.dr-timestamp-line');
   if (p1Timestamp) {
     p1Timestamp.innerHTML = `${reportData.reportDate}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${reportData.reportTime}`;
@@ -203,20 +208,27 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   // First ensure print section has the latest data
   populateDayReportDOM(reportData, printSection);
 
-  // 1. Update Video-Authentic Header Elements
+  // 1. Update Unified Header Elements
   const shiftEl = document.getElementById('drReportShiftNumber');
-  if (shiftEl) shiftEl.textContent = `Current Shift : ${state?.shiftNumber || 1}`;
+  if (shiftEl) {
+    shiftEl.innerHTML = `<span class="dr-shift-dot"></span><span>Shift : ${state?.shiftNumber || 1}</span>`;
+  }
 
   const totalSaleEl = document.getElementById('drReportTotalSaleTitle');
   if (totalSaleEl) {
     const tot = reportData.totalSales || reportData.totalScratcherSales || 0;
-    totalSaleEl.textContent = `Total Sale = $ ${Math.round(tot)}`;
+    const formatted = Number(tot).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    totalSaleEl.textContent = `$${formatted}`;
   }
 
   const statEl = document.getElementById('drReportLargeStat');
   if (statEl) {
     const activeCount = (reportData.boxes || []).filter(b => !b.isEmpty).length;
-    statEl.textContent = activeCount;
+    statEl.innerHTML = `
+      <span class="dr-metric-dot"></span>
+      <span class="dr-metric-label">Active Boxes</span>
+      <span class="dr-metric-val">${activeCount}</span>
+    `;
   }
 
   // 2. Clear and Render Sheets
@@ -242,7 +254,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
 
   container.appendChild(sheetsWrapper);
 
-  // 3. Floating Toolbar Logic (Single Full 1-Page Report)
+  // 3. Integrated Document Toolbar Logic (No floating overlap over table!)
   const floatPrint = document.getElementById('drFloatPrintBtn');
   const floatSave = document.getElementById('drFloatSaveBtn');
   const floatPrev = document.getElementById('drFloatPrevBtn');
@@ -251,6 +263,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   const floatZoomOut = document.getElementById('drFloatZoomOutBtn');
   const floatZoomIn = document.getElementById('drFloatZoomInBtn');
   const floatFit = document.getElementById('drFloatFitBtn');
+  const zoomText = document.getElementById('drZoomLevelText');
 
   if (floatIndicator) {
     floatIndicator.textContent = '1 / 1';
@@ -274,11 +287,16 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   }
 
   let currentZoom = 1.0;
+  const updateZoomDisplay = () => {
+    if (zoomText) zoomText.textContent = `${Math.round(currentZoom * 100)}%`;
+  };
+
   if (floatZoomIn) {
     floatZoomIn.onclick = () => {
       currentZoom = Math.min(1.35, currentZoom + 0.1);
       sheetsWrapper.style.transform = `scale(${currentZoom})`;
       sheetsWrapper.style.transformOrigin = 'top center';
+      updateZoomDisplay();
     };
   }
   if (floatZoomOut) {
@@ -286,6 +304,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
       currentZoom = Math.max(0.65, currentZoom - 0.1);
       sheetsWrapper.style.transform = `scale(${currentZoom})`;
       sheetsWrapper.style.transformOrigin = 'top center';
+      updateZoomDisplay();
     };
   }
   if (floatFit) {
@@ -293,6 +312,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
       currentZoom = (currentZoom === 1.0) ? 0.85 : 1.0;
       sheetsWrapper.style.transform = `scale(${currentZoom})`;
       sheetsWrapper.style.transformOrigin = 'top center';
+      updateZoomDisplay();
     };
   }
 
@@ -400,7 +420,7 @@ export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = 
     btnDone.addEventListener('click', () => {
       modal.close();
       if (sfx && typeof sfx.success === 'function') sfx.success();
-      if (showToast) showToast('✓ Shift Report closed.', 'info');
+      if (showToast) showToast('✓ Day Report closed.', 'info');
     });
   }
 
