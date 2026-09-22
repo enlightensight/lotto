@@ -136,12 +136,12 @@
 }
 
 [data-theme="dark"] .shift-badge-box {
-  background: linear-gradient(180deg, #182544 0%, #0d1527 100%);
-  border-color: #2b3d66;
+  background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 100%);
+  border-color: #475569;
 }
 
 [data-theme="dark"] .shift-badge-text {
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 [data-theme="dark"] .btn-lt-ml {
@@ -676,11 +676,11 @@ body {
   background: linear-gradient(180deg, #94a3b8 0%, #cbd5e1 45%, #e2e8f0 100%);
   border: 1.5px solid #475569;
   border-radius: 2px;
-  width: 72px;
-  min-width: 72px;
-  height: 26px;
-  min-height: 26px;
-  margin-left: 8px;
+  flex: 1;
+  max-width: 175px;
+  height: 28px;
+  min-height: 28px;
+  margin-left: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -700,13 +700,13 @@ body {
 }
 
 .ltsystem-arrow-slider {
-  width: 54px;
-  height: 20px;
+  width: 120px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: absolute;
-  right: 2px;
+  right: 3px;
   top: 2px;
   transform: translateX(0);
   transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1);
@@ -715,22 +715,22 @@ body {
 
 .shift-arrow-track:hover .ltsystem-arrow-slider,
 .shift-badge-arrow-btn:hover .ltsystem-arrow-slider {
-  transform: translateX(-3px);
+  transform: translateX(-5px);
 }
 
 .shift-arrow-track:active .ltsystem-arrow-slider,
 .shift-badge-arrow-btn:active .ltsystem-arrow-slider {
-  transform: translateX(-6px);
+  transform: translateX(-12px);
 }
 
 .ltsystem-arrow-svg {
-  width: 54px;
-  height: 20px;
+  width: 120px;
+  height: 22px;
   display: block;
 }
 
 /* Authentic Real LTSYSTEM Refresh Animation:
-   Glides swiftly to the left of the sunken track, holds momentarily, and smoothly glides back */
+   Glides swiftly across the sunken track to the far left, holds momentarily, and smoothly glides back */
 .shift-arrow-track.refreshing,
 .shift-badge-arrow-btn.refreshing {
   pointer-events: none;
@@ -739,21 +739,21 @@ body {
 .shift-arrow-track.refreshing .ltsystem-arrow-slider,
 .shift-badge-arrow-btn.refreshing .ltsystem-arrow-slider,
 .shift-badge-arrow-btn.refreshing .refresh-arrow-svg {
-  animation: ltsystem-arrow-swift-left 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  animation: ltsystem-arrow-swift-left 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes ltsystem-arrow-swift-left {
   0% {
     transform: translateX(0);
   }
-  38% {
-    transform: translateX(-35px);
+  35% {
+    transform: translateX(-92px);
   }
-  58% {
-    transform: translateX(-35px);
+  55% {
+    transform: translateX(-92px);
   }
   85% {
-    transform: translateX(-4px);
+    transform: translateX(-8px);
   }
   100% {
     transform: translateX(0);

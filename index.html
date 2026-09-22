@@ -54,23 +54,23 @@
       <div class="shift-badge-box" id="shiftBadgeBox">
         <div class="shift-badge-text" id="shiftBadgeText" style="cursor:pointer;" title="Click to Switch Cashier / Worker">
           Current Shift : <strong id="currentShiftNumber">1</strong>
-          <span class="cashier-label" id="currentCashier">[MASTER]</span>
+          <span class="cashier-label" id="currentCashier" style="display:none;">[MASTER]</span>
         </div>
         <div class="shift-arrow-track" id="systemRefreshBtn" role="button" tabindex="0" title="Click to Refresh System & Synchronize State">
           <div class="ltsystem-arrow-slider">
-            <svg class="ltsystem-arrow-svg" viewBox="0 0 54 20" fill="none">
+            <svg class="ltsystem-arrow-svg" viewBox="0 0 120 22" fill="none">
               <defs>
                 <linearGradient id="ltsystemArrowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#38bdf8"/>
-                  <stop offset="18%" stop-color="#2563eb"/>
+                  <stop offset="0%" stop-color="#3b82f6"/>
+                  <stop offset="20%" stop-color="#2563eb"/>
                   <stop offset="60%" stop-color="#1d4ed8"/>
                   <stop offset="100%" stop-color="#172554"/>
                 </linearGradient>
               </defs>
-              <!-- Real LTSYSTEM block arrow: sharp triangular head + wide rectangular shaft -->
-              <polygon points="14,1 0,10 14,19 14,15 53,15 53,5 14,5" fill="url(#ltsystemArrowGrad)" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>
-              <line x1="14" y1="5" x2="52" y2="5" stroke="#93c5fd" stroke-width="1" stroke-linecap="round"/>
-              <rect x="15" y="7" width="36" height="5" fill="#60a5fa" opacity="0.45" rx="1"/>
+              <!-- Real LTSYSTEM elongated block arrow: sharp triangular head on left + wide rectangular shaft on right -->
+              <polygon points="20,1 0,11 20,21 20,17 119,17 119,5 20,5" fill="url(#ltsystemArrowGrad)" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>
+              <line x1="20" y1="5" x2="118" y2="5" stroke="#93c5fd" stroke-width="1" stroke-linecap="round"/>
+              <rect x="22" y="7" width="94" height="4" fill="#93c5fd" opacity="0.5" rx="1"/>
             </svg>
           </div>
         </div>

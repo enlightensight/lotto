@@ -3403,7 +3403,7 @@ export function refreshSystem() {
   const refreshBtn = document.getElementById('systemRefreshBtn');
   if (refreshBtn) {
     refreshBtn.classList.add('refreshing');
-    setTimeout(() => refreshBtn.classList.remove('refreshing'), 680);
+    setTimeout(() => refreshBtn.classList.remove('refreshing'), 720);
   }
 
   sfx.chime();
