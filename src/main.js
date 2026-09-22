@@ -3394,11 +3394,14 @@ function showToast(message, type = 'info') {
 // -------------------------------------------------------------
 
 export function refreshSystem() {
+  const badgeBox = document.getElementById('shiftBadgeBox');
   const refreshBtn = document.getElementById('systemRefreshBtn');
-  if (refreshBtn) {
-    refreshBtn.classList.add('refreshing');
-    setTimeout(() => refreshBtn.classList.remove('refreshing'), 720);
-  }
+  if (badgeBox) badgeBox.classList.add('refreshing');
+  if (refreshBtn) refreshBtn.classList.add('refreshing');
+  setTimeout(() => {
+    badgeBox?.classList.remove('refreshing');
+    refreshBtn?.classList.remove('refreshing');
+  }, 780);
 
   sfx.chime();
 

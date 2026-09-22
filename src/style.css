@@ -673,9 +673,9 @@ body {
 
 .shift-arrow-track,
 .shift-badge-arrow-btn {
-  background: linear-gradient(180deg, #94a3b8 0%, #cbd5e1 45%, #e2e8f0 100%);
-  border: 1.5px solid #475569;
-  border-radius: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   flex: 1;
   max-width: 175px;
   height: 28px;
@@ -686,17 +686,17 @@ body {
   align-items: center;
   justify-content: flex-end;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
-  box-shadow: inset 1.5px 1.5px 3px rgba(0, 0, 0, 0.55), inset -1px -1px 2px rgba(255, 255, 255, 0.7);
-  padding: 0 2px;
+  box-shadow: none;
+  padding: 0;
   user-select: none;
 }
 
 .shift-arrow-track:hover,
 .shift-badge-arrow-btn:hover {
-  border-color: #334155;
-  box-shadow: inset 1.5px 1.5px 3px rgba(0, 0, 0, 0.65), inset -1px -1px 2px rgba(255, 255, 255, 0.9), 0 0 6px rgba(56, 189, 248, 0.35);
+  border: none;
+  box-shadow: none;
 }
 
 .ltsystem-arrow-slider {
@@ -706,11 +706,11 @@ body {
   align-items: center;
   justify-content: center;
   position: absolute;
-  right: 3px;
-  top: 2px;
+  right: 2px;
+  top: 3px;
   transform: translateX(0);
   transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
 .shift-arrow-track:hover .ltsystem-arrow-slider,
@@ -730,32 +730,67 @@ body {
 }
 
 /* Authentic Real LTSYSTEM Refresh Animation:
-   Glides swiftly across the sunken track to the far left, holds momentarily, and smoothly glides back */
+   1. The text 'Current Shift : 1' fades away as the arrow sweeps fully to the left.
+   2. The arrow sweeps across to the far left of the container, holds briefly, and comes back.
+   3. When the arrow returns to the right, the text reappears cleanly. */
 .shift-arrow-track.refreshing,
-.shift-badge-arrow-btn.refreshing {
+.shift-badge-arrow-btn.refreshing,
+.shift-badge-box.refreshing {
   pointer-events: none;
 }
 
-.shift-arrow-track.refreshing .ltsystem-arrow-slider,
-.shift-badge-arrow-btn.refreshing .ltsystem-arrow-slider,
-.shift-badge-arrow-btn.refreshing .refresh-arrow-svg {
-  animation: ltsystem-arrow-swift-left 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+.shift-badge-box.refreshing .shift-badge-text,
+.shift-badge-box:has(.refreshing) .shift-badge-text {
+  animation: ltsystem-text-fade 0.75s ease-in-out forwards;
 }
 
-@keyframes ltsystem-arrow-swift-left {
+.shift-arrow-track.refreshing .ltsystem-arrow-slider,
+.shift-badge-box.refreshing .ltsystem-arrow-slider,
+.shift-badge-arrow-btn.refreshing .ltsystem-arrow-slider {
+  animation: ltsystem-arrow-sweep-left 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes ltsystem-arrow-sweep-left {
   0% {
     transform: translateX(0);
   }
-  35% {
-    transform: translateX(-92px);
+  38% {
+    transform: translateX(-195px);
   }
-  55% {
-    transform: translateX(-92px);
+  58% {
+    transform: translateX(-195px);
   }
   85% {
-    transform: translateX(-8px);
+    transform: translateX(-10px);
   }
   100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes ltsystem-text-fade {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  22% {
+    opacity: 0.2;
+    transform: translateX(-8px);
+  }
+  34% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  60% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  82% {
+    opacity: 0.7;
+    transform: translateX(-4px);
+  }
+  100% {
+    opacity: 1;
     transform: translateX(0);
   }
 }
