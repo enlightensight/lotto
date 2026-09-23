@@ -183,14 +183,15 @@ export function generateLiveDayReport(state) {
         const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
         const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * (sp.price || 0));
         totalScratcherSales += sTotal;
+        const retSuffix = sp.isReturned ? ` (Ret ${sp.ticketsReturned || 0})` : '';
         subRows.push({
           pack: sp.packNumber,
-          name: formatReportGameName(sp.gameName),
+          name: formatReportGameName(sp.gameName) + (sp.isReturned ? ' [RETURNED]' : ''),
           open: sp.startTicket || 0,
-          close: sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold,
+          close: (sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold) + retSuffix,
           price: sp.price || 0,
           total: sTotal,
-          highlight: 'red'
+          highlight: sp.isReturned ? 'purple' : 'red'
         });
       });
 
@@ -216,36 +217,38 @@ export function generateLiveDayReport(state) {
         highlight: slot.activatedThisShift ? 'green' : null
       });
     } else if (soldPacks.length > 0) {
-      // Slot is currently inactive/empty, but sold out a pack during this shift
+      // Slot is currently inactive/empty, but sold out or returned a pack during this shift
       if (soldPacks.length === 1) {
         const sp = soldPacks[0];
         const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
         const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * (sp.price || 0));
         totalScratcherSales += sTotal;
+        const retSuffix = sp.isReturned ? ` (Ret ${sp.ticketsReturned || 0})` : '';
 
         boxes.push({
           box: boxNum,
           pack: sp.packNumber,
-          name: formatReportGameName(sp.gameName),
+          name: formatReportGameName(sp.gameName) + (sp.isReturned ? ' [RETURNED]' : ''),
           open: sp.startTicket || 0,
-          close: sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold,
+          close: (sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold) + retSuffix,
           price: sp.price || 0,
           total: sTotal,
-          highlight: 'red'
+          highlight: sp.isReturned ? 'purple' : 'red'
         });
       } else {
         const subRows = soldPacks.map(sp => {
           const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
           const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * (sp.price || 0));
           totalScratcherSales += sTotal;
+          const retSuffix = sp.isReturned ? ` (Ret ${sp.ticketsReturned || 0})` : '';
           return {
             pack: sp.packNumber,
-            name: formatReportGameName(sp.gameName),
+            name: formatReportGameName(sp.gameName) + (sp.isReturned ? ' [RETURNED]' : ''),
             open: sp.startTicket || 0,
-            close: sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold,
+            close: (sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold) + retSuffix,
             price: sp.price || 0,
             total: sTotal,
-            highlight: 'red'
+            highlight: sp.isReturned ? 'purple' : 'red'
           };
         });
 
@@ -281,10 +284,12 @@ export function generateLiveDayReport(state) {
   const activeSlots = (state?.slots || []).filter(s => s.status === 'ACTIVE' && s.packNumber);
   const endingCount = activeSlots.length;
   const activationsCount = activeSlots.filter(s => s.activatedThisShift).length;
-  const soldCount = (state?.soldOutThisShift || []).length;
-  const discontinuedCount = Number(state?.discontinuedCount || 0);
+  const soldCount = (state?.soldOutThisShift || []).filter(so => !so.isReturned).length;
+  const returnedCount = (state?.soldOutThisShift || []).filter(so => so.isReturned).length;
+  const discontinuedCount = Math.max(Number(state?.discontinuedCount || 0), returnedCount);
 
-  // Exact Opening Count formula from Georgia Lottery manual
+  // Exact Opening Count formula from Georgia Lottery manual:
+  // Opening Active Count + Activations - Sold - Discontinued = Ending Active Count
   let openingCount = endingCount - activationsCount + soldCount + discontinuedCount;
   if (typeof state?.shiftOpeningActiveCount === 'number' && state.shiftOpeningActiveCount > 0) {
     openingCount = state.shiftOpeningActiveCount;
@@ -323,7 +328,7 @@ export function generateLiveDayReport(state) {
       box: so.boxNumber,
       packNumber: so.packNumber,
       price: so.price || 0,
-      name: formatReportGameName(so.gameName)
+      name: formatReportGameName(so.gameName) + (so.isReturned ? ` [RET: ${so.ticketsReturned || 0} tix]` : '')
     });
   });
 

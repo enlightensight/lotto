@@ -77,6 +77,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
           const tr = document.createElement('tr');
           if (sr.highlight === 'green') tr.className = 'dr-row-green';
           else if (sr.highlight === 'red') tr.className = 'dr-row-red';
+          else if (sr.highlight === 'purple') tr.className = 'dr-row-purple';
 
           const boxCol = idx === 0 
             ? `<td class="dr-box-num" rowspan="${item.subRows.length}">${item.box}</td>` 
@@ -100,6 +101,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
       const tr = document.createElement('tr');
       if (item.highlight === 'green') tr.className = 'dr-row-green';
       else if (item.highlight === 'red') tr.className = 'dr-row-red';
+      else if (item.highlight === 'purple') tr.className = 'dr-row-purple';
 
       tr.innerHTML = `
         <td class="dr-box-num">${item.box}</td>
