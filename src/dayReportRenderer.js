@@ -64,8 +64,8 @@ export function populateDayReportDOM(reportData, rootElement = document) {
           <td class="dr-game-name" style="color: #64748b;">${item.name || 'EMPTY'}</td>
           <td class="dr-num-cell" style="color: #64748b;">${item.open ?? '-'}</td>
           <td class="dr-num-cell" style="color: #64748b;">${item.close ?? '-'}</td>
-          <td class="dr-num-cell" style="color: #64748b;">${item.price ? '$' + item.price : '-'}</td>
-          <td class="dr-num-cell" style="color: #64748b;">${item.total !== undefined ? item.total : '0'}</td>
+          <td class="dr-num-cell" style="color: #64748b;">-</td>
+          <td class="dr-num-cell" style="color: #64748b;">0</td>
         `;
         tbodyEl.appendChild(tr);
         return;
@@ -391,7 +391,7 @@ export function openDayReportModal(getStateOrState, sfx = null) {
 /**
  * Wires Day Report UI buttons across the application
  */
-export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = null) {
+export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = null, onUndo = null, onStartNewShift = null) {
   const getState = typeof getStateOrState === 'function' ? getStateOrState : () => getStateOrState;
   const menuBtn = document.getElementById('menuDayReportBtn');
   const modal = document.getElementById('dayReportModal');
@@ -433,16 +433,30 @@ export function setupDayReportHandlers(getStateOrState, sfx = null, showToast = 
 
   const btnUndo = document.getElementById('drReportUndoBtn');
   if (btnUndo && modal) {
-    btnUndo.addEventListener('click', () => modal.close());
+    btnUndo.addEventListener('click', () => {
+      if (typeof onUndo === 'function') {
+        onUndo();
+        // Refresh Day Report modal preview with updated state
+        const currentState = getState();
+        const data = getDayReportData(currentState);
+        renderDayReportModalPreview(data, currentState);
+      } else {
+        modal.close();
+      }
+    });
   }
 
   const btnStartNew = document.getElementById('drReportStartNewShiftBtn');
   if (btnStartNew && modal) {
     btnStartNew.addEventListener('click', () => {
       modal.close();
-      const startShiftModal = document.getElementById('startShiftConfirmModal');
-      if (startShiftModal) {
-        startShiftModal.showModal();
+      if (typeof onStartNewShift === 'function') {
+        onStartNewShift();
+      } else {
+        const startShiftModal = document.getElementById('startShiftConfirmModal');
+        if (startShiftModal) {
+          startShiftModal.showModal();
+        }
       }
     });
   }

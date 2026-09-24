@@ -34,7 +34,6 @@
         <a class="menu-item" id="menuPrintBtn">Print</a>
         <a class="menu-item highlight-green" id="menuSignOutBtn">Sign out</a>
         <a class="menu-item" id="menuSettingsBtn">Settings</a>
-        <a class="menu-item" id="menuClearDataBtn" style="color:#ef4444; font-weight:700;">Clear Data</a>
       </nav>
     </div>
     <div class="menu-right">
@@ -145,8 +144,7 @@
       <span class="tab-name">Inventory Status</span>
       <span class="tab-val" id="metricInventoryCount">0 Packs</span>
     </button>
-    <button class="metric-tab update-inventory-tab" id="tabUpdateInventory">
-      <span class="tab-name">⚡ Stock Intake</span>
+    <button class="metric-tab" id="tabUpdateInventory" title="Open Store Inventory">
       <span class="tab-val">Update Inventory</span>
     </button>
   </nav>
@@ -198,29 +196,25 @@
   </main>
 
   <!-- MODAL 1: Keypad & Box Assignment (Ticket Activation - Matching Screenshot 2 & LT System) -->
+  <!-- MODAL: Box Number & Ticket Activation (Matching POS Reference Image) -->
   <dialog id="activationModal" class="activation-dialog">
     <div class="modal-header">
       <div class="modal-title">
-        <span>🎟️ Ticket Activation & Box Assignment</span>
+        <span>Box Number</span>
       </div>
       <button class="modal-close-btn" id="closeActivationBtn" title="Close Dialog">&times;</button>
     </div>
     <div class="modal-body activation-modal-body">
       <div class="activation-panel">
-        <!-- Compact Header Bar: Game Title + Subtitle + Mode Toggle -->
-        <div class="activation-header-banner">
-          <div class="activation-header-title-box">
-            <div class="activation-game-badge" id="activationGameTitle">$1 · 5X MONEY</div>
-            <div class="activation-pack-hint" id="activationPackHint">Ticket Pack starts at #00 &bull; Active Count: 00</div>
-          </div>
-          <div class="mode-toggle-pills">
-          </div>
+        <!-- Prominent Game Title Header -->
+        <div class="box-assign-game-header">
+          <div class="box-assign-game-title" id="activationGameTitle">$20 MILLIONAIRE JUMBO BUCKS</div>
         </div>
 
         <!-- Inline Error Banner for Activation Modal -->
         <div id="activationErrorBanner" class="modal-error-banner" style="display: none;"></div>
 
-        <!-- 1. Preset Dropdown Container -->
+        <!-- Pack Details Row (Always Open) -->
         <div id="activationDropdownContainer" class="activation-preset-row">
           <div style="flex: 2;">
             <label class="activation-field-label">CHOOSE LOTTERY GAME:</label>
@@ -230,49 +224,44 @@
           </div>
           <div style="flex: 1;">
             <label class="activation-field-label">PACK #:</label>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" id="presetPackNumberInput" class="scanner-field activation-input" placeholder="Pack # (e.g. 882853)">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" id="presetPackNumberInput" class="scanner-field activation-input" placeholder="Pack #">
           </div>
-          <div style="width: 95px;">
-            <label class="activation-field-label">START #:</label>
-            <input type="number" id="presetStartTicketInput" class="scanner-field activation-input text-center" min="0" max="999" value="0">
-            <div id="startTicketMaxHint" class="start-ticket-max-hint">Max: #17</div>
+          <div style="width: 105px;">
+            <label class="activation-field-label">TICKETS #:</label>
+            <input type="number" id="presetStartTicketInput" class="scanner-field activation-input text-center" min="0" max="999" value="0" placeholder="0 = All">
+            <div id="startTicketMaxHint" class="start-ticket-max-hint">0 = Full Roll</div>
           </div>
         </div>
 
-
-        <!-- Bottom Section: Box Number & Touch Keypad Split -->
+        <!-- Main Screen: Left (Box # & Actions) + Right (Keypad) -->
         <div class="activation-input-split">
-          <!-- Left: Box Input & Action Buttons -->
+          <!-- Left: Box Input & Action Buttons (Exact Match to Reference Image) -->
           <div class="box-input-col">
-            <div>
-              <div class="box-input-group">
-                <span class="box-label-red">BOX #</span>
-                <input type="number" id="keypadBoxInput" class="box-num-input" value="5" min="1" max="100" autocomplete="off">
-                <div class="stepper-arrows">
-                  <button type="button" class="stepper-btn" id="stepBoxUp" title="Next Box Number">▲</button>
-                  <button type="button" class="stepper-btn" id="stepBoxDown" title="Previous Box Number">▼</button>
-                </div>
+            <div class="box-input-main-row">
+              <span class="box-label-red">BOX #</span>
+              <input type="number" id="keypadBoxInput" class="box-num-input" value="1" min="1" max="100" autocomplete="off">
+              <div class="stepper-arrows-vertical">
+                <button type="button" class="stepper-arrow-btn" id="stepBoxUp" title="Next Box Number">▲</button>
+                <button type="button" class="stepper-arrow-btn" id="stepBoxDown" title="Previous Box Number">▼</button>
               </div>
-              <p id="boxInputHint" class="box-input-hint">
-                Assign to dispenser slot (1-65 or enter higher number to add new box).
-              </p>
             </div>
 
-            <div class="box-action-buttons">
-              <button type="button" class="btn btn-primary btn-add-box" id="btnAddBox" title="Assign pack into this box slot">
-                <span>➕</span> <span>Activate into Box (↵)</span>
+            <!-- Two Bottom Action Buttons Side-by-Side: Not In Box & Add -->
+            <div class="box-action-buttons-row">
+              <button type="button" class="btn-not-in-box" id="btnNotInBox" title="Keep pack in inventory safe without assigning to rack">
+                Not In Box
               </button>
-              <button type="button" class="btn btn-secondary btn-not-in-box" id="btnNotInBox" title="Keep pack in inventory safe without assigning to rack">
-                <span>📦</span> <span>Not In Box (Safe)</span>
+              <button type="button" class="btn-add-box" id="btnAddBox" title="Assign pack into this box slot">
+                Add
               </button>
             </div>
           </div>
 
-          <!-- Right: Touch Keypad -->
+          <!-- Right: Touch Keypad (Exact Match to Reference Image) -->
           <div class="touch-keypad">
             <div class="keypad-header-row">
               <button type="button" class="key-btn key-fn" id="keyClear" title="Clear box input">Clear</button>
-              <button type="button" class="key-btn key-fn" id="keyBackspace" title="Backspace">⌫ Backspace</button>
+              <button type="button" class="key-btn key-fn key-fn-back" id="keyBackspace" title="Backspace">Backspace</button>
             </div>
             <button type="button" class="key-btn key-num" data-val="7">7</button>
             <button type="button" class="key-btn key-num" data-val="8">8</button>
@@ -288,7 +277,7 @@
 
             <button type="button" class="key-btn key-num" data-val="0">0</button>
             <button type="button" class="key-btn key-num" data-val=".">.</button>
-            <button type="button" class="key-btn key-enter" id="keyEnter" title="Confirm Activation">Enter ↵</button>
+            <button type="button" class="key-btn key-enter" id="keyEnter" title="Confirm Activation">Enter</button>
           </div>
         </div>
       </div>
@@ -305,7 +294,7 @@
       <button class="modal-close-btn" id="closeBoxAdjustBtn" type="button" aria-label="Close">&times;</button>
     </div>
     
-    <div class="modal-body" style="padding: 12px 14px;">
+    <div class="modal-body box-adjust-body">
       <!-- Compact Top Meta Card -->
       <div class="box-adjust-meta-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -391,7 +380,7 @@
       </div>
       <button class="modal-close-btn" id="closeReturnPackBtn" type="button" aria-label="Close">&times;</button>
     </div>
-    <div class="modal-body" style="padding: 12px 14px;">
+    <div class="modal-body return-pack-body">
       <div class="box-adjust-meta-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <div>
@@ -564,13 +553,13 @@
         <table class="report-table">
           <thead>
             <tr>
-              <th style="width: 14%;">BOX</th>
-              <th style="width: 32%;">GAME TITLE</th>
-              <th style="width: 10%; text-align: center;">PRICE</th>
-              <th style="width: 11%; text-align: center;">START #</th>
-              <th style="width: 11%; text-align: center;">CLOSE #</th>
-              <th style="width: 10%; text-align: right;">SOLD</th>
-              <th style="width: 12%; text-align: right;">AMOUNT ($)</th>
+              <th class="col-box">BOX</th>
+              <th class="col-game">GAME TITLE</th>
+              <th class="col-price">PRICE</th>
+              <th class="col-start">START #</th>
+              <th class="col-close">CLOSE #</th>
+              <th class="col-sold">SOLD</th>
+              <th class="col-amount">AMOUNT ($)</th>
             </tr>
           </thead>
           <tbody id="reportBodyRows">
@@ -578,9 +567,9 @@
           </tbody>
           <tfoot>
             <tr class="report-total-row">
-              <td colspan="5">TOTAL LOTTO SHIFT SALES</td>
-              <td id="repSumSold" style="text-align: right;">0</td>
-              <td id="repSumAmount" style="text-align: right;">$0.00</td>
+              <td colspan="5" class="col-total-label">TOTAL LOTTO SHIFT SALES</td>
+              <td id="repSumSold" class="col-sold">0</td>
+              <td id="repSumAmount" class="col-amount">$0.00</td>
             </tr>
           </tfoot>
         </table>
@@ -957,141 +946,247 @@
     </div>
   </dialog>
 
-  <!-- MODAL: Fix Ticket Position (Matching LTSYSTEM Image 6) -->
-  <dialog id="fixTicketPositionModal" style="width: 580px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+  <!-- MODAL: Fix Ticket Position (Matching Physical POS Reference Image) -->
+  <dialog id="fixTicketPositionModal" class="fix-ticket-pos-dialog">
     <div class="modal-header">
       <div class="modal-title">
         <span>Fix Ticket Position</span>
       </div>
-      <button type="button" class="modal-close-btn" id="closeFixTicketPosBtn">&times;</button>
+      <button type="button" class="modal-close-btn" id="closeFixTicketPosBtn" title="Close Dialog">&times;</button>
     </div>
-    <div style="padding: 20px; display: grid; grid-template-columns: 1fr 190px; gap: 20px;">
-      <!-- Left column: Info & Input -->
-      <div>
-        <div style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); margin-bottom: 8px;" id="fixPosGameName">
-          Name: $20 MILLIONAIRE JU
-        </div>
-        <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary); margin-bottom: 12px;" id="fixPosScannedPos">
-          Scanned position: 012
-        </div>
+    <div class="fix-ticket-pos-body">
+      <!-- Left Column: Info, Red Instruction & Inline Input (Exact Match to Photo) -->
+      <div class="fix-pos-details-col">
+        <div class="fix-pos-game-title" id="fixPosGameName">Name: $20 MILLIONAIRE JU</div>
+        <div class="fix-pos-scanned-text" id="fixPosScannedPos">Scanned position: 012</div>
+
         <!-- Inline Error Banner for Fix Position Modal -->
         <div id="fixPosErrorBanner" class="modal-error-banner" style="display: none;"></div>
-        <p style="font-size: 0.8rem; color: #ef4444; line-height: 1.4; margin-bottom: 16px;">
+
+        <!-- Instruction Text in Red (Exact Match to POS Screen) -->
+        <p class="fix-pos-desc-red">
           If this ticket's start position needs to be fixed you can fix it by entering a correct position below. Leave it blank if the scanned position is correct.<br>
           (If a non-numeric position is typed, then the ticket position entered will be ignored)
         </p>
-        <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
-            Enter correct Ticket Position:
-          </label>
-          <input type="number" id="inputFixTicketPosition" class="box-num-input" style="width: 120px; height: 44px; font-size: 1.35rem; text-align: center;" min="0" max="999">
+
+        <!-- Inline Input Row: Enter correct Ticket Position: [   ] -->
+        <div class="fix-pos-input-row">
+          <span class="fix-pos-input-label">Enter correct Ticket Position:</span>
+          <input type="number" id="inputFixTicketPosition" class="box-num-input fix-pos-input-box" min="0" max="999" autocomplete="off">
         </div>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn btn-secondary" id="btnCancelFixTicketPos" style="min-width: 85px;">Cancel</button>
-          <button type="button" class="btn btn-success" id="btnConfirmFixTicketPos" style="min-width: 85px; font-weight: 800; background: #16a34a; color: #fff;">Fix</button>
+
+        <!-- Bottom Action Buttons: Cancel (Pink/Red) & Fix (Blue) -->
+        <div class="fix-pos-actions-row">
+          <button type="button" class="btn-pos-cancel" id="btnCancelFixTicketPos">Cancel</button>
+          <button type="button" class="btn-pos-fix" id="btnConfirmFixTicketPos">Fix</button>
         </div>
       </div>
-      <!-- Right column: Touch Keypad -->
-      <div class="touch-keypad" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
-        <button type="button" class="key-btn key-fn" id="keyFixClear" style="grid-column: span 1; font-size: 0.8rem; padding: 10px 4px;">Clear</button>
-        <button type="button" class="key-btn key-fn" id="keyFixBackspace" style="grid-column: span 2; font-size: 0.8rem; padding: 10px 4px;">⌫ Back</button>
+
+      <!-- Right Column: Touch Keypad (Exact Match to Photo) -->
+      <div class="touch-keypad">
+        <div class="keypad-header-row">
+          <button type="button" class="key-btn key-fn" id="keyFixClear" title="Clear input">Clear</button>
+          <button type="button" class="key-btn key-fn key-fn-back" id="keyFixBackspace" title="Backspace">Backspace</button>
+        </div>
         <button type="button" class="key-btn key-num-fix" data-val="7">7</button>
         <button type="button" class="key-btn key-num-fix" data-val="8">8</button>
         <button type="button" class="key-btn key-num-fix" data-val="9">9</button>
+
         <button type="button" class="key-btn key-num-fix" data-val="4">4</button>
         <button type="button" class="key-btn key-num-fix" data-val="5">5</button>
         <button type="button" class="key-btn key-num-fix" data-val="6">6</button>
+
         <button type="button" class="key-btn key-num-fix" data-val="1">1</button>
         <button type="button" class="key-btn key-num-fix" data-val="2">2</button>
         <button type="button" class="key-btn key-num-fix" data-val="3">3</button>
+
         <button type="button" class="key-btn key-num-fix" data-val="0">0</button>
         <button type="button" class="key-btn key-num-fix" data-val=".">.</button>
-        <button type="button" class="key-btn key-enter" id="keyFixEnter" style="font-size: 0.8rem; padding: 10px 4px;">↵</button>
+        <button type="button" class="key-btn key-enter" id="keyFixEnter" title="Confirm Fix">Enter</button>
       </div>
     </div>
   </dialog>
 
-  <!-- MODAL: Georgia Lottery Terminal Reconciliation (Matching LTSYSTEM Image 15 & 16) -->
-  <dialog id="terminalReconcileModal" style="width: 580px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <div class="modal-header">
-      <div class="modal-title">
+  <!-- MODAL: Georgia Lottery Terminal Reconciliation (Monochrome Dual-Theme) -->
+  <dialog id="terminalReconcileModal" class="term-reconcile-dialog">
+    <div class="term-reconcile-header">
+      <div class="term-reconcile-title">
         <span>Processing online Ticket data input</span>
       </div>
-      <button type="button" class="modal-close-btn" id="closeTerminalReconcileBtn">&times;</button>
+      <button type="button" class="term-reconcile-close" id="closeTerminalReconcileBtn" title="Close">&times;</button>
     </div>
-    <div style="padding: 24px 20px; display: grid; grid-template-columns: 1fr 190px; gap: 20px; align-items: start;">
+    <div class="term-reconcile-body">
       <!-- Left column: 3 Inputs -->
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div>
-          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+      <div class="term-reconcile-inputs">
+        <div class="term-field-group">
+          <label class="term-field-lbl" for="inputTermOnlineSale">
             Online Sale:
           </label>
-          <div style="position: relative;">
-            <span style="position: absolute; left: 10px; top: 9px; color: var(--text-muted); font-weight: 700;">$</span>
-            <input type="number" id="inputTermOnlineSale" class="scanner-field text-right" style="padding-left: 24px; font-size: 1.25rem; font-weight: 800; height: 42px; width: 100%;" step="1" min="0" value="0">
+          <div class="term-input-card">
+            <span class="term-prefix">$</span>
+            <input type="number" id="inputTermOnlineSale" class="term-input" step="1" min="0" value="0" inputmode="decimal">
           </div>
         </div>
-        <div>
-          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+        <div class="term-field-group">
+          <label class="term-field-lbl" for="inputTermOnlineCashOut">
             Online Cash Out:
           </label>
-          <div style="position: relative;">
-            <span style="position: absolute; left: 10px; top: 9px; color: var(--text-muted); font-weight: 700;">$</span>
-            <input type="number" id="inputTermOnlineCashOut" class="scanner-field text-right" style="padding-left: 24px; font-size: 1.25rem; font-weight: 800; height: 42px; width: 100%;" step="1" min="0" value="0">
+          <div class="term-input-card">
+            <span class="term-prefix">$</span>
+            <input type="number" id="inputTermOnlineCashOut" class="term-input" step="1" min="0" value="0" inputmode="decimal">
           </div>
         </div>
-        <div>
-          <label style="display: block; font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+        <div class="term-field-group">
+          <label class="term-field-lbl" for="inputTermScratchOffCash">
             Scratch Off Cash:
           </label>
-          <div style="position: relative;">
-            <span style="position: absolute; left: 10px; top: 9px; color: var(--text-muted); font-weight: 700;">$</span>
-            <input type="number" id="inputTermScratchOffCash" class="scanner-field text-right" style="padding-left: 24px; font-size: 1.25rem; font-weight: 800; height: 42px; width: 100%;" step="1" min="0" value="0">
+          <div class="term-input-card">
+            <span class="term-prefix">$</span>
+            <input type="number" id="inputTermScratchOffCash" class="term-input" step="1" min="0" value="0" inputmode="decimal">
           </div>
         </div>
-        <button type="button" class="btn btn-primary" id="btnTerminalReconcileDone" style="height: 44px; font-size: 1.05rem; font-weight: 800; background: #2563eb; margin-top: 8px;">
+        <button type="button" class="btn-term-done" id="btnTerminalReconcileDone">
           DONE
         </button>
       </div>
       <!-- Right column: Touch Keypad -->
-      <div class="touch-keypad" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
-        <button type="button" class="key-btn key-fn" id="keyTermClear" style="grid-column: span 1; font-size: 0.8rem; padding: 10px 4px;">Clear</button>
-        <button type="button" class="key-btn key-fn" id="keyTermBackspace" style="grid-column: span 2; font-size: 0.8rem; padding: 10px 4px;">⌫ Back</button>
-        <button type="button" class="key-btn key-num-term" data-val="7">7</button>
-        <button type="button" class="key-btn key-num-term" data-val="8">8</button>
-        <button type="button" class="key-btn key-num-term" data-val="9">9</button>
-        <button type="button" class="key-btn key-num-term" data-val="4">4</button>
-        <button type="button" class="key-btn key-num-term" data-val="5">5</button>
-        <button type="button" class="key-btn key-num-term" data-val="6">6</button>
-        <button type="button" class="key-btn key-num-term" data-val="1">1</button>
-        <button type="button" class="key-btn key-num-term" data-val="2">2</button>
-        <button type="button" class="key-btn key-num-term" data-val="3">3</button>
-        <button type="button" class="key-btn key-num-term" data-val="0">0</button>
-        <button type="button" class="key-btn key-num-term" data-val=".">.</button>
-        <button type="button" class="key-btn key-enter" id="keyTermEnter" style="font-size: 0.8rem; padding: 10px 4px;">↵</button>
+      <div class="term-keypad">
+        <button type="button" class="term-key-btn term-key-fn" id="keyTermClear">Clear</button>
+        <button type="button" class="term-key-btn term-key-fn term-key-back" id="keyTermBackspace">⌫ Back</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="7">7</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="8">8</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="9">9</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="4">4</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="5">5</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="6">6</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="1">1</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="2">2</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="3">3</button>
+        <button type="button" class="term-key-btn key-num-term" data-val="0">0</button>
+        <button type="button" class="term-key-btn key-num-term" data-val=".">.</button>
+        <button type="button" class="term-key-btn term-key-enter" id="keyTermEnter">↵</button>
       </div>
     </div>
   </dialog>
 
-  <!-- MODAL: Switch Box Assignment -->
-  <dialog id="switchBoxModal" style="width: 440px; max-width: 95vw; border-radius: 12px; border: 1.5px solid var(--border-color); padding: 0; overflow: hidden; background: var(--bg-surface); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+  <!-- MODAL: Switch Box Assignment (Matching Physical POS Screen) -->
+  <dialog id="switchBoxModal" class="box-switch-dialog">
     <div class="modal-header">
       <div class="modal-title">
         <span>⇄ Switch Dispenser Boxes</span>
       </div>
-      <button type="button" class="modal-close-btn" id="closeSwitchBoxBtn">&times;</button>
+      <button type="button" class="modal-close-btn" id="closeSwitchBoxBtn" title="Close Dialog">&times;</button>
     </div>
-    <div style="padding: 20px; text-align: center;">
-      <div id="switchBoxSourceInfo" style="font-weight: 800; font-size: 1rem; color: var(--color-primary); margin-bottom: 14px;">
-        Switching Box #---
+    <div class="box-switch-body">
+      <!-- Left Column: Details & Input -->
+      <div class="box-switch-details-col">
+        <div class="box-switch-game-title" id="switchBoxSourceInfo">Switching Box #3 (Max out game)</div>
+        <p class="box-switch-desc">
+          Select another dispenser box to swap physical places with this game.
+        </p>
+
+        <!-- Inline Error Banner for Switch Box Modal -->
+        <div id="switchBoxErrorBanner" class="modal-error-banner" style="display: none; margin-bottom: 12px;"></div>
+
+        <div class="box-switch-input-row">
+          <span class="box-switch-input-label">Swap places with Box #:</span>
+          <div class="box-switch-stepper-wrap">
+            <input type="number" id="inputSwitchTargetBox" class="box-num-input box-switch-num-input" min="1" max="100" autocomplete="off">
+            <div class="box-switch-arrows">
+              <button type="button" class="box-switch-arrow-btn" id="stepSwitchUp" title="Next Box">▲</button>
+              <button type="button" class="box-switch-arrow-btn" id="stepSwitchDown" title="Previous Box">▼</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="box-switch-actions-row">
+          <button type="button" class="btn-pos-cancel" id="btnCancelSwitchBox">Cancel</button>
+          <button type="button" class="btn-pos-fix" id="btnConfirmSwitchBox">Confirm Swap</button>
+        </div>
       </div>
-      <label for="inputSwitchTargetBox" style="display: block; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
-        Swap places with Box #:
-      </label>
-      <input type="number" id="inputSwitchTargetBox" class="box-num-input" min="1" max="100" style="width: 110px; height: 46px; font-size: 1.4rem; text-align: center; margin: 0 auto 20px auto;">
-      <div style="display: flex; justify-content: center; gap: 12px;">
-        <button type="button" class="btn btn-secondary" id="btnCancelSwitchBox">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btnConfirmSwitchBox" style="font-weight: 800;">Confirm Swap</button>
+
+      <!-- Right Column: Touch Keypad -->
+      <div class="touch-keypad">
+        <div class="keypad-header-row">
+          <button type="button" class="key-btn key-fn" id="keySwitchClear" title="Clear input">Clear</button>
+          <button type="button" class="key-btn key-fn key-fn-back" id="keySwitchBackspace" title="Backspace">Backspace</button>
+        </div>
+        <button type="button" class="key-btn key-num-switch" data-val="7">7</button>
+        <button type="button" class="key-btn key-num-switch" data-val="8">8</button>
+        <button type="button" class="key-btn key-num-switch" data-val="9">9</button>
+
+        <button type="button" class="key-btn key-num-switch" data-val="4">4</button>
+        <button type="button" class="key-btn key-num-switch" data-val="5">5</button>
+        <button type="button" class="key-btn key-num-switch" data-val="6">6</button>
+
+        <button type="button" class="key-btn key-num-switch" data-val="1">1</button>
+        <button type="button" class="key-btn key-num-switch" data-val="2">2</button>
+        <button type="button" class="key-btn key-num-switch" data-val="3">3</button>
+
+        <button type="button" class="key-btn key-num-switch" data-val="0">0</button>
+        <button type="button" class="key-btn key-num-switch" data-val=".">.</button>
+        <button type="button" class="key-btn key-enter" id="keySwitchEnter" title="Confirm Swap">Enter</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Change Box Assignment (Move Pack to New Box #) -->
+  <dialog id="changeBoxModal" class="box-switch-dialog">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>✏️ Change Box Number</span>
+      </div>
+      <button type="button" class="modal-close-btn" id="closeChangeBoxBtn" title="Close Dialog">&times;</button>
+    </div>
+    <div class="box-switch-body">
+      <!-- Left Column: Details & Input -->
+      <div class="box-switch-details-col">
+        <div class="box-switch-game-title" id="changeBoxSourceInfo">Box #3 · Max out game</div>
+        <p class="box-switch-desc">
+          Enter a new dispenser box number to move this pack into.
+        </p>
+
+        <!-- Inline Error Banner for Change Box Modal -->
+        <div id="changeBoxErrorBanner" class="modal-error-banner" style="display: none; margin-bottom: 12px;"></div>
+
+        <div class="box-switch-input-row">
+          <span class="box-switch-input-label">Move to Box #:</span>
+          <div class="box-switch-stepper-wrap">
+            <input type="number" id="inputChangeTargetBox" class="box-num-input box-switch-num-input" min="1" max="100" autocomplete="off">
+            <div class="box-switch-arrows">
+              <button type="button" class="box-switch-arrow-btn" id="stepChangeUp" title="Next Box">▲</button>
+              <button type="button" class="box-switch-arrow-btn" id="stepChangeDown" title="Previous Box">▼</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="box-switch-actions-row">
+          <button type="button" class="btn-pos-cancel" id="btnCancelChangeBox">Cancel</button>
+          <button type="button" class="btn-pos-fix" id="btnConfirmChangeBox">Change Box</button>
+        </div>
+      </div>
+
+      <!-- Right Column: Touch Keypad -->
+      <div class="touch-keypad">
+        <div class="keypad-header-row">
+          <button type="button" class="key-btn key-fn" id="keyChangeClear" title="Clear input">Clear</button>
+          <button type="button" class="key-btn key-fn key-fn-back" id="keyChangeBackspace" title="Backspace">Backspace</button>
+        </div>
+        <button type="button" class="key-btn key-num-change" data-val="7">7</button>
+        <button type="button" class="key-btn key-num-change" data-val="8">8</button>
+        <button type="button" class="key-btn key-num-change" data-val="9">9</button>
+
+        <button type="button" class="key-btn key-num-change" data-val="4">4</button>
+        <button type="button" class="key-btn key-num-change" data-val="5">5</button>
+        <button type="button" class="key-btn key-num-change" data-val="6">6</button>
+
+        <button type="button" class="key-btn key-num-change" data-val="1">1</button>
+        <button type="button" class="key-btn key-num-change" data-val="2">2</button>
+        <button type="button" class="key-btn key-num-change" data-val="3">3</button>
+
+        <button type="button" class="key-btn key-num-change" data-val="0">0</button>
+        <button type="button" class="key-btn key-num-change" data-val=".">.</button>
+        <button type="button" class="key-btn key-enter" id="keyChangeEnter" title="Confirm Move">Enter</button>
       </div>
     </div>
   </dialog>
@@ -1184,62 +1279,63 @@
     </div>
   </dialog>
 
-  <!-- MODAL 6: Real Settings Dialog -->
-  <dialog id="settingsModal" style="width: 500px;">
-    <div class="modal-header">
-      <div class="modal-title">
-        <span>⚙️ Store & System Settings</span>
+  <!-- MODAL 6: Real Settings Dialog (Compact Minimal Black & White Style) -->
+  <dialog id="settingsModal" class="settings-dialog">
+    <div class="settings-modal-header">
+      <div class="settings-modal-title">
+        <span>⚙️</span> <span>Store & System Settings</span>
       </div>
-      <button class="modal-close-btn" id="closeSettingsBtn">&times;</button>
+      <button type="button" class="settings-modal-close" id="closeSettingsBtn" aria-label="Close dialog">&times;</button>
     </div>
-    <div class="modal-body" style="padding: 20px;">
-      <div style="margin-bottom: 14px;">
-        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Store Name (Printed on Receipts):</label>
-        <input type="text" id="settingStoreName" class="scanner-field" style="width:100%; font-size:0.95rem; font-weight:600;">
+    <div class="settings-modal-body">
+      <div class="settings-form-group">
+        <label for="settingStoreName" class="settings-field-lbl">Store Name (Printed on Receipts)</label>
+        <input type="text" id="settingStoreName" class="settings-input" placeholder="e.g. AMIGO FOOD MART">
       </div>
-      <div style="margin-bottom: 14px;">
-        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Active Cashier Name / ID:</label>
-        <input type="text" id="settingCashierName" class="scanner-field" style="width:100%; font-size:0.95rem; font-weight:600;">
+      <div class="settings-form-group">
+        <label for="settingCashierName" class="settings-field-lbl">Active Cashier Name / ID</label>
+        <input type="text" id="settingCashierName" class="settings-input" placeholder="e.g. master, Sarah, Alex">
       </div>
-      <div style="margin-bottom: 14px;">
-        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Target Email for Shift Reports:</label>
-        <input type="email" id="settingTargetEmail" class="scanner-field" style="width:100%; font-size:0.95rem; font-weight:600;">
+      <div class="settings-form-group">
+        <label for="settingTargetEmail" class="settings-field-lbl">Target Email for Shift Reports</label>
+        <input type="email" id="settingTargetEmail" class="settings-input" placeholder="e.g. manager@store.com">
       </div>
-      <div style="margin-bottom: 14px; display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" id="settingSoundToggle" style="width:18px; height:18px; cursor:pointer;">
-        <label for="settingSoundToggle" style="font-size:0.9rem; font-weight:600; color:var(--text-primary); cursor:pointer;">Enable POS Sound Effects (Beeps, Chimes)</label>
-      </div>
+      <label class="settings-toggle-card" for="settingSoundToggle">
+        <input type="checkbox" id="settingSoundToggle" class="settings-checkbox">
+        <span class="settings-toggle-text">Enable POS Sound Effects (Beeps, Chimes)</span>
+      </label>
     </div>
-    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
-      <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
-      <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+    <div class="settings-modal-footer">
+      <button type="button" class="btn-settings-cancel" id="cancelSettingsBtn">Cancel</button>
+      <button type="button" class="btn-settings-save" id="saveSettingsBtn">Save Settings</button>
     </div>
   </dialog>
 
-  <!-- MODAL: Quick Switch Cashier / Worker -->
-  <dialog id="cashierModal" style="width: 440px; border-radius: 12px; overflow: hidden; padding: 0;">
-    <div class="modal-header" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; padding: 14px 20px; display:flex; justify-content:space-between; align-items:center;">
-      <div class="modal-title" style="display: flex; align-items: center; gap: 8px; font-weight:800;">
-        <span style="font-size:1.2rem;">👤</span> <span>Switch Cashier / Worker</span>
+  <!-- MODAL: Quick Switch Cashier / Worker (Compact Minimal Black & White Style) -->
+  <dialog id="cashierModal" class="cashier-dialog">
+    <div class="cashier-modal-header">
+      <div class="cashier-modal-title">
+        <span>👤</span> <span>Switch Cashier / Worker</span>
       </div>
-      <button class="modal-close-btn" id="closeCashierModalBtn" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer;">&times;</button>
+      <button type="button" class="cashier-modal-close" id="closeCashierModalBtn" aria-label="Close dialog">&times;</button>
     </div>
-    <div class="modal-body" style="padding: 20px;">
-      <div style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:8px 12px; border-radius:6px; border:1px solid var(--border-color);">
-        <span style="font-size:0.85rem; color:var(--text-secondary);">Active Shift:</span>
-        <strong id="cashierModalShiftInfo" style="font-size:0.95rem; color:var(--color-primary);">Shift #1</strong>
+    <div class="cashier-modal-body">
+      <div class="cashier-shift-strip">
+        <span class="cashier-field-lbl">Active Shift</span>
+        <strong id="cashierModalShiftInfo" class="cashier-shift-val">Shift #1</strong>
       </div>
-      <div style="margin-bottom: 16px;">
-        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:6px;">Worker / Cashier Name:</label>
-        <input type="text" id="inputCashierModalName" class="scanner-field" placeholder="e.g. Sarah, Alex, John" style="width:100%; font-size:1.05rem; font-weight:700; padding:8px 12px;">
+      <div class="cashier-input-group">
+        <label for="inputCashierModalName" class="cashier-field-lbl">Worker / Cashier Name</label>
+        <input type="text" id="inputCashierModalName" class="cashier-name-input" placeholder="e.g. Sarah, Alex, John" autocomplete="off" spellcheck="false">
       </div>
-      <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.4;">
-        💡 The cashier name appears on printed 80mm receipts, shift settlement sheets, and the official Georgia Lottery Day Report.
+      <div class="cashier-hint-box">
+        <span class="cashier-hint-icon">💡</span>
+        <span class="cashier-hint-text">The cashier name appears on printed 80mm receipts, shift settlement sheets, and the official Georgia Lottery Day Report.</span>
       </div>
     </div>
-    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
-      <button class="btn btn-secondary" id="cancelCashierModalBtn">Cancel</button>
-      <button class="btn btn-primary" id="saveCashierModalBtn">✓ Switch Cashier</button>
+    <div class="cashier-modal-footer">
+      <button type="button" class="btn-cashier-cancel" id="cancelCashierModalBtn">Cancel</button>
+      <button type="button" class="btn-cashier-save" id="saveCashierModalBtn">✓ Switch Cashier</button>
     </div>
   </dialog>
 

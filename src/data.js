@@ -78,7 +78,26 @@ export function parseLotteryBarcode(raw) {
     };
   }
 
-  // Pattern 2: Delimited with only two segments (e.g. Pack - Ticket or Game - Pack)
+  // Pattern 2a: Delimited Game - Pack (e.g. "1322-0796097", "1417 0618145")
+  const gamePackMatch = s.match(/^(\d{3,5})[-_\s]+(\d{6,8})$/);
+  if (gamePackMatch) {
+    const gameNumber = gamePackMatch[1];
+    const packNumber = gamePackMatch[2];
+    return {
+      isValid: true,
+      gameNumber,
+      packNumber,
+      packClean: packNumber.replace(/^0+/, '') || packNumber,
+      ticketNumber: null,
+      ticketString: null,
+      checkCode: null,
+      canonicalId: `${gameNumber}-${packNumber}`,
+      fullId: `${gameNumber}-${packNumber}`,
+      raw
+    };
+  }
+
+  // Pattern 2b: Delimited with only two segments (e.g. Pack - Ticket or Game - Pack)
   const twoPartMatch = s.match(/^(\d{3,8})[-_\s]+(\d{1,3})(?:[-_\s]*\(?(\d{1,4})\)?)?$/);
   if (twoPartMatch) {
     const firstPart = twoPartMatch[1];
@@ -206,6 +225,42 @@ export function parseLotteryBarcode(raw) {
     };
   }
 
+  // 11 digits: 4 game + 7 pack (Georgia Lottery Pack Barcode / Manifest Barcode)
+  if (digits.length === 11) {
+    const gameNumber = digits.slice(0, 4);
+    const packNumber = digits.slice(4, 11);
+    return {
+      isValid: true,
+      gameNumber,
+      packNumber,
+      packClean: packNumber.replace(/^0+/, '') || packNumber,
+      ticketNumber: null,
+      ticketString: null,
+      checkCode: null,
+      canonicalId: `${gameNumber}-${packNumber}`,
+      fullId: `${gameNumber}-${packNumber}`,
+      raw
+    };
+  }
+
+  // 10 digits: 3 game + 7 pack (Pack Barcode)
+  if (digits.length === 10) {
+    const gameNumber = digits.slice(0, 3);
+    const packNumber = digits.slice(3, 10);
+    return {
+      isValid: true,
+      gameNumber,
+      packNumber,
+      packClean: packNumber.replace(/^0+/, '') || packNumber,
+      ticketNumber: null,
+      ticketString: null,
+      checkCode: null,
+      canonicalId: `${gameNumber}-${packNumber}`,
+      fullId: `${gameNumber}-${packNumber}`,
+      raw
+    };
+  }
+
   // Check against known game barcode prefixes in SAMPLE_GAMES
   for (const g of SAMPLE_GAMES) {
     if (g.barcodePrefix && digits.startsWith(g.barcodePrefix)) {
@@ -241,7 +296,7 @@ export function parseLotteryBarcode(raw) {
 /**
  * Normalizes a pack number string to its canonical numeric sequence (digits stripped of leading zeros).
  * Handles plain pack numbers ("0796097" -> "796097"), hyphenated game-pack ("1322-0796097" -> "796097"),
- * and standard numeric pack serials ("882901" -> "882901").
+ * continuous 11-digit ("13220796097" -> "796097"), and standard numeric pack serials ("882901" -> "882901").
  */
 export function normalizePackNumber(packStr) {
   if (!packStr) return '';
@@ -251,6 +306,12 @@ export function normalizePackNumber(packStr) {
     if (parts[0].length <= 5 && parts[1].length >= 4) {
       s = parts[1];
     }
+  } else if (/^\d{11}$/.test(s)) {
+    // 11 digits continuous = 4 game prefix + 7 pack digits
+    s = s.slice(4);
+  } else if (/^\d{10}$/.test(s)) {
+    // 10 digits continuous = 3 game prefix + 7 pack digits
+    s = s.slice(3);
   }
   const digits = s.replace(/[^0-9]/g, '');
   return digits.replace(/^0+/, '') || digits;
