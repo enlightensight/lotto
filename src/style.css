@@ -5579,6 +5579,7 @@ dialog::backdrop {
 .dr-toolbar-right {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .dr-zoom-control {

@@ -210,30 +210,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   // First ensure print section has the latest data
   populateDayReportDOM(reportData, printSection);
 
-  // 1. Update Unified Header Elements
-  const shiftEl = document.getElementById('drReportShiftNumber');
-  if (shiftEl) {
-    shiftEl.innerHTML = `<span class="dr-shift-dot"></span><span>Shift : ${state?.shiftNumber || 1}</span>`;
-  }
-
-  const totalSaleEl = document.getElementById('drReportTotalSaleTitle');
-  if (totalSaleEl) {
-    const tot = reportData.totalSales || reportData.totalScratcherSales || 0;
-    const formatted = Number(tot).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    totalSaleEl.textContent = `$${formatted}`;
-  }
-
-  const statEl = document.getElementById('drReportLargeStat');
-  if (statEl) {
-    const activeCount = (reportData.boxes || []).filter(b => !b.isEmpty).length;
-    statEl.innerHTML = `
-      <span class="dr-metric-dot"></span>
-      <span class="dr-metric-label">Active Boxes</span>
-      <span class="dr-metric-val">${activeCount}</span>
-    `;
-  }
-
-  // 2. Clear and Render Sheets
+  // 1. Clear and Render Sheets
   container.innerHTML = '';
 
   const sheetsWrapper = document.createElement('div');
