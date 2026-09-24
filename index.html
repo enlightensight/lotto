@@ -497,85 +497,67 @@
   </dialog>
 
   <!-- MODAL 3: Shift Audit Report & Settlement -->
-  <!-- MODAL 3: Shift Audit Report & Settlement -->
   <dialog id="shiftReportModal" class="shift-report-dialog">
     <div class="modal-header shift-report-header">
       <div class="modal-title">
-        <span class="report-header-icon">📊</span>
-        <div>
-          <div class="report-title-main">Shift Settlement Audit Report</div>
-          <div class="report-subtitle-main">Dispenser Sales Audit &amp; Cash Drawer Balancing</div>
-        </div>
+        <div class="report-title-main">Shift Report</div>
       </div>
-      <button class="modal-close-btn" id="closeReportBtn" title="Close Report">&times;</button>
+      <button class="modal-close-btn" id="closeReportBtn" title="Close">&times;</button>
     </div>
     <div class="modal-body report-content">
-      <!-- Top Stats Banner -->
-      <div class="shift-report-banner">
-        <div class="shift-stat-card">
-          <div class="stat-card-icon">📑</div>
-          <div class="stat-card-body">
-            <div class="stat-label">Shift Number</div>
-            <div class="stat-value" id="repShiftNum">Shift #1</div>
-          </div>
+      <!-- Compact Stats Strip -->
+      <div class="shift-report-stats-strip">
+        <div class="sr-stat">
+          <span class="sr-stat-label">Shift</span>
+          <span class="sr-stat-value" id="repShiftNum">#1</span>
         </div>
-        <div class="shift-stat-card">
-          <div class="stat-card-icon">👤</div>
-          <div class="stat-card-body">
-            <div class="stat-label">Cashier</div>
-            <div class="stat-value" id="repCashier">MASTER</div>
-          </div>
+        <div class="sr-stat-divider"></div>
+        <div class="sr-stat">
+          <span class="sr-stat-label">Cashier</span>
+          <span class="sr-stat-value" id="repCashier">master</span>
         </div>
-        <div class="shift-stat-card">
-          <div class="stat-card-icon">🎟️</div>
-          <div class="stat-card-body">
-            <div class="stat-label">Tickets Sold</div>
-            <div class="stat-value" id="repTicketsSold">0</div>
-          </div>
+        <div class="sr-stat-divider"></div>
+        <div class="sr-stat">
+          <span class="sr-stat-label">Tickets Sold</span>
+          <span class="sr-stat-value" id="repTicketsSold">0</span>
         </div>
-        <div class="shift-stat-card stat-card-highlight">
-          <div class="stat-card-icon">💰</div>
-          <div class="stat-card-body">
-            <div class="stat-label">Total Lottery Sales</div>
-            <div class="stat-value stat-revenue-val" id="repTotalRevenue">$0.00</div>
-          </div>
+        <div class="sr-stat-divider"></div>
+        <div class="sr-stat sr-stat-highlight">
+          <span class="sr-stat-label">Total Sales</span>
+          <span class="sr-stat-value sr-stat-green" id="repTotalRevenue">$0.00</span>
         </div>
       </div>
 
-      <!-- Cash Drawer Reconciliation Card -->
+      <!-- Cash Reconciliation -->
       <div class="cash-reconciliation-card">
         <div class="reconcile-card-header">
-          <div class="reconcile-header-left">
-            <span class="reconcile-header-icon">💵</span>
-            <span class="reconcile-header-title">Cash Drawer Balancing &amp; Reconciliation</span>
-          </div>
-          <span class="reconcile-header-badge">Shift Drawer Audit</span>
+          <span class="reconcile-header-title">Cash Drawer Reconciliation</span>
+          <span id="repDrawerBalance" class="drawer-balance-pill status-pending">Enter Counted Cash</span>
         </div>
 
         <div class="drawer-reconcile-grid">
           <!-- Left: Flow Breakdown -->
           <div class="reconcile-pane flow-pane">
-            <div class="reconcile-pane-heading">REGISTER CASH FLOW</div>
             <div class="reconcile-item-row">
-              <span class="reconcile-item-label">(+) Scratcher Ticket Sales:</span>
+              <span class="reconcile-item-label">(+) Ticket Sales:</span>
               <strong id="recLottoSales" class="reconcile-amount-success">$0.00</strong>
             </div>
             <div class="reconcile-item-row">
-              <span class="reconcile-item-label" title="Prize cash paid out to customers for winning tickets">(-) Winning Payouts (Cashes):</span>
+              <span class="reconcile-item-label" title="Prize cash paid out to customers for winning tickets">(-) Payouts:</span>
               <div class="reconcile-input-box payout-box">
                 <span class="reconcile-prefix prefix-red">-$</span>
                 <input type="number" id="inputShiftPayouts" step="1" min="0" value="0.00" class="reconcile-num-input input-red">
               </div>
             </div>
             <div class="reconcile-item-row">
-              <span class="reconcile-item-label" title="Starting cash in register at start of shift">(+) Starting Bank Float (Optional):</span>
+              <span class="reconcile-item-label" title="Starting cash in register at start of shift">(+) Bank Float:</span>
               <div class="reconcile-input-box">
                 <span class="reconcile-prefix prefix-dim">+$</span>
                 <input type="number" id="inputDrawerFloat" step="1" min="0" value="0.00" class="reconcile-num-input">
               </div>
             </div>
             <div class="reconcile-item-row expected-row">
-              <span class="reconcile-item-label font-bold">(=) Expected Cash in Drawer:</span>
+              <span class="reconcile-item-label font-bold">(=) Expected Cash:</span>
               <strong id="recExpectedCash" class="reconcile-amount-expected">$0.00</strong>
             </div>
             <div id="recPayoutNote" class="reconcile-payout-warning" style="display:none;">
@@ -585,11 +567,9 @@
 
           <!-- Right: Counted Cash -->
           <div class="reconcile-pane count-pane">
-            <div class="reconcile-pane-heading">PHYSICAL CASH COUNT</div>
             <div class="cash-count-group">
               <div class="cash-count-meta">
-                <span class="cash-count-title">Physical Cash in Drawer:</span>
-                <span class="cash-count-hint">Count all bills &amp; coins in drawer</span>
+                <span class="cash-count-title">Cash Counted:</span>
               </div>
               <div class="cash-count-input-wrapper">
                 <span class="cash-symbol">$</span>
@@ -632,12 +612,12 @@
         <div class="email-strip-details">
           <span class="email-strip-icon">📧</span>
           <div>
-            <div class="email-strip-title">Shift Reconciliation Dispatch</div>
-            <div class="email-strip-subtitle">Automated report routed to: <strong id="repTargetEmails">manager@eltesystemsoftware.com</strong></div>
+            <div class="email-strip-title">Email Report</div>
+            <div class="email-strip-subtitle">To: <strong id="repTargetEmails">manager@eltesystemsoftware.com</strong></div>
           </div>
         </div>
         <div class="email-strip-status">
-          <span class="email-status-chip">✓ System Ready</span>
+          <span class="email-status-chip">✓ Ready</span>
         </div>
       </div>
     </div>
@@ -646,18 +626,18 @@
     <div class="modal-footer shift-report-footer">
       <div class="footer-left-group">
         <button class="btn btn-print-receipt" id="reportPrintBtn" title="Optimized for 80mm thermal receipt roll">
-          <span>🧾</span> Print 80mm Receipt
+          🧾 Print Receipt
         </button>
-        <button class="btn btn-view-day-report" id="reportPrintFullBtn" title="Full 2-Page Official Day Report (AMIGO FOOD MART)">
-          <span>📄</span> Day Report (2-Page)
+        <button class="btn btn-view-day-report" id="reportPrintFullBtn" title="Full 2-Page Official Day Report">
+          📄 Day Report
         </button>
       </div>
       <div class="footer-right-group">
         <button class="btn btn-email-report" id="reportEmailBtn">
-          <span>📧</span> Email Report
+          📧 Email
         </button>
         <button class="btn btn-start-shift" id="reportNewShiftBtn">
-          <span>🚀</span> Start New Shift
+          🚀 New Shift
         </button>
       </div>
     </div>

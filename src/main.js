@@ -2394,7 +2394,7 @@ function confirmEndShift() {
 
 function openShiftReportModal() {
   voice.speakReport();
-  repShiftNum.textContent = `Shift #${state.shiftNumber}`;
+  repShiftNum.textContent = `#${state.shiftNumber}`;
   repCashier.textContent = state.cashierName;
 
   reportBodyRows.innerHTML = '';
@@ -4388,7 +4388,7 @@ function openPastShiftReportModal(h) {
   historyModal?.close();
   voice.speakReport();
 
-  repShiftNum.innerHTML = `Shift #${h.shiftNumber} <span class="audit-history-badge">AUDIT HISTORY</span>`;
+  repShiftNum.innerHTML = `#${h.shiftNumber} <span class="audit-history-badge">HISTORY</span>`;
   repCashier.textContent = h.cashier || 'Clerk';
 
   reportBodyRows.innerHTML = '';
