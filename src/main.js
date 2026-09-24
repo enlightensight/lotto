@@ -804,7 +804,7 @@ function renderDispenserRack() {
     card.dataset.box = slot.boxNumber;
 
     const cleanName = cleanGameTitle(slot.gameName);
-    const soldCount = Math.max(0, (slot.currentTicket || 0) - (slot.startTicket || 0));
+    const runningTicket = String(slot.currentTicket !== undefined && slot.currentTicket !== null ? slot.currentTicket : 0).padStart(2, '0');
     card.innerHTML = `
       <div class="card-header-row">
         <span class="price-tag">$${slot.price}</span>
@@ -817,7 +817,7 @@ function renderDispenserRack() {
       </div>
       <div class="card-dashed-line"></div>
       <div class="card-footer-row ${isScanning ? 'is-scanning' : ''}">
-        <span class="ticket-sold-count" title="Tickets Sold This Shift">${soldCount}</span>
+        <span class="ticket-number-display ticket-sold-count ${isScanning ? 'scanning-num' : ''}" title="Running Ticket: #${runningTicket}">${runningTicket}</span>
         ${isScanning ? (slot.scannedInEndShift ? '<span class="card-scan-badge done">✓ SCANNED</span>' : '<span class="card-scan-badge pending">SCAN</span>') : ''}
       </div>
     `;
