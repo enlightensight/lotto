@@ -2423,11 +2423,11 @@ function openShiftReportModal() {
 
       const row = document.createElement('tr');
       if (sold > 0) {
-        row.style.background = 'rgba(16, 185, 129, 0.12)';
-        row.style.borderLeft = '4px solid var(--color-success)';
+        row.style.background = 'rgba(16, 185, 129, 0.08)';
+        row.style.borderLeft = '3px solid #10b981';
       }
       row.innerHTML = `
-        <td style="font-weight:700; color:var(--color-primary);">
+        <td style="font-weight:800; color:var(--text-primary);">
           Box ${s.boxNumber}
           ${sold > 0 ? `<span style="background:var(--color-success); color:#000; font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">SOLD ${sold}x</span>` : ''}
         </td>
@@ -2632,7 +2632,7 @@ function openShiftReportModal() {
         recExpectedCash.style.color = '#ef4444';
       } else {
         recExpectedCash.textContent = `$${expectedDrawerCash.toFixed(2)}`;
-        recExpectedCash.style.color = 'var(--color-primary)';
+        recExpectedCash.style.color = 'var(--text-primary)';
       }
     }
 
@@ -4413,11 +4413,11 @@ function openPastShiftReportModal(h) {
 
         const row = document.createElement('tr');
         if (sold > 0) {
-          row.style.background = 'rgba(16, 185, 129, 0.12)';
-          row.style.borderLeft = '4px solid var(--color-success)';
+          row.style.background = 'rgba(16, 185, 129, 0.08)';
+          row.style.borderLeft = '3px solid #10b981';
         }
         row.innerHTML = `
-          <td style="font-weight:700; color:var(--color-primary);">
+          <td style="font-weight:800; color:var(--text-primary);">
             Box ${s.boxNumber}
             ${sold > 0 ? `<span style="background:var(--color-success); color:#000; font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;">SOLD ${sold}x</span>` : ''}
           </td>
@@ -4505,7 +4505,7 @@ function openPastShiftReportModal(h) {
   if (inputDrawerFloat) inputDrawerFloat.value = histFloat.toFixed(2);
   if (recExpectedCash) {
     recExpectedCash.textContent = expectedCash < 0 ? `-$${Math.abs(expectedCash).toFixed(2)}` : `$${expectedCash.toFixed(2)}`;
-    recExpectedCash.style.color = expectedCash < 0 ? '#ef4444' : '#38bdf8';
+    recExpectedCash.style.color = expectedCash < 0 ? '#ef4444' : 'var(--text-primary)';
   }
   if (recPayoutNote) {
     recPayoutNote.style.display = (histPayouts > totalRevenue && histFloat === 0) ? 'block' : 'none';
