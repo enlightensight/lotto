@@ -1878,244 +1878,617 @@ dialog::backdrop {
   flex-shrink: 0;
 }
 
-/* Specific Activation Dialog Sizing: Guaranteed No Cut-Off */
-.activation-dialog {
-  width: 680px !important;
-  max-width: 95vw !important;
-  max-height: 92vh !important;
+/* ============================================================
+   TICKET ACTIVATION & BOX ASSIGNMENT MODAL
+   Compact Minimal Black & White Style (Dual-Theme, Zero Blue)
+   ============================================================ */
+
+#activationModal.activation-dialog {
+  width: min(94vw, 680px) !important;
+  max-width: 680px !important;
+  max-height: 94vh !important;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 12px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25);
+  color: #09090b;
+  padding: 0;
+  overflow: hidden;
 }
 
-.activation-modal-body {
-  padding: 10px 16px !important;
+[data-theme="dark"] #activationModal.activation-dialog {
+  background: #09090b;
+  border: 1px solid #27272a;
+  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
 }
 
-.activation-panel {
-  background: #f8fafc;
-  color: var(--text-primary);
-  border-radius: var(--radius-lg);
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
+#activationModal::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
 }
 
-/* Compact Activation Header Banner */
-.activation-header-banner {
+#activationModal .modal-header {
+  padding: 11px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e4e4e7;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary-border);
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] #activationModal .modal-header {
+  background: #121214;
+  border-bottom: 1px solid #27272a;
+}
+
+#activationModal .modal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #09090b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] #activationModal .modal-title {
+  color: #ffffff;
+}
+
+#activationModal .modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+#activationModal .modal-close-btn:hover {
+  background: #e4e4e7;
+  color: #09090b;
+}
+
+[data-theme="dark"] #activationModal .modal-close-btn {
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] #activationModal .modal-close-btn:hover {
+  background: #27272a;
+  color: #ffffff;
+}
+
+#activationModal .activation-modal-body {
+  padding: 14px 16px !important;
+  background: transparent;
+  overflow-y: auto;
+}
+
+#activationModal .activation-panel {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Compact Activation Header Banner */
+#activationModal .activation-header-banner {
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 9px 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 10px;
 }
 
-.activation-header-title-box {
+[data-theme="dark"] #activationModal .activation-header-banner {
+  background: #141416;
+  border-color: #27272a;
+}
+
+#activationModal .activation-header-title-box {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.activation-game-badge {
+#activationModal .activation-game-badge {
   font-size: 1.15rem;
   font-weight: 800;
   font-family: var(--font-mono);
-  color: var(--color-primary);
-  line-height: 1.2;
+  color: #09090b;
+  line-height: 1.25;
 }
 
-.activation-pack-hint {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+[data-theme="dark"] #activationModal .activation-game-badge {
+  color: #ffffff;
+}
+
+#activationModal .activation-pack-hint {
+  font-size: 0.74rem;
+  color: #71717a;
   font-weight: 600;
 }
 
-/* Preset & Manual Rows */
-.activation-preset-row {
+[data-theme="dark"] #activationModal .activation-pack-hint {
+  color: #a1a1aa;
+}
+
+/* Preset & Manual Inputs Row */
+#activationModal .activation-preset-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
   align-items: flex-end;
 }
 
-.activation-field-label {
+#activationModal .activation-field-label {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  color: var(--text-secondary);
-  margin-bottom: 2px;
-  letter-spacing: 0.3px;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
 }
 
-.activation-input, .activation-select {
+[data-theme="dark"] #activationModal .activation-field-label {
+  color: #a1a1aa;
+}
+
+#activationModal .activation-input,
+#activationModal .activation-select {
   width: 100%;
-  height: 32px;
-  font-size: 0.85rem;
+  height: 38px;
+  font-size: 0.88rem;
   font-weight: 700;
-  padding: 4px 8px;
+  font-family: var(--font-mono);
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1.5px solid #d4d4d8;
+  background: #ffffff;
+  color: #09090b;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
 }
 
-.text-center {
+#activationModal .activation-select:focus,
+#activationModal .activation-input:focus {
+  border-color: #09090b;
+  outline: none;
+  box-shadow: 0 0 0 1px #09090b;
+}
+
+[data-theme="dark"] #activationModal .activation-input,
+[data-theme="dark"] #activationModal .activation-select {
+  background: #141416;
+  border-color: #27272a;
+  color: #ffffff;
+}
+
+[data-theme="dark"] #activationModal .activation-select:focus,
+[data-theme="dark"] #activationModal .activation-input:focus {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+#startTicketMaxHint,
+.start-ticket-max-hint {
+  font-size: 0.72rem;
+  color: #71717a !important;
   text-align: center;
+  margin-top: 3px;
+  font-weight: 700;
+  font-family: var(--font-mono);
 }
 
-/* Activation Input Split */
-.activation-input-split {
+[data-theme="dark"] #startTicketMaxHint,
+[data-theme="dark"] .start-ticket-max-hint {
+  color: #a1a1aa !important;
+}
+
+/* Bottom Split Layout */
+#activationModal .activation-input-split {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-columns: 1fr 1.05fr;
   gap: 14px;
   align-items: stretch;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
-.box-input-col {
+[data-theme="dark"] #activationModal .activation-input-split {
+  background: #141416;
+  border-color: #27272a;
+}
+
+#activationModal .box-input-col {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 10px;
 }
 
-.box-input-group {
+#activationModal .box-input-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
-.box-label-red {
-  color: var(--color-danger);
-  font-size: 1.2rem;
+#activationModal .box-label-red {
+  color: #09090b;
+  font-size: 1.15rem;
   font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
-.box-num-input {
+[data-theme="dark"] #activationModal .box-label-red {
+  color: #ffffff;
+}
+
+#activationModal #keypadBoxInput {
   background: #ffffff;
-  border: 2px solid var(--color-primary);
-  border-radius: var(--radius-md);
+  border: 1.5px solid #09090b;
+  border-radius: 8px;
   font-family: var(--font-mono);
-  font-size: 1.6rem;
-  font-weight: 800;
-  width: 80px;
-  height: 42px;
+  font-size: 1.65rem;
+  font-weight: 900;
+  width: 78px;
+  height: 44px;
   text-align: center;
-  color: var(--text-primary);
+  color: #09090b;
   outline: none;
   box-shadow: var(--shadow-xs);
   cursor: text;
+  transition: all 0.15s ease;
 }
 
-.box-input-hint {
+[data-theme="dark"] #activationModal #keypadBoxInput {
+  background: #18181b;
+  border: 1.5px solid #3f3f46;
+  color: #ffffff;
+}
+
+[data-theme="dark"] #activationModal #keypadBoxInput:focus {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+#activationModal .stepper-arrows {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+#activationModal .stepper-btn {
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  color: #09090b;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+#activationModal .stepper-btn:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+#activationModal .stepper-btn:active {
+  background: #e4e4e7;
+  transform: scale(0.96);
+}
+
+[data-theme="dark"] #activationModal .stepper-btn {
+  background: #18181b;
+  border-color: #27272a;
+  color: #f4f4f5;
+}
+
+[data-theme="dark"] #activationModal .stepper-btn:hover {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #ffffff;
+}
+
+[data-theme="dark"] #activationModal .stepper-btn:active {
+  background: #3f3f46;
+  transform: scale(0.96);
+}
+
+#activationModal .box-input-hint {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: #71717a;
   margin-top: 6px;
   line-height: 1.35;
 }
 
-.box-action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
+[data-theme="dark"] #activationModal .box-input-hint {
+  color: #a1a1aa;
 }
 
-.btn-add-box {
-  background: linear-gradient(135deg, #0284c7, #0369a1);
-  color: white;
-  border: none;
+#activationModal .box-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+#activationModal .btn-add-box {
+  background: #09090b !important;
+  color: #ffffff !important;
+  border: 1px solid #09090b !important;
   font-weight: 800;
-  padding: 9px 12px;
-  border-radius: var(--radius-md);
+  font-size: 0.86rem;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 7px;
   width: 100%;
   cursor: pointer;
-  font-size: 0.88rem;
-  transition: all 0.15s;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-.btn-add-box:hover {
-  background: linear-gradient(135deg, #0369a1, #075985);
+
+#activationModal .btn-add-box:hover {
+  background: #27272a !important;
+  border-color: #27272a !important;
   transform: translateY(-1px);
 }
 
-.btn-not-in-box {
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
+[data-theme="dark"] #activationModal .btn-add-box {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] #activationModal .btn-add-box:hover {
+  background: #e4e4e7 !important;
+  border-color: #e4e4e7 !important;
+  transform: translateY(-1px);
+}
+
+#activationModal .btn-not-in-box {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border: 1px solid #d4d4d8 !important;
   font-weight: 700;
-  padding: 7px 10px;
-  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 7px;
   width: 100%;
   cursor: pointer;
-  font-size: 0.78rem;
-  transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-}
-.btn-not-in-box:hover {
-  background: #e2e8f0;
-  color: var(--text-primary);
+  transition: all 0.15s ease;
 }
 
-/* Compact Touch Keypad */
+#activationModal .btn-not-in-box:hover {
+  background: #f4f4f5 !important;
+  border-color: #a1a1aa !important;
+}
+
+[data-theme="dark"] #activationModal .btn-not-in-box {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] #activationModal .btn-not-in-box:hover {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+/* Touch Keypad */
+#activationModal .touch-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+#activationModal .keypad-header-row {
+  grid-column: span 3;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+#activationModal .key-btn {
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #09090b;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  user-select: none;
+}
+
+#activationModal .key-btn:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+#activationModal .key-btn:active {
+  background: #e4e4e7;
+  transform: scale(0.97);
+}
+
+[data-theme="dark"] #activationModal .key-btn {
+  background: #18181b;
+  border-color: #27272a;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+[data-theme="dark"] #activationModal .key-btn:hover {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+[data-theme="dark"] #activationModal .key-btn:active {
+  background: #3f3f46;
+  transform: scale(0.97);
+}
+
+#activationModal .key-fn {
+  height: 34px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #52525b;
+  background: #f4f4f5;
+}
+
+#activationModal .key-fn:hover {
+  background: #e4e4e7;
+  color: #09090b;
+}
+
+[data-theme="dark"] #activationModal .key-fn {
+  background: #141416;
+  border-color: #27272a;
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] #activationModal .key-fn:hover {
+  background: #27272a;
+  color: #ffffff;
+}
+
+#activationModal .key-enter {
+  background: #09090b !important;
+  border-color: #09090b !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+}
+
+#activationModal .key-enter:hover {
+  background: #27272a !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] #activationModal .key-enter {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] #activationModal .key-enter:hover {
+  background: #e4e4e7 !important;
+  border-color: #e4e4e7 !important;
+}
+
+/* Touch Keypad Generic Fallback (Georgia Lottery Terminal & Fix Ticket Pos) */
 .touch-keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  gap: 5px;
 }
 
 .keypad-header-row {
   grid-column: span 3;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 5px;
   margin-bottom: 2px;
 }
 
 .key-btn {
   background: #ffffff;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-family: var(--font-sans);
-  font-size: 1.1rem;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-primary);
-  height: 36px;
+  height: 38px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.1s;
-  box-shadow: var(--shadow-xs);
+  transition: all 0.1s ease;
   user-select: none;
 }
 
-.key-btn:hover {
-  background: var(--bg-hover);
-  border-color: #cbd5e1;
+[data-theme="dark"] .key-btn {
+  background: #18181b;
+  border-color: #27272a;
+  color: #ffffff;
 }
 
-.key-btn:active {
-  background: #e2e8f0;
-  transform: scale(0.96);
+[data-theme="dark"] .key-btn:hover {
+  background: #27272a;
+  border-color: #3f3f46;
 }
 
 .key-fn {
-  height: 32px;
+  height: 34px;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-secondary);
 }
 
+[data-theme="dark"] .key-fn {
+  background: #141416;
+  border-color: #27272a;
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .key-fn:hover {
+  background: #27272a;
+  color: #ffffff;
+}
+
 .key-enter {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
+  background: #09090b;
+  border-color: #09090b;
+  color: #ffffff;
   font-weight: 800;
 }
-.key-enter:hover {
-  background: var(--color-primary-hover);
+
+[data-theme="dark"] .key-enter {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
 }
 
 /* End Shift Confirmation Modal (Arron Portal Clean Layout) */
