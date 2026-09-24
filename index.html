@@ -1288,28 +1288,17 @@
   <dialog id="startShiftConfirmModal" class="start-shift-modal">
     <div class="start-shift-header">
       <div class="start-shift-title">
-        <span class="start-shift-icon">🚀</span>
         <span id="startShiftModalTitle">Start New Shift #2</span>
       </div>
-      <button type="button" class="start-shift-close-btn" id="closeStartShiftConfirmBtn" title="Close dialog">&times;</button>
+      <button type="button" class="start-shift-close-btn" id="closeStartShiftConfirmBtn" title="Close">&times;</button>
     </div>
 
     <div class="start-shift-body">
-      <!-- Rollover Info Banner -->
-      <div class="start-shift-banner">
-        <div class="banner-header">
-          <span class="banner-icon">🔄</span>
-          <strong>Automatic Shift Rollover:</strong>
-        </div>
-        <div class="banner-text">
-          Closing numbers become opening numbers &bull; Sales archived &bull; New shift resets to $0.00
-        </div>
-      </div>
+      <p class="start-shift-hint">Closing numbers roll over as opening numbers. Sales reset to $0.00.</p>
 
-      <!-- Worker Name & Drawer Float (2 Columns) -->
       <div class="shift-details-grid">
         <div class="form-group">
-          <label for="inputNewShiftCashierName">Cashier / Worker Name:</label>
+          <label for="inputNewShiftCashierName">Cashier Name</label>
           <input 
             type="text" 
             id="inputNewShiftCashierName" 
@@ -1318,7 +1307,7 @@
           >
         </div>
         <div class="form-group">
-          <label for="inputNewShiftDrawerFloat">Opening Float (Optional):</label>
+          <label for="inputNewShiftDrawerFloat">Float ($)</label>
           <div class="float-input-wrapper">
             <span class="currency-symbol">$</span>
             <input 
@@ -1335,9 +1324,9 @@
     </div>
 
     <div class="start-shift-footer">
-      <button type="button" class="btn btn-secondary" id="cancelStartShiftConfirmBtn">Cancel</button>
+      <button type="button" class="btn-shift-cancel" id="cancelStartShiftConfirmBtn">Cancel</button>
       <button type="button" class="btn-start-shift-submit" id="confirmStartShiftBtn">
-        <span>🚀</span> Start Shift Now
+        Start Shift →
       </button>
     </div>
   </dialog>
