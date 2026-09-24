@@ -994,8 +994,9 @@ function updateAdjustModalDynamicStats() {
   const std = getStandardPackDetails(currentAdjustingSlot.price || 2);
   const packSize = currentAdjustingSlot.packSize || std.packSize;
   const start = (currentAdjustingSlot.startTicket !== undefined && currentAdjustingSlot.startTicket !== null) ? currentAdjustingSlot.startTicket : 0;
-  let curr = parseInt(inputAdjustCount.value, 10);
-  if (isNaN(curr) || curr < 0) curr = 0;
+  let curr = parseInt(inputAdjustCount?.value, 10);
+  if (isNaN(curr)) curr = currentAdjustingSlot.currentTicket !== undefined ? currentAdjustingSlot.currentTicket : 0;
+  if (curr < 0) curr = 0;
   if (curr > packSize) curr = packSize;
 
   const soldThisShift = Math.max(0, curr - start);
@@ -1029,7 +1030,7 @@ function openBoxAdjustModal(slot) {
   adjustPackSize.textContent = `${packSize} pk`;
   adjustStartTicket.textContent = `#${String(startTicket).padStart(2, '0')}`;
   adjustDaysActive.textContent = `${slot.daysActive || 1} Day${(slot.daysActive || 1) === 1 ? '' : 's'}`;
-  inputAdjustCount.value = currentTicket;
+  if (inputAdjustCount) inputAdjustCount.value = currentTicket;
 
   const soldThisShift = Math.max(0, currentTicket - startTicket);
   const remainingInBox = Math.max(0, packSize - currentTicket);
@@ -1299,7 +1300,10 @@ function setupBoxAdjustModal() {
   });
 
   saveBoxAdjustBtn?.addEventListener('click', () => {
-    if (!currentAdjustingSlot) return;
+    if (!currentAdjustingSlot || !inputAdjustCount) {
+      boxAdjustModal?.close();
+      return;
+    }
     clearModalError('boxAdjustErrorBanner', inputAdjustCount);
     const newCount = parseInt(inputAdjustCount.value, 10);
     if (isNaN(newCount) || newCount < 0) {
@@ -1486,7 +1490,7 @@ function handleConfirmFixTicketPosition() {
   } else {
     currentAdjustingSlot.currentTicket = newPos;
   }
-  inputAdjustCount.value = newPos;
+  if (inputAdjustCount) inputAdjustCount.value = newPos;
   saveState(state);
   sfx.success();
   voice.speakMissedTicketFixed();

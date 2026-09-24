@@ -349,26 +349,6 @@
       <!-- Inline Error Banner for Box Adjust Modal -->
       <div id="boxAdjustErrorBanner" class="modal-error-banner" style="display: none; margin-bottom:8px;"></div>
 
-      <!-- Compact Ticket Counter Section -->
-      <div class="box-adjust-counter-card">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" class="box-stepper-btn" id="btnCountMinus" title="Decrease Count">-</button>
-            <input type="number" id="inputAdjustCount" class="box-num-input" min="0" max="999" value="0">
-            <button type="button" class="box-stepper-btn" id="btnCountPlus" title="Increase Count">+</button>
-          </div>
-          <button type="button" class="btn-sell-direct" id="btnSellOneTicket" title="Sell 1 Ticket">
-            🛒 Sell 1 (+1)
-          </button>
-        </div>
-        <div style="margin-top: 8px; display: flex; align-items: center; gap: 6px;">
-          <input type="checkbox" id="chkSetAsStartingTicket" style="cursor: pointer;">
-          <label for="chkSetAsStartingTicket" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;">
-            Set as Starting Ticket (Pack starts here · 0 sold this shift)
-          </label>
-        </div>
-      </div>
-
       <!-- Compact Action Buttons (2 Rows, No Bulky Section Titles) -->
       <div class="box-compact-actions">
         <div class="box-action-row">
@@ -397,8 +377,7 @@
 
       <!-- Footer Buttons -->
       <div class="box-adjust-footer">
-        <button type="button" class="btn-footer-cancel" id="cancelBoxAdjustBtn">Cancel</button>
-        <button type="button" class="btn-footer-save" id="saveBoxAdjustBtn">💾 Save Count</button>
+        <button type="button" class="btn-footer-cancel" id="cancelBoxAdjustBtn">Close</button>
       </div>
     </div>
   </dialog>
