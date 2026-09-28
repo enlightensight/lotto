@@ -7,10 +7,13 @@ echo.
 
 cd /d "%~dp0"
 
-:: Start Vite dev server in the background if not already active
-start "LottoPOS-Server" /min cmd /c "npm run dev"
+:: Start Backend MySQL API Server in the background
+start "LottoPOS-Backend" /min cmd /c "node server.js"
 
-:: Wait 2 seconds for server to initialize
+:: Start Vite dev server in the background if not already active
+start "LottoPOS-Frontend" /min cmd /c "npm run dev"
+
+:: Wait 2 seconds for servers to initialize
 timeout /t 2 /nobreak >nul
 
 :: Launch in Chrome or Edge standalone app mode

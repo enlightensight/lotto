@@ -140,14 +140,49 @@ export function generateLiveDayReport(state) {
   const reportDate = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
   const reportTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  // Map any sold out packs by box number
+  const isToday = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getFullYear() === now.getFullYear() &&
+           d.getMonth() === now.getMonth() &&
+           d.getDate() === now.getDate();
+  };
+
+  // Find all past shifts that completed today (if any)
+  const todayPastShifts = (state?.shiftHistory || [])
+    .filter(h => isToday(h.endedAt || h.startedAt))
+    .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0));
+
+  const earliestTodayShift = todayPastShifts.length > 0 ? todayPastShifts[0] : null;
+
+  // Determine true opening ticket for the day
+  const getDayOpenTicket = (slot) => {
+    if (earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
+      const pastSlot = earliestTodayShift.slotsSnapshot.find(s => s.boxNumber === slot.boxNumber);
+      if (pastSlot && pastSlot.packNumber === slot.packNumber && typeof pastSlot.startTicket === 'number') {
+        return pastSlot.startTicket;
+      }
+    }
+    return slot.startTicket || 0;
+  };
+
+  // Map any sold out packs across all today's shifts + current session
   const soldOutMap = new Map();
-  (state?.soldOutThisShift || []).forEach(so => {
+  const allSoldOutToday = [];
+  todayPastShifts.forEach(h => {
+    (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
+  });
+  (state?.soldOutThisShift || []).forEach(so => allSoldOutToday.push(so));
+
+  allSoldOutToday.forEach(so => {
     if (so && so.boxNumber) {
       if (!soldOutMap.has(so.boxNumber)) {
         soldOutMap.set(so.boxNumber, []);
       }
-      soldOutMap.get(so.boxNumber).push(so);
+      const existing = soldOutMap.get(so.boxNumber);
+      if (!existing.some(x => x.packNumber === so.packNumber)) {
+        existing.push(so);
+      }
     }
   });
 
@@ -163,7 +198,8 @@ export function generateLiveDayReport(state) {
 
     if (isSlotActive && soldPacks.length > 0) {
       // Multi-Pack Box: e.g. Box 6 in the official PDF where a pack finished and a new pack was activated
-      const activeSold = Math.max(0, (slot.currentTicket || 0) - (slot.startTicket || 0));
+      const openTicket = getDayOpenTicket(slot);
+      const activeSold = Math.max(0, (slot.currentTicket || 0) - openTicket);
       const activeTotal = activeSold * (slot.price || 0);
       totalScratcherSales += activeTotal;
 
@@ -171,7 +207,7 @@ export function generateLiveDayReport(state) {
         {
           pack: slot.packNumber,
           name: formatReportGameName(slot.gameName),
-          open: slot.startTicket || 0,
+          open: openTicket,
           close: slot.currentTicket || 0,
           price: slot.price || 0,
           total: activeTotal,
@@ -202,7 +238,8 @@ export function generateLiveDayReport(state) {
       });
     } else if (isSlotActive) {
       // Single active pack in dispenser
-      const sold = Math.max(0, (slot.currentTicket || 0) - (slot.startTicket || 0));
+      const openTicket = getDayOpenTicket(slot);
+      const sold = Math.max(0, (slot.currentTicket || 0) - openTicket);
       const total = sold * (slot.price || 0);
       totalScratcherSales += total;
 
@@ -210,7 +247,7 @@ export function generateLiveDayReport(state) {
         box: boxNum,
         pack: slot.packNumber,
         name: formatReportGameName(slot.gameName),
-        open: slot.startTicket || 0,
+        open: openTicket,
         close: slot.currentTicket || 0,
         price: slot.price || 0,
         total,
@@ -273,10 +310,14 @@ export function generateLiveDayReport(state) {
     }
   }
 
-  // Financial Summary & Reconciled Totals
-  const cashes = Number(state?.cashes || 0);
-  const onlineSales = Number(state?.onlineSales || 0);
-  const onlineCashes = Number(state?.onlineCashes || 0);
+  // Financial Summary & Reconciled Totals (includes past today shifts + current)
+  const pastCashes = todayPastShifts.reduce((sum, h) => sum + Number(h.cashes || 0), 0);
+  const pastOnlineSales = todayPastShifts.reduce((sum, h) => sum + Number(h.onlineSales || 0), 0);
+  const pastOnlineCashes = todayPastShifts.reduce((sum, h) => sum + Number(h.onlineCashes || 0), 0);
+
+  const cashes = Number(state?.cashes || 0) + pastCashes;
+  const onlineSales = Number(state?.onlineSales || 0) + pastOnlineSales;
+  const onlineCashes = Number(state?.onlineCashes || 0) + pastOnlineCashes;
   const totalSales = totalScratcherSales + onlineSales;
   const totalCashes = cashes + onlineCashes;
 
@@ -284,14 +325,16 @@ export function generateLiveDayReport(state) {
   const activeSlots = (state?.slots || []).filter(s => s.status === 'ACTIVE' && s.packNumber);
   const endingCount = activeSlots.length;
   const activationsCount = activeSlots.filter(s => s.activatedThisShift).length;
-  const soldCount = (state?.soldOutThisShift || []).filter(so => !so.isReturned).length;
-  const returnedCount = (state?.soldOutThisShift || []).filter(so => so.isReturned).length;
+  const soldCount = allSoldOutToday.filter(so => !so.isReturned).length;
+  const returnedCount = allSoldOutToday.filter(so => so.isReturned).length;
   const discontinuedCount = Math.max(Number(state?.discontinuedCount || 0), returnedCount);
 
   // Exact Opening Count formula from Georgia Lottery manual:
   // Opening Active Count + Activations - Sold - Discontinued = Ending Active Count
   let openingCount = endingCount - activationsCount + soldCount + discontinuedCount;
-  if (typeof state?.shiftOpeningActiveCount === 'number' && state.shiftOpeningActiveCount > 0) {
+  if (earliestTodayShift && typeof earliestTodayShift.emptySlotsCount === 'number') {
+    openingCount = (state?.totalSlots || 70) - earliestTodayShift.emptySlotsCount;
+  } else if (typeof state?.shiftOpeningActiveCount === 'number' && state.shiftOpeningActiveCount > 0) {
     openingCount = state.shiftOpeningActiveCount;
   } else {
     openingCount = Math.max(0, openingCount);
@@ -307,10 +350,23 @@ export function generateLiveDayReport(state) {
     return sum + (remaining * (s.price || 0));
   }, 0);
 
-  // Activations Subtable (Page 2)
+  // Activations Subtable (Page 2) - includes today's past shifts activations + current
   const activationsList = [];
+  todayPastShifts.forEach(h => {
+    (h.slotsSnapshot || []).forEach(s => {
+      if (s.activatedThisShift && !activationsList.some(a => a.packNumber === s.packNumber)) {
+        activationsList.push({
+          box: s.boxNumber,
+          time: s.activatedAt || reportTime,
+          packNumber: s.packNumber,
+          price: s.price || 0,
+          name: formatReportGameName(s.gameName)
+        });
+      }
+    });
+  });
   activeSlots.forEach(s => {
-    if (s.activatedThisShift) {
+    if (s.activatedThisShift && !activationsList.some(a => a.packNumber === s.packNumber)) {
       activationsList.push({
         box: s.boxNumber,
         time: s.activatedAt || reportTime,
@@ -323,13 +379,15 @@ export function generateLiveDayReport(state) {
 
   // Sold Out Subtable (Page 2)
   const soldOutList = [];
-  (state?.soldOutThisShift || []).forEach(so => {
-    soldOutList.push({
-      box: so.boxNumber,
-      packNumber: so.packNumber,
-      price: so.price || 0,
-      name: formatReportGameName(so.gameName) + (so.isReturned ? ` [RET: ${so.ticketsReturned || 0} tix]` : '')
-    });
+  allSoldOutToday.forEach(so => {
+    if (!soldOutList.some(x => x.packNumber === so.packNumber)) {
+      soldOutList.push({
+        box: so.boxNumber,
+        packNumber: so.packNumber,
+        price: so.price || 0,
+        name: formatReportGameName(so.gameName) + (so.isReturned ? ` [RET: ${so.ticketsReturned || 0} tix]` : '')
+      });
+    }
   });
 
   return {

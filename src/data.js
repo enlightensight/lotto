@@ -1,6 +1,5 @@
 // State Management & Lottery POS Data Model
-
-// State Management & Lottery POS Data Model
+import { syncPOSStateToDB } from './dbSync.js';
 
 const STORAGE_KEY = 'lotto_track_pos_data_v2';
 
@@ -55,15 +54,52 @@ export function parseLotteryBarcode(raw) {
   // Strip scanner symbology prefix (e.g. "]C1", "]I0", "]e0")
   s = s.replace(/^\][a-zA-Z0-9]{2}/, '').trim();
 
-  // Pattern 1: Delimited format: Game - Pack - Ticket (Check)
-  // e.g. "1898-0019425-084(015)", "1898-0004627-097(002)", "1898-0019425-084 (015)", "1898-0019425-084-015"
+  // Pattern 1: Delimited format: Game - Pack - Ticket (Check) or Game - Pack - Roll (Ticket)
+  // e.g. "1898-0019425-084(015)", "1234-5678901-001(023)", "1898-0004627-097(002)", "1898-0019425-084-015"
   const delimitedMatch = s.match(/^(\d{3,5})[-_\s]+(\d{5,8})[-_\s]+(\d{1,3})(?:[-_\s]*\(?(\d{1,4})\)?)?$/);
   if (delimitedMatch) {
     const gameNumber = delimitedMatch[1];
     const packNumber = delimitedMatch[2];
-    const ticketNumber = parseInt(delimitedMatch[3], 10);
-    const ticketString = String(delimitedMatch[3]).padStart(3, '0');
+    const seg3Num = parseInt(delimitedMatch[3], 10);
+    const seg3Str = String(delimitedMatch[3]).padStart(3, '0');
+    const parenNum = delimitedMatch[4] ? parseInt(delimitedMatch[4], 10) : null;
+    const parenStr = delimitedMatch[4] ? String(delimitedMatch[4]).padStart(3, '0') : null;
     const checkCode = delimitedMatch[4] || null;
+
+    // Detect exact ticket number:
+    // If seg3 is <= 1 (book/roll 001) and paren exists (e.g. 1234-5678901-001(023)), then (023) is ticket 23!
+    let ticketNumber = isNaN(seg3Num) ? 0 : seg3Num;
+    let ticketString = seg3Str;
+    if (seg3Num <= 1 && parenNum !== null && !isNaN(parenNum) && parenNum >= 0) {
+      ticketNumber = parenNum;
+      ticketString = parenStr;
+    }
+
+    return {
+      isValid: true,
+      gameNumber,
+      packNumber,
+      packClean: packNumber.replace(/^0+/, '') || packNumber,
+      ticketNumber,
+      ticketString,
+      seg3Num: isNaN(seg3Num) ? 0 : seg3Num,
+      parenNumber: parenNum,
+      parenString: parenStr,
+      checkCode,
+      canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
+      fullId: `${gameNumber}-${packNumber}-${ticketString}${checkCode ? '(' + checkCode + ')' : ''}`,
+      raw
+    };
+  }
+
+  // Pattern 1b: Game - Pack - (Ticket) where ticket number is in parentheses
+  // e.g. "1234-5678901-(023)" or "1234-5678901(023)"
+  const parenthesizedTixMatch = s.match(/^(\d{3,5})[-_\s]+(\d{5,8})[-_\s]*\((\d{1,4})\)$/);
+  if (parenthesizedTixMatch) {
+    const gameNumber = parenthesizedTixMatch[1];
+    const packNumber = parenthesizedTixMatch[2];
+    const ticketNumber = parseInt(parenthesizedTixMatch[3], 10);
+    const ticketString = String(parenthesizedTixMatch[3]).padStart(3, '0');
     return {
       isValid: true,
       gameNumber,
@@ -71,9 +107,9 @@ export function parseLotteryBarcode(raw) {
       packClean: packNumber.replace(/^0+/, '') || packNumber,
       ticketNumber: isNaN(ticketNumber) ? 0 : ticketNumber,
       ticketString,
-      checkCode,
+      checkCode: null,
       canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
-      fullId: `${gameNumber}-${packNumber}-${ticketString}${checkCode ? '(' + checkCode + ')' : ''}`,
+      fullId: `${gameNumber}-${packNumber}-${ticketString}`,
       raw
     };
   }
@@ -294,6 +330,46 @@ export function parseLotteryBarcode(raw) {
 }
 
 /**
+ * Formats any raw lottery barcode into authentic Georgia Lottery hyphenated format
+ * e.g. 1898-0019425-058(041), 1234-5678900-001, or 1234-5678900
+ */
+export function formatLotteryBarcode(rawCode) {
+  if (!rawCode) return '---';
+  const str = String(rawCode).trim();
+  if (str.includes('-')) return str;
+  const parsed = parseLotteryBarcode(str);
+  if (parsed && (parsed.fullId || parsed.canonicalId)) {
+    return parsed.fullId || parsed.canonicalId;
+  }
+  const digits = str.replace(/[^0-9]/g, '');
+  if (digits.length === 17) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 11)}-${digits.slice(11, 14)}(${digits.slice(14, 17)})`;
+  }
+  if (digits.length === 16) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 10)}-${digits.slice(10, 13)}(${digits.slice(13, 16)})`;
+  }
+  if (digits.length === 14) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 11)}-${digits.slice(11, 14)}`;
+  }
+  if (digits.length === 13) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 10)}-${digits.slice(10, 13)}`;
+  }
+  if (digits.length === 11) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 11)}`;
+  }
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 10)}`;
+  }
+  if (digits.length > 11) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 11)}-${digits.slice(11)}`;
+  }
+  if (digits.length > 4) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+  return str;
+}
+
+/**
  * Normalizes a pack number string to its canonical numeric sequence (digits stripped of leading zeros).
  * Handles plain pack numbers ("0796097" -> "796097"), hyphenated game-pack ("1322-0796097" -> "796097"),
  * continuous 11-digit ("13220796097" -> "796097"), and standard numeric pack serials ("882901" -> "882901").
@@ -381,6 +457,7 @@ export function getInitialState() {
       currentTicket: 0,
       ticketsInBox: 0,
       scannedBarcodes: [],
+      soldBarcodes: [],
       activatedThisShift: false,
       daysActive: 0,
       scannedInEndShift: false
@@ -407,9 +484,11 @@ export function getInitialState() {
     discontinuedCount: 0, // Georgia Lottery discontinued packs
     shiftOpeningActiveCount: 0, // Opening dispenser pack count at shift start
     soldOutThisShift: [], // Packs/boxes sold out or emptied this shift
+    partialTakeOuts: [], // Packs taken out of dispensers to inventory (not for sale)
     shiftHistory: [], // Clean audit history
     lastScannedBarcode: '',
     lastScannedSlot: null,
+    soldBarcodes: [],
     dataCleared: true,
     settings: {
       soundEnabled: true,
@@ -432,6 +511,7 @@ export function loadState() {
       const parsed = JSON.parse(raw);
       if (!parsed.customGames) parsed.customGames = [];
       if (!parsed.soldOutThisShift) parsed.soldOutThisShift = [];
+      if (!parsed.partialTakeOuts) parsed.partialTakeOuts = [];
       if (!parsed.inventoryBarcodes) parsed.inventoryBarcodes = {};
       if (parsed.onlineSales === undefined) parsed.onlineSales = 0;
       if (parsed.cashes === undefined) parsed.cashes = 0;
@@ -453,6 +533,8 @@ export function loadState() {
 export function saveState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Asynchronously synchronize state backup to MySQL
+    syncPOSStateToDB(state);
   } catch (e) {
     console.error('Failed to save state to localStorage:', e);
   }

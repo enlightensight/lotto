@@ -5,6 +5,7 @@
 
 import { getDayReportData } from './dayReportData.js';
 import { saveState } from './data.js';
+import { saveDayReportToDB } from './dbSync.js';
 
 /**
  * Populates a DOM tree (either print section or modal preview) with Day Report data
@@ -354,9 +355,17 @@ export function openDayReportModal(getStateOrState, sfx = null) {
     const currentState = getState();
     const data = getDayReportData(currentState);
     renderDayReportModalPreview(data, currentState, refreshModal);
+    // Asynchronously save/backup day report to MySQL database
+    saveDayReportToDB(data);
   };
 
   refreshModal();
+
+  const btnStartNew = document.getElementById('drReportStartNewShiftBtn');
+  if (btnStartNew) {
+    const isDaily = getState()?.settings?.operationMode === 'DAILY';
+    btnStartNew.textContent = isDaily ? '✨ Start New Day' : '🚀 Start New Shift';
+  }
 
   if (sfx && typeof sfx.keypad === 'function') {
     sfx.keypad();
