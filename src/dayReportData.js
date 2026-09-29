@@ -148,16 +148,21 @@ export function generateLiveDayReport(state) {
            d.getDate() === now.getDate();
   };
 
-  // Find all past shifts that completed today (if any)
-  const todayPastShifts = (state?.shiftHistory || [])
-    .filter(h => isToday(h.endedAt || h.startedAt))
-    .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0));
+  const isDaily = state?.settings?.operationMode !== 'SHIFTS';
 
-  const earliestTodayShift = todayPastShifts.length > 0 ? todayPastShifts[0] : null;
+  // In Daily Mode: Find all past shifts that completed today (if any)
+  // In Shift Mode: Only report data for the current active shift
+  const todayPastShifts = isDaily
+    ? (state?.shiftHistory || [])
+        .filter(h => isToday(h.endedAt || h.startedAt))
+        .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0))
+    : [];
 
-  // Determine true opening ticket for the day
+  const earliestTodayShift = isDaily && todayPastShifts.length > 0 ? todayPastShifts[0] : null;
+
+  // Determine true opening ticket (day's opening in Daily Mode, shift's opening in Shift Mode)
   const getDayOpenTicket = (slot) => {
-    if (earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
+    if (isDaily && earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
       const pastSlot = earliestTodayShift.slotsSnapshot.find(s => s.boxNumber === slot.boxNumber);
       if (pastSlot && pastSlot.packNumber === slot.packNumber && typeof pastSlot.startTicket === 'number') {
         return pastSlot.startTicket;
@@ -166,12 +171,14 @@ export function generateLiveDayReport(state) {
     return slot.startTicket || 0;
   };
 
-  // Map any sold out packs across all today's shifts + current session
+  // Map any sold out packs across all today's shifts (Daily Mode) or current session (Shift Mode)
   const soldOutMap = new Map();
   const allSoldOutToday = [];
-  todayPastShifts.forEach(h => {
-    (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
-  });
+  if (isDaily) {
+    todayPastShifts.forEach(h => {
+      (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
+    });
+  }
   (state?.soldOutThisShift || []).forEach(so => allSoldOutToday.push(so));
 
   allSoldOutToday.forEach(so => {
@@ -392,6 +399,9 @@ export function generateLiveDayReport(state) {
 
   return {
     isLive: true,
+    isDailyMode: isDaily,
+    reportHeading: isDaily ? 'Day Report' : `Shift #${state?.shiftNumber || 1} Report`,
+    shiftNumber: state?.shiftNumber || 1,
     storeName: state?.storeName || 'AMIGO FOOD MART',
     storeAddress: state?.storeAddress || '2300 MOODY RD WARNER ROBINS, GA, 31088',
     userId: state?.cashierName || 'master',

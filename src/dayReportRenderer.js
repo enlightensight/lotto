@@ -30,7 +30,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
 
   const p1Heading = rootElement.querySelector('#drReportHeadingText') || rootElement.querySelector('.dr-report-heading');
   if (p1Heading) {
-    p1Heading.textContent = 'Day Report';
+    p1Heading.textContent = reportData.reportHeading || (reportData.isDailyMode ? 'Day Report' : 'Shift Report');
   }
 
   const p1Timestamp = rootElement.querySelector('#drP1Timestamp') || rootElement.querySelector('.dr-timestamp-line');
@@ -47,7 +47,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td colspan="7" style="text-align: center; padding: 18px 12px; color: #64748b; font-style: italic; font-size: 11px;">
-          No active scratcher dispenser boxes recorded in this shift. (Tap any box on main screen to activate packs)
+          No active scratcher dispenser boxes recorded in this ${reportData.isDailyMode ? 'day' : 'shift'}. (Tap any box on main screen to activate packs)
         </td>
       `;
       tbodyEl.appendChild(tr);
@@ -155,7 +155,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
     actTbody.innerHTML = '';
     if (!reportData.activations || reportData.activations.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="5" style="padding: 4px 8px; color: #64748b; font-style: italic; font-size: 9.5px; text-align: center;">None (No new activations today)</td>`;
+      tr.innerHTML = `<td colspan="5" style="padding: 4px 8px; color: #64748b; font-style: italic; font-size: 9.5px; text-align: center;">None (No new activations ${reportData.isDailyMode ? 'today' : 'this shift'})</td>`;
       actTbody.appendChild(tr);
     } else {
       reportData.activations.forEach(act => {
@@ -179,7 +179,7 @@ export function populateDayReportDOM(reportData, rootElement = document) {
     soldTbody.innerHTML = '';
     if (!reportData.soldOut || reportData.soldOut.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="4" style="padding: 4px 8px; color: #64748b; font-style: italic; font-size: 9.5px; text-align: center;">None (No packs sold out today)</td>`;
+      tr.innerHTML = `<td colspan="4" style="padding: 4px 8px; color: #64748b; font-style: italic; font-size: 9.5px; text-align: center;">None (No packs sold out ${reportData.isDailyMode ? 'today' : 'this shift'})</td>`;
       soldTbody.appendChild(tr);
     } else {
       reportData.soldOut.forEach(sold => {
@@ -361,10 +361,15 @@ export function openDayReportModal(getStateOrState, sfx = null) {
 
   refreshModal();
 
+  const isDaily = getState()?.settings?.operationMode !== 'SHIFTS';
   const btnStartNew = document.getElementById('drReportStartNewShiftBtn');
   if (btnStartNew) {
-    const isDaily = getState()?.settings?.operationMode === 'DAILY';
-    btnStartNew.textContent = isDaily ? '✨ Start New Day' : '🚀 Start New Shift';
+    btnStartNew.innerHTML = isDaily ? '<span>✨</span> Start New Day' : '<span>🚀</span> Start New Shift';
+  }
+  const floatPrintBtn = document.getElementById('drFloatPrintBtn');
+  if (floatPrintBtn) {
+    const span = floatPrintBtn.querySelector('span');
+    if (span) span.textContent = isDaily ? 'Print Day Report' : 'Print Shift Report';
   }
 
   if (sfx && typeof sfx.keypad === 'function') {
