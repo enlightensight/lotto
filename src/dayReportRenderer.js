@@ -29,13 +29,34 @@ export function populateDayReportDOM(reportData, rootElement = document) {
   if (p1UserId) p1UserId.textContent = `User ID: ${reportData.userId || 'master'}`;
 
   const p1Heading = rootElement.querySelector('#drReportHeadingText') || rootElement.querySelector('.dr-report-heading');
+  const baseHeading = reportData.reportHeading || (reportData.isDailyMode ? 'Day Report' : 'Shift Report');
   if (p1Heading) {
-    p1Heading.textContent = reportData.reportHeading || (reportData.isDailyMode ? 'Day Report' : 'Shift Report');
+    p1Heading.textContent = baseHeading;
   }
 
   const p1Timestamp = rootElement.querySelector('#drP1Timestamp') || rootElement.querySelector('.dr-timestamp-line');
   if (p1Timestamp) {
     p1Timestamp.innerHTML = `${reportData.reportDate}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${reportData.reportTime}`;
+  }
+
+  // Header (Page 2)
+  const p2StoreName = rootElement.querySelector('#drP2StoreName');
+  if (p2StoreName) p2StoreName.textContent = reportData.storeName || 'AMIGO FOOD MART';
+
+  const p2StoreAddr = rootElement.querySelector('#drP2StoreAddr');
+  if (p2StoreAddr) p2StoreAddr.textContent = reportData.storeAddress || '2300 MOODY RD WARNER ROBINS, GA, 31088';
+
+  const p2UserId = rootElement.querySelector('#drP2UserId');
+  if (p2UserId) p2UserId.textContent = `User ID: ${reportData.userId || 'master'}`;
+
+  const p2Heading = rootElement.querySelector('#drP2HeadingText');
+  if (p2Heading) {
+    p2Heading.textContent = `${baseHeading} (Page 2)`;
+  }
+
+  const p2Timestamp = rootElement.querySelector('#drP2Timestamp');
+  if (p2Timestamp) {
+    p2Timestamp.innerHTML = `${reportData.reportDate}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${reportData.reportTime}`;
   }
 
   // Box rows rendering helper
@@ -117,10 +138,40 @@ export function populateDayReportDOM(reportData, rootElement = document) {
     });
   }
 
-  // Render ALL boxes (active and empty) on the single full 1-page report
+  // Partition boxes: Page 1 takes up to 50 rows; remaining boxes go to Page 2
   const allBoxes = reportData.boxes || [];
-  const p1Tbody = rootElement.querySelector('#drP1TableBody') || rootElement.querySelector('.dr-table tbody');
-  renderBoxRows(allBoxes, p1Tbody);
+  let rowCount = 0;
+  let splitIndex = allBoxes.length;
+
+  for (let i = 0; i < allBoxes.length; i++) {
+    const item = allBoxes[i];
+    const itemRows = (item.isMultiPack && item.subRows && item.subRows.length > 0) ? item.subRows.length : 1;
+    if (rowCount + itemRows > 50) {
+      splitIndex = i;
+      break;
+    }
+    rowCount += itemRows;
+  }
+
+  const p1Boxes = allBoxes.slice(0, splitIndex);
+  const p2Boxes = allBoxes.slice(splitIndex);
+
+  // 2. Table Page 1
+  const p1Tbody = rootElement.querySelector('#drP1TableBody') || rootElement.querySelectorAll('.dr-table tbody')[0];
+  renderBoxRows(p1Boxes, p1Tbody);
+
+  // 3. Table Page 2
+  const p2Tbody = rootElement.querySelector('#drP2TableBody') || rootElement.querySelectorAll('.dr-table tbody')[1];
+  const p2Table = p2Tbody ? (rootElement.querySelector('#drP2Table') || p2Tbody.closest('.dr-table')) : null;
+  if (p2Tbody) {
+    if (p2Boxes.length > 0) {
+      if (p2Table) p2Table.style.display = 'table';
+      renderBoxRows(p2Boxes, p2Tbody);
+    } else {
+      if (p2Table) p2Table.style.display = 'none';
+      p2Tbody.innerHTML = '';
+    }
+  }
 
   // 4. Financial Summary
   const setEl = (id, val) => {
@@ -219,6 +270,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   sheetsWrapper.id = 'drSheetsWrapper';
 
   let p1Sheet = null;
+  let p2Sheet = null;
 
   try {
     const p1Source = printSection.querySelector('#dayReportSheetPage1');
@@ -227,6 +279,14 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
       p1Sheet.removeAttribute('id');
       p1Sheet.classList.add('dr-preview-sheet');
       sheetsWrapper.appendChild(p1Sheet);
+    }
+
+    const p2Source = printSection.querySelector('#dayReportSheetPage2');
+    if (p2Source) {
+      p2Sheet = p2Source.cloneNode(true);
+      p2Sheet.removeAttribute('id');
+      p2Sheet.classList.add('dr-preview-sheet');
+      sheetsWrapper.appendChild(p2Sheet);
     }
   } catch (err) {
     console.error('Error cloning Day Report sheet for preview:', err);
@@ -246,7 +306,7 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   const zoomText = document.getElementById('drZoomLevelText');
 
   if (floatIndicator) {
-    floatIndicator.textContent = '1 / 1';
+    floatIndicator.textContent = '1 / 2';
   }
 
   if (floatPrint) {
@@ -258,11 +318,14 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   if (floatPrev) {
     floatPrev.onclick = () => {
       container.scrollTo({ top: 0, behavior: 'smooth' });
+      if (floatIndicator) floatIndicator.textContent = '1 / 2';
     };
   }
   if (floatNext) {
     floatNext.onclick = () => {
-      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+      const offset = p1Sheet ? (p1Sheet.offsetHeight + 24) : 800;
+      container.scrollTo({ top: offset, behavior: 'smooth' });
+      if (floatIndicator) floatIndicator.textContent = '2 / 2';
     };
   }
 
@@ -297,8 +360,12 @@ export function renderDayReportModalPreview(reportData, state = null, onRefresh 
   }
 
   container.onscroll = () => {
-    if (floatIndicator) {
-      floatIndicator.textContent = '1 / 1';
+    if (!floatIndicator) return;
+    const threshold = p1Sheet ? (p1Sheet.offsetHeight / 2) : 400;
+    if (container.scrollTop > threshold) {
+      floatIndicator.textContent = '2 / 2';
+    } else {
+      floatIndicator.textContent = '1 / 2';
     }
   };
 }
@@ -312,7 +379,7 @@ export function printDayReport(reportData, sfx = null) {
     populateDayReportDOM(reportData, printSection);
   }
 
-  // Set Letter Portrait print page size
+  // Set Letter Portrait print page size with strict 2-page break rules
   let styleEl = document.getElementById('dynamicDayReportPrintStyle');
   if (!styleEl) {
     styleEl = document.createElement('style');
@@ -323,6 +390,25 @@ export function printDayReport(reportData, sfx = null) {
     @page {
       size: letter portrait !important;
       margin: 8mm 10mm !important;
+    }
+    @media print {
+      html, body, body:has(dialog[open]) {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+      }
+      .day-report-sheet.page-1 {
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .day-report-sheet.page-2 {
+        page-break-before: always !important;
+        break-before: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
     }
   `;
 

@@ -1928,6 +1928,10 @@ dialog {
   overflow: hidden;
 }
 
+dialog:not([open]) {
+  display: none !important;
+}
+
 dialog[open] {
   display: flex;
   flex-direction: column;
@@ -4566,11 +4570,14 @@ dialog::backdrop {
 }
 
 @media print {
-  /* Reset document root margins and paddings */
-  html, body {
+  /* Reset document root margins, paddings, and ensure overflow is visible for multi-page printing */
+  html, body, body:has(dialog[open]) {
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -4935,6 +4942,18 @@ dialog::backdrop {
 
   body.print-day-report .day-report-sheet.page-1 {
     display: block !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  body.print-day-report .day-report-sheet.page-2 {
+    display: block !important;
+    page-break-before: always !important;
+    break-before: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   body.print-day-report .dr-table {
@@ -7052,19 +7071,31 @@ body.dark-mode .scan-chip.chip-action.verified {
    High-Contrast Monochrome & Clean Dual-Theme Architecture
    ============================================================ */
 
-#inventoryModal {
-  width: 980px;
-  max-width: 96vw;
-  max-height: 88vh;
-  border-radius: 14px;
-  overflow: hidden;
+#inventoryModal:not([open]),
+#inventoryStatusModal:not([open]),
+.inv-modal-dialog:not([open]) {
+  display: none !important;
+}
+
+#inventoryModal[open],
+#inventoryStatusModal[open] {
+  width: 1200px !important;
+  max-width: 96vw !important;
+  height: 85vh !important;
+  max-height: 85vh !important;
+  min-height: 560px !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
   border: 1px solid #cbd5e1;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   background: #ffffff;
   color: #0f172a;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-[data-theme="dark"] #inventoryModal {
+[data-theme="dark"] #inventoryModal[open],
+[data-theme="dark"] #inventoryStatusModal[open] {
   background: #111827;
   border-color: #374151;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
@@ -7209,12 +7240,15 @@ body.dark-mode .scan-chip.chip-action.verified {
 .inv-modal-dialog {
   max-width: 1220px !important;
   width: 95vw !important;
-  max-height: 92vh !important;
   border-radius: 16px !important;
   border: 1px solid var(--border-color, #e2e8f0);
   background: var(--bg-surface, #ffffff);
   box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
+}
+
+.inv-modal-dialog[open] {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 [data-theme="dark"] .inv-modal-dialog {
@@ -7257,14 +7291,15 @@ body.dark-mode .scan-chip.chip-action.verified {
   color: #93c5fd;
 }
 
-/* Modal Body */
+/* Modal Body (Strict Fixed Height, Prevents Resizing On Tab Change) */
 .inv-modal-body {
   padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   gap: 12px;
-  overflow-y: auto;
-  flex: 1;
+  overflow: hidden !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
 }
 
 /* Modern 4-Card and 5-Card Inventory KPI Strips */
@@ -7693,13 +7728,15 @@ body.dark-mode .scan-chip.chip-action.verified {
   background: #e4e4e7;
 }
 
-/* Inventory Table Container & Table (Generous & Responsive) */
+/* Inventory Table Container & Table (Strict Stable Size, Never Jumps) */
 .inv-table-container {
-  flex: 1;
-  min-height: 240px;
-  max-height: 480px;
-  overflow-y: auto;
-  overflow-x: auto;
+  flex: 1 1 0% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: scroll !important;
+  overflow-x: auto !important;
+  scrollbar-gutter: stable !important;
   border: 1px solid #e4e4e7;
   border-radius: 8px;
   background: #ffffff;
@@ -7743,7 +7780,7 @@ body.dark-mode .scan-chip.chip-action.verified {
 .inv-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed !important;
   min-width: 880px;
   margin: 0;
 }

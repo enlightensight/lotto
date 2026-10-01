@@ -141,6 +141,23 @@ export async function syncHistoricalShiftsToDB(shiftHistory = []) {
 }
 
 /**
+ * Log an individual ticket scan / sale event to MySQL
+ */
+export async function logTicketScanToDB(scanData) {
+  if (!scanData || !scanData.barcode) return;
+  try {
+    await fetch('/api/log-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scanData),
+      signal: AbortSignal.timeout(3000)
+    });
+  } catch (err) {
+    // Silently continue if DB offline
+  }
+}
+
+/**
  * Periodically monitor database status
  */
 export function initDatabaseSync(onStatus) {
@@ -148,3 +165,4 @@ export function initDatabaseSync(onStatus) {
   checkMySQLStatus();
   setInterval(checkMySQLStatus, 10000);
 }
+

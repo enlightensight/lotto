@@ -82,7 +82,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
   }
 
   // Pattern 0: 4-segment format: Game - Pack - Check - Ticket (Security)
-  // Matches printed ticket text: "1648-018378-8-000(029)", "1672-007252-3-000(099)", "1648-018378-8-000", "1648-018378-0-001"
+  // Matches printed ticket text: "1648-018378-8-029(000)", "1672-007252-3-000(099)", "1648-018378-8-000", "1648-018378-0-001"
   const fourPartMatch = s.match(/^(\d{3,5})[-_\s]+(\d{5,8})[-_\s]+(\d{1,2})[-_\s]+(\d{1,4})(?:[-_\s]*\(?(\d{1,4})\)?)?$/);
   if (fourPartMatch) {
     const gameNumber = fourPartMatch[1];
@@ -101,7 +101,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode,
-      canonicalId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}`,
+      canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
       fullId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}${securityCode ? '(' + securityCode + ')' : ''}`,
       raw
     };
@@ -136,7 +136,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketNumber,
       ticketString,
       checkCode,
-      canonicalId: checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString}` : `${gameNumber}-${packNumber}-${ticketString}`,
+      canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
       fullId: parenStr ? `${gameNumber}-${packNumber}-${ticketString}(${parenStr})` : `${gameNumber}-${packNumber}-${ticketString}`,
       raw
     };
@@ -193,16 +193,23 @@ export function parseLotteryBarcode(raw, customGames = []) {
   }
 
   // Pattern 3: Pure continuous digits
-  const digits = s.replace(/[^0-9]/g, '');
+  let digits = s.replace(/[^0-9]/g, '');
 
-  // 17 digits: 4 game + 6 pack + 1 check + 3 ticket + 3 security (e.g. 16480183788000029)
+  // Strip scanner leading zeroes (e.g. 15 or 16-digit output from scanners configured with leading 0 padding)
+  if (digits.length === 15 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  } else if (digits.length === 16 && digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+
+  // 17 digits: 4 game + 6 pack + 1 check + 3 ticket + 3 security (e.g. 16480183788029000)
   if (digits.length === 17) {
     const gameNumber = digits.slice(0, 4);
     const packNumber = digits.slice(4, 10); // 6-digit pack (018378)
     const checkCode = digits.slice(10, 11); // 1-digit check (8)
-    const ticketNumber = parseInt(digits.slice(11, 14), 10); // 3-digit ticket (000)
+    const ticketNumber = parseInt(digits.slice(11, 14), 10); // 3-digit ticket (029)
     const ticketString = digits.slice(11, 14);
-    const securityCode = digits.slice(14, 17); // 3-digit security (029)
+    const securityCode = digits.slice(14, 17); // 3-digit security (000)
     return {
       isValid: true,
       gameNumber,
@@ -212,23 +219,38 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode,
-      canonicalId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}`,
+      canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
       fullId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}(${securityCode})`,
       raw
     };
   }
 
-  // 14 digits: 4 game + 6 pack + 1 check + 3 ticket
-  // e.g. 1648-018378-8-000 -> 16480183788000, 16480183780001 (tix 01), 16720072520007 (tix 07)
+  // 14 digits: 4 game + 6 pack + 3 ticket + 1 check (Standard Interleaved 2 of 5 / ITF-14 barcode on SCEL & US lottery tickets)
+  // e.g. 16480183780290 -> Game 1648, Pack 018378, Ticket 029, Check 0
+  // e.g. 16720072520007 -> Game 1672, Pack 007252, Ticket 000, Check 7
   if (digits.length === 14) {
     const gameNumber = digits.slice(0, 4);
     const packNumber = digits.slice(4, 10); // 6-digit pack (018378, 007252)
-    const checkCode = digits.slice(10, 11); // 1-digit check (8, 0, 3)
-    const ticketNumber = parseInt(digits.slice(11, 14), 10); // 3-digit ticket (000, 001, 007)
-    const ticketString = digits.slice(11, 14);
 
-    // Sanity check: scratch ticket rolls never have ticket numbers above 300
-    if (isNaN(ticketNumber) || ticketNumber > 300) {
+    const candTicket1 = parseInt(digits.slice(10, 13), 10);
+    const candTicket2 = parseInt(digits.slice(11, 14), 10);
+
+    let ticketNumber;
+    let ticketString;
+    let checkCode;
+
+    // Scratch ticket rolls never have ticket numbers above 300 (standard packs are 000-029, 000-059, 000-099, 000-149, 000-199, 000-249).
+    // Primary: candTicket1 (indices 10..13: [3 Ticket][1 Check]).
+    // Fallback: If candTicket1 > 300 and candTicket2 <= 300, use candTicket2 ([1 Check][3 Ticket]).
+    if (candTicket1 <= 300) {
+      ticketNumber = candTicket1;
+      ticketString = digits.slice(10, 13);
+      checkCode = digits.slice(13, 14);
+    } else if (candTicket2 <= 300) {
+      ticketNumber = candTicket2;
+      ticketString = digits.slice(11, 14);
+      checkCode = digits.slice(10, 11);
+    } else {
       return {
         isValid: false,
         isRetailProduct: true,
@@ -248,8 +270,8 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketNumber,
       ticketString,
       checkCode,
-      canonicalId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}`,
-      fullId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}`,
+      canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
+      fullId: `${gameNumber}-${packNumber}-${ticketString}`,
       raw
     };
   }
@@ -271,15 +293,46 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode,
-      canonicalId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}`,
+      canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
       fullId: `${gameNumber}-${packNumber}-${checkCode}-${ticketString}(${securityCode})`,
       raw
     };
   }
 
-  // Detect standard retail store merchandise barcodes (UPC-A 12-digits, EAN-13 13-digits, EAN-8 8-digits)
+  // 13 digits: Can be 4 game + 6 pack + 3 ticket (Lottery ticket with stripped check digit)
+  // OR retail store merchandise (EAN-13)
+  if (digits.length === 13) {
+    const gameNumber = digits.slice(0, 4);
+    const gNum = parseInt(gameNumber, 10);
+    if (isKnownGamePrefix(gameNumber, customGames) || (gNum >= 1000 && gNum <= 2999)) {
+      const packNumber = digits.slice(4, 10);
+      const ticketNumber = parseInt(digits.slice(10, 13), 10);
+      const ticketString = digits.slice(10, 13);
+      if (!isNaN(ticketNumber) && ticketNumber <= 300) {
+        return {
+          isValid: true,
+          gameNumber,
+          packNumber,
+          packClean: packNumber.replace(/^0+/, '') || packNumber,
+          ticketNumber,
+          ticketString,
+          checkCode: null,
+          canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
+          fullId: `${gameNumber}-${packNumber}-${ticketString}`,
+          raw
+        };
+      }
+    }
+    return {
+      isValid: false,
+      isRetailProduct: true,
+      raw
+    };
+  }
+
+  // Detect standard retail store merchandise barcodes (UPC-A 12-digits, EAN-8 8-digits)
   // These are grocery, food, snack, beverage, or convenience store merchandise — NEVER lottery scratch tickets!
-  if (digits.length === 12 || digits.length === 13 || digits.length === 8) {
+  if (digits.length === 12 || digits.length === 8) {
     return {
       isValid: false,
       isRetailProduct: true,
@@ -367,7 +420,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
           ticketNumber: (tix !== null && !isNaN(tix)) ? tix : null,
           ticketString: tixStr,
           checkCode: check,
-          canonicalId: check && tixStr ? `${g.barcodePrefix}-${pack}-${check}-${tixStr}` : `${g.barcodePrefix}-${pack}`,
+          canonicalId: tixStr ? `${g.barcodePrefix}-${pack}-${tixStr}` : `${g.barcodePrefix}-${pack}`,
           fullId: check && tixStr ? `${g.barcodePrefix}-${pack}-${check}-${tixStr}` : `${g.barcodePrefix}-${pack}`,
           raw
         };
@@ -388,7 +441,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
 /**
  * Formats any raw lottery barcode into authentic SCEL / Georgia Lottery hyphenated format
- * e.g. "1648-018378-8-000(029)", "1648-018378-0-001", "1672-007252-0-007"
+ * e.g. "1648-018378-8-000(029)", "1648-018378-029", "1672-007252-000"
  */
 export function formatLotteryBarcode(rawCode, customGames = []) {
   if (!rawCode) return '---';
@@ -414,7 +467,10 @@ export function normalizePackNumber(packStr) {
       s = parts[1];
     }
   } else if (/^\d{14}$/.test(s)) {
-    // 14 digits continuous = 4 game prefix + 6 pack digits (indices 4..10) + 1 check + 3 ticket
+    // 14 digits continuous = 4 game prefix + 6 pack digits (indices 4..10) + 3 ticket + 1 check
+    s = s.slice(4, 10);
+  } else if (/^\d{13}$/.test(s)) {
+    // 13 digits continuous = 4 game prefix + 6 pack digits (indices 4..10) + 3 ticket
     s = s.slice(4, 10);
   } else if (/^\d{11}$/.test(s)) {
     // 11 digits continuous = 4 game prefix + 6 pack digits (indices 4..10) + 1 check

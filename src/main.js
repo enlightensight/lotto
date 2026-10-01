@@ -3,7 +3,7 @@ import { loadState, saveState, resetToDefaults, resetToCleanState, SAMPLE_GAMES,
 import { sfx, voice } from './audio.js';
 import { setupDayReportHandlers, openDayReportModal, printDayReport, populateDayReportDOM } from './dayReportRenderer.js';
 import { getDayReportData } from './dayReportData.js';
-import { initDatabaseSync, checkMySQLStatus, saveShiftReportToDB, syncHistoricalShiftsToDB } from './dbSync.js';
+import { initDatabaseSync, checkMySQLStatus, saveShiftReportToDB, syncHistoricalShiftsToDB, logTicketScanToDB } from './dbSync.js';
 
 let state = loadState();
 let undoHistory = [];
@@ -3032,6 +3032,18 @@ function quickSellTicket(slot, barcodeScanned = null, skipIncrement = false, exp
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   });
   if (state.recentScans.length > 50) state.recentScans.pop();
+
+  // Log real-time ticket scan to normalized MySQL ticket_scans_log
+  logTicketScanToDB({
+    barcode: actualBarcode,
+    boxNumber: slot.boxNumber,
+    gameName: cleanName,
+    packNumber: slot.packNumber || '---',
+    ticketNumber: slot.currentTicket,
+    price: slot.price,
+    cashier: state.settings?.cashierName || 'master',
+    shiftNumber: state.currentShiftNumber || 1
+  });
   
   const std = getStandardPackDetails(slot.price || 2);
   const packSize = slot.packSize || std.packSize;
@@ -4715,7 +4727,8 @@ function openSetTicketDetailsModal(barcode) {
   if (matchedGame) {
     initialName = cleanGameTitle(matchedGame.name);
     initialPrice = matchedGame.price || 1;
-    const tixInfo = (parsed && parsed.ticketNumber !== null) ? ` · Start Ticket: #${String(parsed.ticketNumber).padStart(2, '0')}` : '';
+    const tixDisplay = (parsed && parsed.ticketString) ? parsed.ticketString : (parsed && parsed.ticketNumber !== null ? String(parsed.ticketNumber).padStart(3, '0') : null);
+    const tixInfo = tixDisplay ? ` · Start Ticket: #${tixDisplay}` : '';
     const packInfo = (parsed && parsed.packNumber) ? ` · Pack #${parsed.packNumber}` : '';
     if (gameDisplay) {
       gameDisplay.innerHTML = `<span style="color:#10b981; font-weight:800;">✓ Matched Game:</span> ${initialName} · <strong style="color:#ffffff;">$${initialPrice}.00</strong> <span style="color:#a1a1aa; font-size:0.78rem; font-family:var(--font-mono); font-weight:700;">${packInfo}${tixInfo}</span>`;
@@ -4723,7 +4736,8 @@ function openSetTicketDetailsModal(barcode) {
   } else {
     initialName = 'Scratch-Off Game';
     initialPrice = 1;
-    const tixInfo = (parsed && parsed.ticketNumber !== null) ? ` · Ticket #${String(parsed.ticketNumber).padStart(2, '0')}` : '';
+    const tixDisplay = (parsed && parsed.ticketString) ? parsed.ticketString : (parsed && parsed.ticketNumber !== null ? String(parsed.ticketNumber).padStart(3, '0') : null);
+    const tixInfo = tixDisplay ? ` · Ticket #${tixDisplay}` : '';
     const packInfo = (parsed && parsed.packNumber) ? ` · Pack #${parsed.packNumber}` : '';
     if (gameDisplay) {
       gameDisplay.innerHTML = `<span style="color:#e4e4e7; font-weight:700;">New Lottery Ticket</span> <span style="color:#a1a1aa; font-size:0.78rem; font-family:var(--font-mono);">${packInfo}${tixInfo}</span>`;
@@ -4977,25 +4991,30 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
   const cleanDigits = barcode.replace(/[^0-9]/g, '');
   let ticketNum = null;
 
-  if (parsed && parsed.ticketNumber !== null && parsed.ticketNumber < packSize) {
+  if (parsed && parsed.ticketNumber !== null && parsed.ticketNumber <= packSize) {
     ticketNum = parsed.ticketNumber;
   } else if (barcode.includes('-')) {
     const parts = barcode.split('-');
     const lastPart = parts[parts.length - 1].replace(/[^0-9]/g, '');
     if (lastPart) {
       const parsedPart = parseInt(lastPart, 10);
-      if (parsedPart < packSize) ticketNum = parsedPart;
+      if (parsedPart <= packSize) ticketNum = parsedPart;
+    }
+  } else if (cleanDigits.length >= 13) {
+    const candidate = parseInt(cleanDigits.slice(10, 13), 10);
+    if (!isNaN(candidate) && candidate <= packSize) {
+      ticketNum = candidate;
     }
   } else if (cleanDigits.length >= 10) {
     const candidate = parseInt(cleanDigits.slice(-3), 10);
-    if (!isNaN(candidate) && candidate < packSize) {
+    if (!isNaN(candidate) && candidate <= packSize) {
       ticketNum = candidate;
     }
   }
 
-  // Strictly ensure validTicketNum is within 0 .. packSize - 1. Default to 0 for fresh activation!
+  // Strictly ensure validTicketNum is within 0 .. packSize. Default to 0 for fresh activation!
   let validTicketNum = 0;
-  if (ticketNum !== null && !isNaN(ticketNum) && ticketNum >= 0 && ticketNum < packSize) {
+  if (ticketNum !== null && !isNaN(ticketNum) && ticketNum >= 0 && ticketNum <= packSize) {
     validTicketNum = ticketNum;
   }
 
@@ -5323,6 +5342,8 @@ function setupInventoryModalLogic() {
       btn.classList.add('active');
       currentInvFilter = btn.getAttribute('data-filter') || 'all';
       renderInventoryTable();
+      const tableContainer = document.querySelector('#inventoryModal .inv-table-container');
+      if (tableContainer) tableContainer.scrollTop = 0;
     });
   });
 
@@ -5334,6 +5355,8 @@ function setupInventoryModalLogic() {
       btn.classList.add('active');
       currentInvStatusFilter = btn.getAttribute('data-invstatus-filter') || 'active';
       renderInventoryStatusModal();
+      const tableContainer = document.querySelector('#inventoryStatusModal .inv-table-container');
+      if (tableContainer) tableContainer.scrollTop = 0;
     });
   });
 
