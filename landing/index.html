@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LottoTrack Pro - Retail Lottery POS and Shift Tracking</title>
+  <meta name="description" content="LottoTrack Pro tracks every scratch-off pack, keeps your inventory and sales up to date, and helps balance your cash drawer at the end of the shift.">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+  <!-- Keyboard accessibility skip link -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- ====================================================================
+       HEADER & NAVIGATION
+       Sticky • High Contrast • Direct Conversion
+       ==================================================================== -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="#" class="brand-logo" aria-label="LottoTrack Pro Home">
+        <span class="brand-badge" aria-hidden="true"></span>
+        <span>LottoTrack Pro</span>
+      </a>
+
+      <nav aria-label="Primary navigation">
+        <ul class="nav-links">
+          <li><a href="#how" class="nav-link">How It Works</a></li>
+          <li><a href="#benefits" class="nav-link">Benefits</a></li>
+          <li><a href="#faq" class="nav-link">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="#demo" class="btn btn-primary">Request a Demo</a>
+        <button type="button" class="mobile-nav-toggle" aria-expanded="false" aria-label="Toggle navigation menu">
+          Menu
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- ==================================================================
+         1. HERO SECTION
+         Counter Composition with Architectural Dispenser Rack
+         ================================================================== -->
+    <section class="hero-section" aria-labelledby="hero-heading">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-content">
+            <span class="eyebrow">Retail lottery POS and shift tracking</span>
+            <h1 id="hero-heading" class="hero-h1">Stop handwriting your lottery logs.</h1>
+            <p class="hero-text">
+              LottoTrack Pro tracks every scratch-off pack, keeps your inventory and sales up to date, and helps balance your cash drawer at the end of the shift.
+            </p>
+            <div class="hero-cta-group">
+              <a href="#demo" class="btn btn-primary">Request a Demo</a>
+              <a href="#how" class="btn btn-secondary">See How It Works</a>
+            </div>
+            <div class="hero-small-line">
+              <span>Works in any browser. Can also be installed as a standalone app on your device.</span>
+            </div>
+          </div>
+
+          <!-- Dual Hero Visual: Physical Dispenser Rack + Live System POS Screen -->
+          <div class="hero-rack-clean">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: end; width: 100%;">
+              <div style="text-align: center;">
+                <img src="assets/dispenser-rack.jpg" alt="Physical acrylic retail lottery scratch-off dispenser rack" class="hero-rack-img" style="max-height: 220px; border: 1px solid var(--border); padding: 4px; border-radius: var(--radius-sm); background: #fff;" loading="eager">
+                <p class="rack-caption" style="font-size: 0.6875rem; color: var(--ink-muted); margin-top: 0.375rem;">Physical Dispenser Rack</p>
+              </div>
+              <div style="text-align: center;">
+                <img src="assets/screenshots/cashier-screen.png?v=3" alt="Live LottoTrack POS Register Screen showing 20 active dispenser boxes, live ticket counts, and $1017.00 settlement" class="hero-rack-img" style="max-height: 220px; border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); background: #fff;" loading="eager">
+                <p class="rack-caption" style="font-size: 0.6875rem; color: var(--ink-muted); margin-top: 0.375rem;">Live Counter POS System</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Optional Demo Video Container (Hidden until video is supplied) -->
+    <div id="demo-video-container" hidden aria-hidden="true">
+      <div class="container">
+        <!-- Supply an mp4 or video embed here when ready -->
+      </div>
+    </div>
+
+    <!-- ==================================================================
+         2. THE PROBLEM SECTION: Open Editorial Layout (Zero Card Boxes)
+         ================================================================== -->
+    <section class="section section-problem-open" aria-labelledby="problem-heading">
+      <div class="container">
+        <div class="problem-layout-open">
+          <div class="problem-header">
+            <span class="eyebrow">The Challenge</span>
+            <h2 id="problem-heading" class="section-h2">Lottery paperwork is slow. Mistakes make it worse.</h2>
+            <p class="section-lead">
+              At the end of a busy shift, you shouldn't have to rebuild what happened from handwritten notes and a calculator.
+            </p>
+          </div>
+          <div class="problem-points-col">
+            <ul class="problem-points-list">
+              <li class="problem-point-item">
+                <span class="problem-marker" aria-hidden="true">01</span>
+                <span class="problem-point-text">Writing ticket numbers by hand takes time and gives mistakes another place to start.</span>
+              </li>
+              <li class="problem-point-item">
+                <span class="problem-marker" aria-hidden="true">02</span>
+                <span class="problem-point-text">One wrong number can throw off your sales and your reconciliation.</span>
+              </li>
+              <li class="problem-point-item">
+                <span class="problem-marker" aria-hidden="true">03</span>
+                <span class="problem-point-text">The drawer doesn't match, and now you have to work out where the difference came from.</span>
+              </li>
+              <li class="problem-point-item">
+                <span class="problem-marker" aria-hidden="true">04</span>
+                <span class="problem-point-text">Inventory isn't clear. You shouldn't have to check every box just to know what's left.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Live System Solution Showcase: Real Inventory Status Screen -->
+        <div style="margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+          <div style="max-width: 680px; margin-bottom: 1rem;">
+            <span class="eyebrow">Live System Screenshot</span>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--ink); margin-top: 0.25rem;">Real-time Dispenser Stock &amp; Audit Dashboard</h3>
+            <p style="font-size: 0.875rem; color: var(--ink-secondary); margin-top: 0.25rem;">LottoTrack replaces handwritten paperwork with instant visibility into every box, pack and ticket.</p>
+          </div>
+          <div style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);">
+            <img src="assets/screenshots/rack.png?v=4" alt="Live LottoTrack Lottery Inventory Status dashboard showing 19 active dispenser packs, 1,863 tickets left in rack, 288 sold today ($1317.00), and $5,883.00 total rack value" style="width: 100%; height: auto; display: block;" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         3. HOW IT WORKS SECTION (id="how")
+         Three-Step Clear Model
+         ================================================================== -->
+    <section id="how" class="section" aria-labelledby="how-heading">
+      <div class="container">
+        <h2 id="how-heading" class="section-h2">Three things happen. You do the scanning.</h2>
+        
+        <div class="how-steps-grid">
+          <div class="how-step-card">
+            <span class="how-step-badge">1</span>
+            <h3 class="how-step-title">Scan it.</h3>
+            <p class="how-step-desc">Scan a pack when it arrives. Scan a ticket when you sell it. No typing long ticket numbers.</p>
+          </div>
+
+          <div class="how-step-card">
+            <span class="how-step-badge">2</span>
+            <h3 class="how-step-title">LottoTrack keeps up.</h3>
+            <p class="how-step-desc">Inventory, ticket positions, sales and sold-out packs update as you work.</p>
+          </div>
+
+          <div class="how-step-card">
+            <span class="how-step-badge">3</span>
+            <h3 class="how-step-title">Get the report.</h3>
+            <p class="how-step-desc">When the shift is finished, your reports are ready to print, export or email.</p>
+          </div>
+        </div>
+
+        <p class="closing-statement">You scan. LottoTrack keeps the record.</p>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         4. ONE RECORD FROM PACK TO SALE (Main Walkthrough)
+         Seven Vertically Stacked Steps with 16:10 Screenshot Frames
+         ================================================================== -->
+    <section class="section" aria-labelledby="workflow-heading">
+      <div class="container">
+        <h2 id="workflow-heading" class="section-h2">One record from pack to sale.</h2>
+        <p class="section-lead">
+          LottoTrack Pro follows each pack from delivery to the finished shift report. The steps below show where the record is made.
+        </p>
+
+        <div class="workflow-stack">
+          <!-- Step 1 -->
+          <article class="workflow-step-row">
+            <div class="workflow-step-meta">
+              <span class="workflow-step-index">01</span>
+              <h3 class="workflow-step-title">A pack arrives.</h3>
+              <p class="workflow-step-sentence">Scan or type the incoming pack barcode into Fast Pack Intake. LottoTrack identifies the game and activates the pack directly into your dispenser inventory.</p>
+            </div>
+            <div class="workflow-step-visual">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/01-scan-pack.png?v=5" alt="LottoTrack Update Inventory and Store Audit showing 19 active packs, 46 empty slots, and ticket counts across dispenser boxes" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: PACK BARCODE SCAN]</span>
+                  <span class="frame-fallback-specs">01-scan-pack.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Step 2 -->
+          <article class="workflow-step-row">
+            <div class="workflow-step-meta">
+              <span class="workflow-step-index">02</span>
+              <h3 class="workflow-step-title">LottoTrack audits your stock.</h3>
+              <p class="workflow-step-sentence">The store audit keeps complete count of active packs, empty slots, and reserve packs stored off-counter in your safe, keeping counter and safe inventory in sync.</p>
+            </div>
+            <div class="workflow-step-visual">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/02-pack-identified.png?v=3" alt="Update Inventory and Store Audit showing active packs, empty slots, and off-counter safe storage inventory" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: STORE AUDIT &amp; STORAGE]</span>
+                  <span class="frame-fallback-specs">02-pack-identified.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Step 3 -->
+          <article class="workflow-step-row">
+            <div class="workflow-step-meta">
+              <span class="workflow-step-index">03</span>
+              <h3 class="workflow-step-title">Put it in a box.</h3>
+              <p class="workflow-step-sentence">Box details show the active game, pack number, starting ticket #00, tickets sold, and remaining count, with quick actions to switch boxes or adjust ticket positions.</p>
+            </div>
+            <div class="workflow-step-visual">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/03-choose-box.png?v=5" alt="Dispenser Box #2 Details showing JR JUMBO pack with ticket counts and management actions" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: BOX DETAILS]</span>
+                  <span class="frame-fallback-specs">03-choose-box.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Step 4 -->
+          <article class="workflow-step-row">
+            <div class="workflow-step-meta">
+              <span class="workflow-step-index">04</span>
+              <h3 class="workflow-step-title">Inventory updates.</h3>
+              <p class="workflow-step-sentence">The real-time inventory dashboard displays active pack counts, shift sales ($294.00), remaining tickets (2,336), and total retail value on display ($2,336.00).</p>
+            </div>
+            <div class="workflow-step-visual">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/05-inventory-updates.png?v=3" alt="Lottery Inventory Status dashboard showing 8 active packs, 294 sold, 2,336 remaining tickets and $2,336 total rack value" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: INVENTORY STATUS]</span>
+                  <span class="frame-fallback-specs">05-inventory-updates.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Step 5 -->
+          <article class="workflow-step-row">
+            <div class="workflow-step-meta">
+              <span class="workflow-step-index">05</span>
+              <h3 class="workflow-step-title">The shift closes.</h3>
+              <p class="workflow-step-sentence">During shift closing or game changes, choose whether to return unsold tickets to the lottery for vendor credit or safely transfer them into your store safe.</p>
+            </div>
+            <div class="workflow-step-visual">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/06-close-shift.png?v=3" alt="Pack Removal and Return Options showing Return to Lottery for vendor credit and Move to Storage options" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: RETURN &amp; STORAGE OPTIONS]</span>
+                  <span class="frame-fallback-specs">06-close-shift.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Step 6 -->
+          <article class="workflow-step-row">
+            <div class="workflow-step-meta">
+              <span class="workflow-step-index">06</span>
+              <h3 class="workflow-step-title">The report is ready.</h3>
+              <p class="workflow-step-sentence">LottoTrack compiles the official Day Report showing itemized opening and closing ticket numbers, prices, and total sales per box, ready to print or save to PDF.</p>
+            </div>
+            <div class="workflow-step-visual">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/07-report.png?v=3" alt="Day Report print preview showing store details, itemized box numbers, open and close ticket counts and total sales" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: DAY REPORT]</span>
+                  <span class="frame-fallback-specs">07-report.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <p class="closing-statement">The work happens at the counter. The record stays connected.</p>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         5. OWNERS AND CASHIERS SECTION (id="benefits")
+         Two Distinct Perspectives
+         ================================================================== -->
+    <section id="benefits" class="section" aria-labelledby="benefits-heading">
+      <div class="container">
+        <h2 id="benefits-heading" class="section-h2">Less paperwork for you. Less guesswork for them.</h2>
+        
+        <div class="perspectives-grid">
+          <!-- Store Owner Perspective -->
+          <div class="perspective-block">
+            <h3 class="perspective-role-title">For the store owner:</h3>
+            <ul class="perspective-features-list">
+              <li>Save time at the end of the shift. Sales are calculated from the ticket positions recorded during the shift.</li>
+              <li>Catch problems early. See whether the drawer is balanced, over or short.</li>
+              <li>Know what's in your rack. See active packs, tickets remaining, sold-out packs and stored inventory.</li>
+              <li>Check in without being there. Add an email in Settings and receive the shift report when the shift closes.</li>
+            </ul>
+            <div class="perspective-visuals-stack">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/rack.png?v=4" alt="Lottery Inventory Status audit dashboard showing 19 active packs, 1,863 tickets in rack, 288 sold today ($1317.00), and $5,883.00 total display value" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: RACK OVERVIEW]</span>
+                  <span class="frame-fallback-specs">rack.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cashier Perspective -->
+          <div class="perspective-block">
+            <h3 class="perspective-role-title">For the person behind the counter:</h3>
+            <ul class="perspective-features-list">
+              <li>Large controls. Clear buttons and number pads make common actions easy.</li>
+              <li>Spoken prompts. Audio feedback guides scanning and workflow steps.</li>
+              <li>Built-in quick guide. The basic workflow is explained inside the system.</li>
+              <li>Easy shift handoff. Switch the active cashier and continue with the next shift.</li>
+            </ul>
+            <div class="perspective-visuals-stack">
+              <div class="screenshot-frame">
+                <img src="assets/screenshots/cashier-screen.png?v=3" alt="LottoTrack POS counter screen with 20 active boxes, large +1 sell buttons, ticket positions, and live day settlement totals" loading="lazy" onerror="this.style.display='none'; this.closest('.screenshot-frame')?.classList.add('has-failed');">
+                <div class="frame-fallback" aria-hidden="true">
+                  <span class="frame-fallback-label">[REAL PRODUCT SCREENSHOT: CASHIER SCREEN]</span>
+                  <span class="frame-fallback-specs">cashier-screen.png • 16:10 Frame</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         6. CASH RECONCILIATION SECTION
+         Financial Clarity with Balanced/Over/Short States
+         ================================================================== -->
+    <section class="section" aria-labelledby="reconciliation-heading">
+      <div class="container">
+        <h2 id="reconciliation-heading" class="section-h2">Know what the drawer should contain.</h2>
+        <p class="section-lead">
+          Ticket sales, payouts and your starting float come together to calculate the cash you should have. Online sales and cashouts can be entered too.
+        </p>
+
+        <div class="reconciliation-panel">
+          <!-- Flow Calculation Display -->
+          <div class="reconciliation-flow-bar" role="region" aria-label="Reconciliation formula example">
+            <div class="reconciliation-math-item">
+              <span class="math-label">Ticket sales</span>
+              <span class="math-value positive">+ $412</span>
+            </div>
+            <div class="reconciliation-math-item">
+              <span class="math-label">Payouts</span>
+              <span class="math-value negative">- $96</span>
+            </div>
+            <div class="reconciliation-math-item">
+              <span class="math-label">Bank float</span>
+              <span class="math-value positive">+ $150</span>
+            </div>
+            <div class="reconciliation-math-item">
+              <span class="math-label">Expected cash</span>
+              <span class="math-value expected">$466</span>
+            </div>
+            <div class="reconciliation-math-item">
+              <span class="math-label">Counted cash</span>
+              <span class="math-value">$466</span>
+            </div>
+            <div class="reconciliation-math-item">
+              <span class="math-label">Status</span>
+              <span class="math-value positive">Balanced</span>
+            </div>
+          </div>
+
+          <p class="reconciliation-outcomes-header">If the numbers don't match, you'll see Over or Short.</p>
+
+          <!-- 3 Potential Outcomes Display -->
+          <div class="reconciliation-outcomes-grid">
+            <div class="outcome-card is-balanced">
+              <div class="outcome-status">Balanced</div>
+              <div class="outcome-detail">($466 counted against expected $466)</div>
+            </div>
+            <div class="outcome-card is-over">
+              <div class="outcome-status">Over</div>
+              <div class="outcome-detail">($480 counted against expected $466)</div>
+            </div>
+            <div class="outcome-card is-short">
+              <div class="outcome-status">Short</div>
+              <div class="outcome-detail">($450 counted against expected $466)</div>
+            </div>
+          </div>
+
+          <span class="illustration-notice">Example figures shown for illustration.</span>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- ==================================================================
+         8. FIX MISTAKES SECTION
+         Workflow Correction Demonstration
+         ================================================================== -->
+    <section class="section" aria-labelledby="mistakes-heading">
+      <div class="container">
+        <h2 id="mistakes-heading" class="section-h2">Made a mistake? Fix it.</h2>
+
+        <div class="fix-mistakes-panel">
+          <!-- WRONG > FIX > CORRECTED Workflow -->
+          <div class="workflow-correction-strip" role="region" aria-label="Example workflow demonstrating position correction">
+            <span class="correction-badge-wrong">ticket entered 0187</span>
+            <span class="correction-arrow" aria-hidden="true">&gt;</span>
+            <span class="correction-badge-action">Fix Position</span>
+            <span class="correction-arrow" aria-hidden="true">&gt;</span>
+            <span class="correction-badge-fixed">correct position 0186</span>
+          </div>
+
+          <ul class="fix-mistakes-list">
+            <li>Wrong ticket number? Use Fix Position.</li>
+            <li>Wrong box? Switch boxes or change the box number.</li>
+            <li>Pack finished? Mark it sold out.</li>
+            <li>Taking a pack off the counter? Return it to the Lottery or move it to storage for later.</li>
+          </ul>
+
+          <span class="illustration-notice">Example workflow.</span>
+        </div>
+
+        <p class="closing-statement">You don't have to start over because one number was wrong.</p>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         9. EVERYTHING IN ONE PLACE SECTION
+         Quiet and Compact List (Not Cards)
+         ================================================================== -->
+    <section class="section" aria-labelledby="everything-heading">
+      <div class="container">
+        <h2 id="everything-heading" class="section-h2">Everything in one place.</h2>
+        
+        <ul class="compact-feature-list">
+          <li class="compact-feature-item">
+            <strong>Dispenser rack:</strong> manage up to 65 boxes, with the game, ticket position and tickets left.
+          </li>
+          <li class="compact-feature-item">
+            <strong>Pack inventory:</strong> active, sold-out and stored packs, with their value.
+          </li>
+          <li class="compact-feature-item">
+            <strong>Scan history:</strong> barcode scans saved with the time they were scanned.
+          </li>
+          <li class="compact-feature-item">
+            <strong>Shift tracking:</strong> shift mode or daily mode.
+          </li>
+          <li class="compact-feature-item">
+            <strong>Cash reconciliation:</strong> balanced, over or short.
+          </li>
+          <li class="compact-feature-item">
+            <strong>Reports:</strong> shift, day, receipt, email and export.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         10. FAQ SECTION (id="faq")
+         Accessible Details/Summary (One Open at a Time with JS)
+         ================================================================== -->
+    <section id="faq" class="section" aria-labelledby="faq-heading">
+      <div class="container">
+        <h2 id="faq-heading" class="section-h2">Frequently Asked Questions</h2>
+
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary class="faq-summary">Do I need to install anything?</summary>
+            <div class="faq-answer">
+              <p>No installation is required. LottoTrack Pro runs directly in your web browser. You can also install it as a standalone app on your computer or tablet for a full-screen, app-like experience.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-summary">How do I sell a ticket?</summary>
+            <div class="faq-answer">
+              <p>Scan the ticket barcode, or press +1 on that box.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-summary">What if I enter the wrong ticket number?</summary>
+            <div class="faq-answer">
+              <p>Open the box and use Fix Position to correct it.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-summary">Can more than one person use it?</summary>
+            <div class="faq-answer">
+              <p>Yes. You can switch the active cashier, and each shift report records who worked that shift.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-summary">Can I return or store unsold packs?</summary>
+            <div class="faq-answer">
+              <p>Yes. Packs can be returned or moved into storage and loaded again later.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-summary">Will it work with my state's lottery?</summary>
+            <div class="faq-answer">
+              <p>The current day report follows the Georgia Lottery layout. Contact us to ask about your state.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         11. FINAL CTA AND DEMO FORM (id="demo")
+         Lead Conversion • Client-side Validation • Config-bound Fallback
+         ================================================================== -->
+    <section id="demo" class="section" aria-labelledby="demo-heading">
+      <div class="container">
+        <div class="cta-form-wrapper">
+          <div class="cta-pitch">
+            <span class="eyebrow">Ready to leave the paper behind?</span>
+            <h2 id="demo-heading" class="section-h2">Put the paper reconciliation away.</h2>
+            <p class="section-lead">
+              See how LottoTrack Pro can handle your lottery counter, from the first scan to the finished shift report.
+            </p>
+            <div class="hero-cta-group">
+              <a href="#demo-name" class="btn btn-primary" onclick="document.getElementById('demo-name')?.focus();">Request a Demo</a>
+              <button type="button" class="btn btn-secondary talk-to-us-btn">Talk to Us</button>
+            </div>
+
+            <!-- Contact Quick Details Card (Triggered by Talk to Us) -->
+            <div id="talk-to-us-info" class="contact-quick-info" hidden tabindex="-1">
+              <div class="contact-quick-title">Contact LottoTrack Pro</div>
+              <div class="contact-quick-line">
+                Phone: <span data-config="PHONE">[PHONE NUMBER]</span>
+              </div>
+              <div class="contact-quick-line">
+                Email: <span data-config="EMAIL">[EMAIL ADDRESS]</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Demo Request Form -->
+          <form id="demo-request-form" class="demo-form" novalidate>
+            <div>
+              <h3 class="form-header-title">Request a Demo</h3>
+              <p class="form-header-line">See LottoTrack Pro in action and ask questions about your lottery operation.</p>
+            </div>
+
+            <!-- Feedback Message Box (Status/Error/Not Connected Mailto Fallback) -->
+            <div id="form-feedback-message" class="form-feedback-box" role="status" aria-live="polite"></div>
+
+            <!-- Anti-Spam Honeypot Field -->
+            <input type="text" name="company_website_url" id="form-hp-website" class="form-hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="demo-name" class="form-label">Name <span class="required-star">*</span></label>
+                <input type="text" id="demo-name" name="name" class="form-input" required autocomplete="name">
+                <span class="field-error-msg"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="demo-email" class="form-label">Email <span class="required-star">*</span></label>
+                <input type="email" id="demo-email" name="email" class="form-input" required autocomplete="email">
+                <span class="field-error-msg"></span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="demo-phone" class="form-label">Phone</label>
+                <input type="tel" id="demo-phone" name="phone" class="form-input" autocomplete="tel">
+                <span class="field-error-msg"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="demo-store" class="form-label">Store / Company</label>
+                <input type="text" id="demo-store" name="store" class="form-input" autocomplete="organization">
+                <span class="field-error-msg"></span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="demo-state" class="form-label">State</label>
+              <select id="demo-state" name="state" class="form-select">
+                <option value="">Select a state...</option>
+                <option value="GA" selected>Georgia</option>
+                <option value="AL">Alabama</option>
+                <option value="FL">Florida</option>
+                <option value="NC">North Carolina</option>
+                <option value="SC">South Carolina</option>
+                <option value="TN">Tennessee</option>
+                <option value="OTHER">Other State</option>
+              </select>
+              <span class="field-error-msg"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="demo-message" class="form-label">Message</label>
+              <textarea id="demo-message" name="message" class="form-textarea" placeholder="What would you like to see?"></textarea>
+              <span class="field-error-msg"></span>
+            </div>
+
+            <div class="form-privacy-line">
+              [PRIVACY LINE: owner to confirm]
+            </div>
+
+            <button type="submit" id="demo-submit-btn" class="btn btn-primary">
+              Request a Demo
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ====================================================================
+       FOOTER
+       Config Bound • Links • No App Routes
+       ==================================================================== -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="footer-brand-name">LottoTrack Pro</div>
+          <div class="footer-brand-desc">Retail Lottery POS and Shift Tracking System.</div>
+        </div>
+
+        <div class="footer-contact-block">
+          <div><span data-config="COMPANY_NAME">[COMPANY NAME]</span></div>
+          <div>Phone: <a href="#" data-config="PHONE">[PHONE NUMBER]</a></div>
+          <div>Email: <a href="#" data-config="EMAIL">[EMAIL ADDRESS]</a></div>
+        </div>
+
+        <ul class="footer-links">
+          <li><a href="#how" class="footer-link">How It Works</a></li>
+          <li><a href="#benefits" class="footer-link">Benefits</a></li>
+          <li><a href="#faq" class="footer-link">FAQ</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js?v=3" defer></script>
+</body>
+</html>

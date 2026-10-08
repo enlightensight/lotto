@@ -1,0 +1,1382 @@
+/* ==========================================================================
+   LottoTrack Pro - Standalone Marketing Landing Page Stylesheet
+   Pure CSS • Fluid Typography • Light/Dark Mode • Accessible & Responsive
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design Tokens & Color System
+   -------------------------------------------------------------------------- */
+:root {
+  /* Color Palette - Light Mode Default (Monochrome Black & White) */
+  --bg: #FFFFFF;
+  --bg-subtle: #F5F5F5;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F5F5F5;
+  --ink: #000000;
+  --ink-secondary: #525252;
+  --ink-muted: #737373;
+  --border: #E5E5E5;
+  --border-strong: #A3A3A3;
+  --accent: #000000;
+  --accent-hover: #262626;
+  --accent-subtle: #F5F5F5;
+  --accent-ring: rgba(0, 0, 0, 0.15);
+  
+  /* Status / Reconciliation Tokens */
+  --success: #000000;
+  --success-subtle: #F5F5F5;
+  --danger: #737373;
+  --danger-subtle: #F5F5F5;
+  --info: #404040;
+  --info-subtle: #F5F5F5;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Layout & Spacing */
+  --container-max: 1200px;
+  --container-narrow: 840px;
+  --section-spacing: clamp(2rem, 3.5vw, 3rem);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+
+/* --------------------------------------------------------------------------
+   2. Reset & Baseline
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background-color: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Skip link for screen reader and keyboard accessibility */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  z-index: 9999;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   3. Typography & Utility Classes
+   -------------------------------------------------------------------------- */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1rem, 4vw, 2rem);
+  padding-right: clamp(1rem, 4vw, 2rem);
+}
+
+.container-narrow {
+  max-width: var(--container-narrow);
+}
+
+.section {
+  padding-top: var(--section-spacing);
+  padding-bottom: var(--section-spacing);
+  border-bottom: 1px solid var(--border);
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.875rem;
+}
+
+.section-h2 {
+  font-size: clamp(1.875rem, 3.2vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+
+.section-lead {
+  font-size: clamp(1.0625rem, 1.8vw, 1.25rem);
+  line-height: 1.6;
+  color: var(--ink-secondary);
+  max-width: 68ch;
+  margin-bottom: 2.5rem;
+}
+
+.closing-statement {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.illustration-notice {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1;
+  padding: 0.8125rem 1.375rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.btn-primary:hover {
+  background-color: #000000;
+  border-color: #000000;
+}
+
+
+
+.btn-secondary {
+  background-color: var(--surface);
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-subtle);
+  border-color: var(--ink-muted);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   4. Header & Navigation (Sticky)
+   -------------------------------------------------------------------------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.25rem;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.brand-badge {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  background-color: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
+}
+
+.nav-link {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  transition: color 0.15s ease;
+}
+
+.nav-link:hover {
+  color: var(--ink);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Mobile menu toggle */
+.mobile-nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+/* --------------------------------------------------------------------------
+   5. Screenshot Frames & Image Fallback System (16:10)
+   -------------------------------------------------------------------------- */
+.screenshot-frame {
+  position: relative;
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screenshot-frame img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Fallback state only when image genuinely fails */
+.screenshot-frame .frame-fallback {
+  display: none;
+}
+
+.frame-fallback-label {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.05em;
+  padding: 0.375rem 0.75rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+}
+
+.frame-fallback-specs {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  max-width: 36ch;
+  line-height: 1.4;
+}
+
+/* If image fails, hide broken img icon and show fallback */
+.screenshot-frame.has-failed img {
+  display: none;
+}
+.screenshot-frame.has-failed .frame-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background: var(--surface-sunken);
+  border: 1px dashed var(--border-strong);
+}
+
+/* --------------------------------------------------------------------------
+   6. Hero Section (Rack Composition)
+   -------------------------------------------------------------------------- */
+.hero-section {
+  padding-top: clamp(2rem, 3.5vw, 3rem);
+  padding-bottom: clamp(1.5rem, 2.5vw, 2rem);
+  background-color: var(--surface);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  align-items: center;
+}
+
+.hero-content {
+  max-width: 600px;
+}
+
+.hero-h1 {
+  font-size: clamp(2.35rem, 4.2vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  margin-bottom: 1.25rem;
+}
+
+.hero-text {
+  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+  line-height: 1.55;
+  color: var(--ink-secondary);
+  margin-bottom: 2rem;
+}
+
+.hero-cta-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.hero-small-line {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hero-small-line::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: var(--success);
+  border-radius: var(--radius-full);
+}
+
+/* Hero Decorative Lottery Rack (Clean Direct Presentation - No Card) */
+.hero-rack-clean {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-rack-img {
+  width: 100%;
+  height: auto;
+  max-height: 290px;
+  object-fit: contain;
+  display: block;
+}
+
+.rack-caption {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   7. The Problem Section: Open Editorial Layout (Zero Cards)
+   -------------------------------------------------------------------------- */
+.section-problem-open {
+  background-color: var(--surface);
+  padding-top: clamp(2rem, 3vw, 2.5rem);
+  padding-bottom: clamp(2.5rem, 4vw, 3.5rem);
+  border-bottom: 1px solid var(--border);
+}
+
+.problem-layout-open {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: start;
+}
+
+.problem-points-col {
+  border-left: 1px solid var(--border);
+  padding-left: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.problem-points-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.problem-point-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.problem-point-item:first-child {
+  padding-top: 0;
+}
+
+.problem-point-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.problem-marker {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink);
+  padding-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.problem-point-text {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   8. How It Works Section: Open 3-Column Editorial (No Cards)
+   -------------------------------------------------------------------------- */
+.how-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+  margin-top: 2.5rem;
+}
+
+.how-step-card {
+  background-color: transparent;
+  border: none;
+  border-top: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 1.5rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+.how-step-badge {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+.how-step-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.625rem;
+}
+
+.how-step-desc {
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------------------------------
+   9. One Record From Pack To Sale (Vertical 7-Step Walkthrough)
+   -------------------------------------------------------------------------- */
+.workflow-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-top: 3.5rem;
+  padding-bottom: 4rem;
+}
+
+.workflow-step-row {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: clamp(1.75rem, 3.5vw, 2.75rem);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.workflow-step-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Progressive Sticky Stacking Animation (Desktop >= 900px) */
+@media (min-width: 900px) {
+  .workflow-step-row {
+    position: sticky;
+  }
+
+  .workflow-step-row:nth-child(1) {
+    top: calc(76px + 0px);
+    z-index: 10;
+  }
+  .workflow-step-row:nth-child(2) {
+    top: calc(76px + 16px);
+    z-index: 11;
+  }
+  .workflow-step-row:nth-child(3) {
+    top: calc(76px + 32px);
+    z-index: 12;
+  }
+  .workflow-step-row:nth-child(4) {
+    top: calc(76px + 48px);
+    z-index: 13;
+  }
+  .workflow-step-row:nth-child(5) {
+    top: calc(76px + 64px);
+    z-index: 14;
+  }
+  .workflow-step-row:nth-child(6) {
+    top: calc(76px + 80px);
+    z-index: 15;
+  }
+}
+
+@media (max-width: 899px) {
+  .workflow-step-row {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+}
+
+
+
+.workflow-step-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-step-index {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.workflow-step-title {
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+
+.workflow-step-sentence {
+  font-size: 1.0625rem;
+  color: var(--ink-secondary);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   10. Owners and Cashiers Section (Two Perspectives)
+   -------------------------------------------------------------------------- */
+.perspectives-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(2rem, 4vw, 3.5rem);
+  margin-top: 2rem;
+}
+
+.perspective-block {
+  background-color: transparent;
+  border: none;
+  border-top: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 1.5rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+.perspective-role-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.perspective-features-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.perspective-features-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+}
+
+.perspective-features-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+.perspective-visuals-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+/* --------------------------------------------------------------------------
+   11. Cash Reconciliation Section
+   -------------------------------------------------------------------------- */
+.reconciliation-panel {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  margin-top: 2rem;
+}
+
+.reconciliation-flow-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  margin-bottom: 2rem;
+}
+
+.reconciliation-math-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.math-label {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.math-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.math-value.positive { color: var(--success); }
+.math-value.negative { color: var(--danger); }
+.math-value.expected { color: var(--accent); }
+
+.reconciliation-outcomes-header {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+
+.reconciliation-outcomes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.outcome-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  background-color: var(--surface);
+}
+
+.outcome-card.is-balanced {
+  border-color: var(--success);
+  background-color: var(--success-subtle);
+}
+
+.outcome-card.is-over {
+  border-color: var(--info);
+  background-color: var(--info-subtle);
+}
+
+.outcome-card.is-short {
+  border-color: var(--danger);
+  background-color: var(--danger-subtle);
+}
+
+.outcome-status {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.outcome-card.is-balanced .outcome-status { color: var(--success); }
+.outcome-card.is-over .outcome-status { color: var(--info); }
+.outcome-card.is-short .outcome-status { color: var(--danger); }
+
+.outcome-detail {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   12. Reports Section (Accessible Tabs)
+   -------------------------------------------------------------------------- */
+.reports-tablist {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.report-tab-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.report-tab-btn:hover {
+  color: var(--ink);
+}
+
+.report-tab-btn[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.report-panel {
+  display: block; /* Overridden by JS when tabbed; stacked when JS is off */
+  margin-bottom: 2.5rem;
+}
+
+.report-panel-desc {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  margin-top: 1rem;
+  line-height: 1.5;
+}
+
+.reports-extra-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.extra-info-item {
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+}
+
+.extra-info-item strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   13. Fix Mistakes Section
+   -------------------------------------------------------------------------- */
+.fix-mistakes-panel {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  box-shadow: var(--shadow-sm);
+  margin-top: 2rem;
+}
+
+.workflow-correction-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+.correction-badge-wrong {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.correction-badge-action {
+  background-color: var(--surface);
+  border: 1px solid var(--border-strong);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.correction-badge-fixed {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.correction-arrow {
+  color: var(--ink-muted);
+}
+
+.fix-mistakes-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.fix-mistakes-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  line-height: 1.5;
+}
+
+.fix-mistakes-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+/* --------------------------------------------------------------------------
+   14. Everything in One Place (Compact List)
+   -------------------------------------------------------------------------- */
+.compact-feature-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  max-width: var(--container-narrow);
+}
+
+.compact-feature-item {
+  padding: 1rem 1.25rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  line-height: 1.5;
+}
+
+.compact-feature-item strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   15. FAQ Section (Accessible Details/Summary)
+   -------------------------------------------------------------------------- */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-top: 2rem;
+  max-width: var(--container-narrow);
+}
+
+.faq-item {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.faq-item[open] {
+  border-color: var(--border-strong);
+}
+
+.faq-summary {
+  padding: 1.25rem 1.5rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.faq-summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-summary::after {
+  content: "+";
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--ink-muted);
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.faq-item[open] .faq-summary::after {
+  content: "–";
+}
+
+.faq-answer {
+  padding: 0 1.5rem 1.25rem 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   16. Final CTA & Request a Demo Form
+   -------------------------------------------------------------------------- */
+.cta-form-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(2rem, 4.5vw, 4rem);
+  box-shadow: var(--shadow-md);
+  margin-top: 2rem;
+}
+
+.cta-pitch {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.contact-quick-info {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.contact-quick-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  margin-bottom: 0.5rem;
+}
+
+.contact-quick-line {
+  font-size: 0.875rem;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+  font-family: var(--font-mono);
+}
+
+/* Form Styles */
+.demo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.form-header-line {
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form-label .required-star {
+  color: var(--danger);
+  margin-left: 0.125rem;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 0.6875rem 0.875rem;
+  background-color: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.field-error-msg {
+  font-size: 0.75rem;
+  color: var(--danger);
+  min-height: 1rem;
+  display: none;
+}
+
+.form-group.has-error .form-input,
+.form-group.has-error .form-select {
+  border-color: var(--danger);
+}
+
+.form-group.has-error .field-error-msg {
+  display: block;
+}
+
+/* Honeypot field - visually and functionally hidden from real visitors */
+.form-hp-field {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  height: 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.form-privacy-line {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.form-feedback-box {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  display: none;
+}
+
+.form-feedback-box.is-info {
+  display: block;
+  background-color: var(--info-subtle);
+  border: 1px solid var(--info);
+  color: var(--ink);
+}
+
+.form-feedback-box.is-success {
+  display: block;
+  background-color: var(--success-subtle);
+  border: 1px solid var(--success);
+  color: var(--ink);
+}
+
+.form-feedback-box.is-error {
+  display: block;
+  background-color: var(--danger-subtle);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+/* --------------------------------------------------------------------------
+   17. Footer
+   -------------------------------------------------------------------------- */
+.site-footer {
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+  margin-top: auto;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.footer-brand {
+  max-width: 400px;
+}
+
+.footer-brand-name {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 0.375rem;
+}
+
+.footer-brand-desc {
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+}
+
+.footer-contact-block {
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+  line-height: 1.6;
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.75rem;
+  list-style: none;
+}
+
+.footer-link {
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+  transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   18. Responsive Media Queries
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .hero-grid,
+  .problem-composition,
+  .how-steps-grid,
+  .workflow-step-row,
+  .perspectives-grid,
+  .reconciliation-outcomes-grid,
+  .cta-form-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .problem-header {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 1.5rem;
+  }
+
+  .fix-mistakes-list {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-extra-info {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-links {
+    display: none; /* Can be toggled if menu opens */
+  }
+
+  .nav-links.is-open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 4.25rem;
+    left: 0;
+    right: 0;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem;
+    gap: 1rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .mobile-nav-toggle {
+    display: block;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-top {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .rack-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .dispenser-box:nth-child(n+19) {
+    display: none; /* Scale cleanly on narrow 360px phones */
+  }
+}
+
+/* --------------------------------------------------------------------------
+   19. Progressive Enhancement (No-JS Fallbacks)
+   -------------------------------------------------------------------------- */
+html:not(.js-enabled) .reports-tablist {
+  display: none;
+}
+
+html:not(.js-enabled) .report-panel {
+  display: block !important;
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+html:not(.js-enabled) #talk-to-us-info {
+  display: block !important;
+}
+
+html:not(.js-enabled) .talk-to-us-btn {
+  display: none;
+}
+
