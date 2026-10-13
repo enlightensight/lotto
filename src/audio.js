@@ -120,6 +120,10 @@ class SoundFX {
       });
     } catch (e) {}
   }
+
+  win() {
+    this.success();
+  }
 }
 
 export const sfx = new SoundFX();

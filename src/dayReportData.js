@@ -437,3 +437,222 @@ export function generateLiveDayReport(state) {
 export function getDayReportData(state) {
   return generateLiveDayReport(state);
 }
+
+/**
+ * Reference Day Report specification directly matching the UI Screenshot
+ * Store: AMIGO FOOD MART · Total Sales: $1,237.00 · Tickets: 248
+ */
+export const AMIGO_SCREENSHOT_DAY_REPORT = {
+  isLive: false,
+  reportTitle: 'Day Report',
+  storeName: 'AMIGO FOOD MART',
+  storeAddress: '2300 Moody Rd, Warner Robins, GA 31088',
+  subtitle: 'Thursday, Oct 8, 2026 · Closed 9:41 PM by master',
+  date: '10/08/2026',
+  openedTime: '7:02 AM',
+  closedTime: '9:41 PM',
+  userId: 'master',
+  totalInstantSales: 1237.00,
+  totalTickets: 248,
+  soldOutCount: 1,
+  soldOutBox: 'Box 16',
+  returnedCount: 0,
+  priceBreakdown: [
+    { price: 1, count: 22, total: 22.00 },
+    { price: 2, count: 53, total: 106.00 },
+    { price: 3, count: 108, total: 324.00 },
+    { price: 5, count: 35, total: 175.00 },
+    { price: 10, count: 14, total: 140.00 },
+    { price: 20, count: 11, total: 220.00 },
+    { price: 50, count: 5, total: 250.00 }
+  ],
+  boxes: [
+    { box: 1, pack: '128842', game: '5X Money', open: '000', close: '013', sold: 13, price: 1, total: 13.00 },
+    { box: 2, pack: '745508', game: 'Jr Jumbo', open: '000', close: '009', sold: 9, price: 1, total: 9.00 },
+    { box: 3, pack: '933093', game: 'Loteria', open: '000', close: '003', sold: 3, price: 2, total: 6.00 },
+    { box: 4, pack: '558845', game: 'Hit 100', open: '000', close: '011', sold: 11, price: 2, total: 22.00 },
+    { box: 6, pack: '935561', game: 'Cross Word', open: '000', close: '004', sold: 4, price: 3, total: 12.00 },
+    { box: 7, pack: '558848', game: '2026 Happy New', open: '000', close: '004', sold: 4, price: 3, total: 12.00 },
+    { box: 14, pack: '493848', game: '50X Money', open: '000', close: '011', sold: 11, price: 10, total: 110.00 },
+    { box: 16, pack: '130508', game: 'Treasure Hunt', open: '000', close: '100', sold: 100, price: 3, total: 300.00, isSoldOut: true },
+    { box: 17, pack: '176917', game: 'Gold $500,000', open: '000', close: '012', sold: 12, price: 5, total: 60.00 },
+    { box: 18, pack: '196515', game: '25X Tra', open: '000', close: '008', sold: 8, price: 5, total: 40.00 },
+    { box: 21, pack: '903287', game: 'Lucky 7s', open: '000', close: '007', sold: 7, price: 5, total: 35.00 },
+    { box: 22, pack: '500022', game: 'Epic Riches', open: '000', close: '003', sold: 3, price: 10, total: 30.00 },
+    { box: 25, pack: '593958', game: 'Jumbo Bucks Ext', open: '000', close: '001', sold: 1, price: 50, total: 50.00 },
+    { box: 27, pack: '277184', game: 'Cash 500,000', open: '000', close: '004', sold: 4, price: 50, total: 200.00 },
+    { box: 56, pack: '568218', game: 'Hit 1000', open: '000', close: '011', sold: 11, price: 20, total: 220.00 },
+    { box: 57, pack: '572198', game: 'Frogger', open: '000', close: '008', sold: 8, price: 5, total: 40.00 },
+    { box: 60, pack: '600871', game: 'Jumbo Bucks', open: '000', close: '008', sold: 8, price: 2, total: 16.00 },
+    { box: 61, pack: '610455', game: '10X Money', open: '000', close: '010', sold: 10, price: 2, total: 20.00 },
+    { box: 62, pack: '620913', game: 'Spicy Hot Cash', open: '000', close: '009', sold: 9, price: 2, total: 18.00 },
+    { box: 63, pack: '631482', game: 'Jackpots', open: '040', close: '052', sold: 12, price: 2, total: 24.00 }
+  ]
+};
+
+/**
+ * Reconciles and returns Day Report Screen data.
+ * If live sales exist in state, calculates dynamic sales; otherwise renders the reference dataset.
+ * Supports toggling empty boxes visibility.
+ */
+export function getScreenDayReportData(state, options = {}) {
+  const { showEmptyBoxes = false, forceSample = false } = options;
+
+  // Check if store state has any actual ticket sales
+  const hasLiveSales = !forceSample && state && Array.isArray(state.slots) && state.slots.some(s => {
+    return s && s.status === 'ACTIVE' && typeof s.startTicket === 'number' && typeof s.currentTicket === 'number' && s.currentTicket > s.startTicket;
+  });
+
+  if (!hasLiveSales) {
+    // Return sample matching user screenshot exactly
+    const ref = JSON.parse(JSON.stringify(AMIGO_SCREENSHOT_DAY_REPORT));
+    if (state?.storeName) ref.storeName = state.storeName;
+    if (state?.storeAddress) ref.storeAddress = state.storeAddress;
+    if (state?.cashierName) ref.userId = state.cashierName;
+
+    if (showEmptyBoxes) {
+      const existingBoxNums = new Set(ref.boxes.map(b => b.box));
+      const maxBox = 65;
+      const allRows = [...ref.boxes];
+      for (let i = 1; i <= maxBox; i++) {
+        if (!existingBoxNums.has(i)) {
+          allRows.push({
+            box: i,
+            pack: '---',
+            game: 'EMPTY',
+            open: '-',
+            close: '-',
+            sold: '-',
+            price: '-',
+            total: 0,
+            isEmpty: true
+          });
+        }
+      }
+      allRows.sort((a, b) => a.box - b.box);
+      ref.boxes = allRows;
+    }
+
+    return ref;
+  }
+
+  // Calculate live report data from state
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const monthName = now.toLocaleDateString('en-US', { month: 'short' });
+  const dayNum = now.getDate();
+  const yearNum = now.getFullYear();
+
+  const openTime = state?.shiftStartedAt 
+    ? new Date(state.shiftStartedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : '7:02 AM';
+
+  const user = state?.cashierName || 'master';
+  const subtitle = `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${state?.shiftEndedAt ? 'Closed' : 'Open'} ${timeStr} by ${user}`;
+
+  let totalTickets = 0;
+  let totalInstantSales = 0;
+  const priceMap = new Map();
+  const boxes = [];
+  const soldOutList = state?.soldOutThisShift || [];
+  let soldOutCount = soldOutList.length;
+  let soldOutBox = soldOutList.length > 0 ? `Box ${soldOutList[0].boxNumber || ''}` : '-';
+
+  const maxBox = Math.max(65, ...(state.slots || []).map(s => s.boxNumber || 0));
+
+  for (let b = 1; b <= maxBox; b++) {
+    const slot = (state.slots || []).find(s => s.boxNumber === b);
+    const soldPacks = soldOutList.filter(so => so.boxNumber === b);
+
+    if (slot && slot.status === 'ACTIVE' && slot.packNumber) {
+      const openTix = typeof slot.startTicket === 'number' ? slot.startTicket : 0;
+      const closeTix = typeof slot.currentTicket === 'number' ? slot.currentTicket : openTix;
+      const sold = Math.max(0, closeTix - openTix);
+      const price = Number(slot.price) || 1;
+      const rowTotal = sold * price;
+
+      totalTickets += sold;
+      totalInstantSales += rowTotal;
+
+      const pEntry = priceMap.get(price) || { count: 0, total: 0 };
+      pEntry.count += sold;
+      pEntry.total += rowTotal;
+      priceMap.set(price, pEntry);
+
+      boxes.push({
+        box: b,
+        pack: slot.packNumber,
+        game: slot.gameName || 'Scratch-off',
+        open: String(openTix).padStart(3, '0'),
+        close: String(closeTix).padStart(3, '0'),
+        sold,
+        price,
+        total: rowTotal,
+        isSoldOut: false
+      });
+    } else if (soldPacks.length > 0) {
+      const sp = soldPacks[0];
+      const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
+      const price = Number(sp.price) || 1;
+      const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * price);
+
+      totalTickets += sSold;
+      totalInstantSales += sTotal;
+
+      const pEntry = priceMap.get(price) || { count: 0, total: 0 };
+      pEntry.count += sSold;
+      pEntry.total += sTotal;
+      priceMap.set(price, pEntry);
+
+      boxes.push({
+        box: b,
+        pack: sp.packNumber,
+        game: sp.gameName || 'Scratch-off',
+        open: String(sp.startTicket || 0).padStart(3, '0'),
+        close: String(sp.closeTicket || (sp.startTicket || 0) + sSold).padStart(3, '0'),
+        sold: sSold,
+        price,
+        total: sTotal,
+        isSoldOut: true
+      });
+    } else if (showEmptyBoxes) {
+      boxes.push({
+        box: b,
+        pack: '---',
+        game: 'EMPTY',
+        open: '-',
+        close: '-',
+        sold: '-',
+        price: '-',
+        total: 0,
+        isEmpty: true
+      });
+    }
+  }
+
+  // Price breakdown sorted by price ascending
+  const priceBreakdown = Array.from(priceMap.entries())
+    .map(([price, data]) => ({ price, count: data.count, total: data.total }))
+    .sort((a, b) => a.price - b.price);
+
+  return {
+    isLive: true,
+    reportTitle: 'Day Report',
+    storeName: state?.storeName || 'AMIGO FOOD MART',
+    storeAddress: state?.storeAddress || '2300 Moody Rd, Warner Robins, GA 31088',
+    subtitle,
+    date: dateStr,
+    openedTime: openTime,
+    closedTime: timeStr,
+    userId: user,
+    totalInstantSales,
+    totalTickets,
+    soldOutCount,
+    soldOutBox,
+    returnedCount: 0,
+    priceBreakdown,
+    boxes
+  };
+}

@@ -1,49 +1,29 @@
 // LottoTrack Pro - Service Worker for PWA Installability
-const CACHE_NAME = 'lottotrack-pro-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/icon.svg',
-  '/manifest.json'
-];
+const CACHE_NAME = 'lottotrack-pro-v2';
 
-// Install: cache essential assets
+// Install: activate immediately
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: clean up ALL old caches immediately
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
   );
   self.clients.claim();
 });
 
-// Fetch: network-first strategy with cache fallback
+// Fetch: Always bypass service worker cache for local development & localhost
 self.addEventListener('fetch', event => {
+  const url = event.request.url;
+  if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes(':5173') || url.includes('/src/')) {
+    // Direct network pass-through for development
+    return;
+  }
+
+  // Production offline fallback
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cache successful GET responses
-        if (event.request.method === 'GET' && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Fallback to cache when offline
-        return caches.match(event.request);
-      })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
