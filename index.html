@@ -46,26 +46,26 @@
 
       <nav class="sidebar-nav" aria-label="Main Navigation">
         <div class="nav-group-title">EVERY DAY</div>
-        <button type="button" class="sidebar-nav-item active" id="navSellCounter">
+        <button type="button" class="sidebar-nav-item active" id="navSellCounter" title="Sell Counter">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
             <line x1="7" x2="7" y1="8" y2="16"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="17" x2="17" y1="8" y2="16"/>
           </svg>
           <span>Sell Counter</span>
         </button>
-        <button type="button" class="sidebar-nav-item" id="navReceivePacks">
+        <button type="button" class="sidebar-nav-item" id="navReceivePacks" title="Update Inventory">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
           </svg>
           <span>Update Inventory</span>
         </button>
-        <button type="button" class="sidebar-nav-item" id="navInventory">
+        <button type="button" class="sidebar-nav-item" id="navInventory" title="Inventory">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
           </svg>
           <span>Inventory</span>
         </button>
-        <button type="button" class="sidebar-nav-item" id="navDayReport">
+        <button type="button" class="sidebar-nav-item" id="navDayReport" title="Day Report">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
           </svg>
@@ -73,13 +73,13 @@
         </button>
 
         <div class="nav-group-title" style="margin-top: 1.5rem;">BACK OFFICE</div>
-        <button type="button" class="sidebar-nav-item" id="navHistory">
+        <button type="button" class="sidebar-nav-item" id="navHistory" title="Reports">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
           </svg>
           <span>Reports</span>
         </button>
-        <button type="button" class="sidebar-nav-item" id="navSettings">
+        <button type="button" class="sidebar-nav-item" id="navSettings" title="Settings">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
           </svg>
@@ -89,7 +89,7 @@
 
       <!-- SIDEBAR FOOTER: Cloud Sync, Dark Mode, Clerk Pill & Sign Out -->
       <div class="sidebar-footer">
-        <div class="sidebar-sync-pill" id="sidebarSyncPill">
+        <div class="sidebar-sync-pill" id="sidebarSyncPill" title="Cloud Sync Status">
           <span class="sync-icon">☁️</span>
           <span class="sync-text">Synced &middot; 3:12 PM</span>
         </div>
@@ -99,7 +99,7 @@
           <span id="themeToggleText">Dark mode</span>
         </button>
 
-        <div class="sidebar-user-pill" id="sidebarUserPill">
+        <div class="sidebar-user-pill" id="sidebarUserPill" title="Cashier / Owner Profile">
           <div class="user-avatar-initial" id="sidebarAvatar">M</div>
           <div class="user-meta-block">
             <strong class="user-name" id="sidebarUserName">master</strong>
@@ -107,7 +107,7 @@
           </div>
         </div>
 
-        <button type="button" class="sidebar-signout-btn" id="menuSignOutBtn">
+        <button type="button" class="sidebar-signout-btn" id="menuSignOutBtn" title="Sign out">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
           </svg>
@@ -463,14 +463,26 @@
       </section>
 
       <!-- VIEW: DAY REPORT (Matching Reference UI Design) -->
+      <!-- VIEW: DAY REPORT (Matching Reference UI Design Image 1) -->
       <section class="day-report-view" id="viewDayReport" style="display: none;">
         <!-- TOP HEADER -->
         <header class="day-report-header">
           <div class="header-titles">
             <h1 class="page-main-title" id="dayReportPageTitle">Day Report</h1>
             <div class="page-subtitle" id="dayReportPageSubtitle">
-              Thursday, Oct 8, 2026 · Closed 9:41 PM by master
+              Thursday, Oct 8, 2026 · 2 shifts · last closed 9:41 PM by Carlos
             </div>
+          </div>
+          <div class="day-report-header-actions">
+            <span class="dr-hdr-badge" id="drHdrVersionBadge">Final v1</span>
+            <span class="dr-hdr-badge" id="drHdrRulesBadge">Rules v3</span>
+            <button type="button" class="btn-dr-correct" id="drBtnCorrectReport" title="Correct this report">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+              <span>Correct report</span>
+            </button>
           </div>
         </header>
 
@@ -481,7 +493,7 @@
             <!-- Sheet Header -->
             <div class="dr-sheet-top-header">
               <div class="dr-store-brand-block">
-                <h2 class="dr-sheet-title">Day Report</h2>
+                <h2 class="dr-sheet-title">Day Report <span class="dr-sheet-version-tag" id="drSheetVersionTag">· Final v1</span></h2>
                 <div class="dr-store-name" id="drSheetStoreName">AMIGO FOOD MART</div>
                 <div class="dr-store-addr" id="drSheetStoreAddr">2300 Moody Rd, Warner Robins, GA 31088</div>
               </div>
@@ -493,23 +505,23 @@
 
             <div class="dr-sheet-divider"></div>
 
-            <!-- Sheet Meta Row -->
-            <div class="dr-sheet-meta-bar">
+            <!-- Sheet Meta Row (Matching Image 1) -->
+            <div class="dr-sheet-meta-bar" id="drSheetMetaBar">
               <div class="dr-meta-item">
                 <span class="dr-meta-lbl">Date</span>
                 <strong class="dr-meta-val" id="drSheetDate">10/08/2026</strong>
               </div>
               <div class="dr-meta-item">
-                <span class="dr-meta-lbl">Opened</span>
-                <strong class="dr-meta-val" id="drSheetOpened">7:02 AM</strong>
+                <span class="dr-meta-lbl">Shifts</span>
+                <strong class="dr-meta-val" id="drSheetShifts">#1 Priya (7:02 AM-3:30 PM) · #2 Carlos (3:30-9:41 PM)</strong>
               </div>
               <div class="dr-meta-item">
-                <span class="dr-meta-lbl">Closed</span>
-                <strong class="dr-meta-val" id="drSheetClosed">9:41 PM</strong>
+                <span class="dr-meta-lbl">Rules</span>
+                <strong class="dr-meta-val" id="drSheetRules">v3</strong>
               </div>
               <div class="dr-meta-item">
-                <span class="dr-meta-lbl">User</span>
-                <strong class="dr-meta-val" id="drSheetUser">master</strong>
+                <span class="dr-meta-lbl">Generated</span>
+                <strong class="dr-meta-val" id="drSheetGenerated">Oct 8, 9:41 PM</strong>
               </div>
               <div class="dr-meta-item">
                 <span class="dr-meta-lbl">Tickets</span>
@@ -546,6 +558,36 @@
               </table>
             </div>
 
+            <!-- Cash Reconciliation Summary Box (Bottom Right on Paper Sheet, Matching Image 1) -->
+            <div class="dr-sheet-reconcile-wrap">
+              <div class="dr-sheet-reconcile-box">
+                <div class="dr-recon-row">
+                  <span class="dr-recon-lbl">Ticket sales</span>
+                  <span class="dr-recon-val" id="drSheetReconTicketSales">$1,237.00</span>
+                </div>
+                <div class="dr-recon-row">
+                  <span class="dr-recon-lbl">Prizes paid out</span>
+                  <span class="dr-recon-val" id="drSheetReconPrizes">- $0.00</span>
+                </div>
+                <div class="dr-recon-row">
+                  <span class="dr-recon-lbl">Starting cash</span>
+                  <span class="dr-recon-val" id="drSheetReconStarting">+ $0.00</span>
+                </div>
+                <div class="dr-recon-row dr-recon-bold">
+                  <span class="dr-recon-lbl">Cash expected</span>
+                  <strong class="dr-recon-val" id="drSheetReconExpected">$1,237.00</strong>
+                </div>
+                <div class="dr-recon-row">
+                  <span class="dr-recon-lbl">Cash counted</span>
+                  <span class="dr-recon-val" id="drSheetReconCounted">—</span>
+                </div>
+                <div class="dr-recon-row">
+                  <span class="dr-recon-lbl">Over / short</span>
+                  <span class="dr-recon-val" id="drSheetReconOverShort">—</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Sheet Footer -->
             <div class="dr-sheet-footer">
               <span id="drSheetFooterText">Printed from LottoTrack Pro · Register 1 · Page 1 of 1</span>
@@ -554,7 +596,69 @@
 
           <!-- RIGHT COLUMN: Action & Analytics Sidebar Cards -->
           <div class="dr-sidebar-panel">
-            <!-- Card 1: Top Actions -->
+            <!-- Card 1: Count the cash drawer (Matching Image 1) -->
+            <div class="dr-cash-card">
+              <div class="dr-cash-card-header">
+                <div class="dr-cash-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                    <circle cx="12" cy="12" r="2.5"></circle>
+                    <path d="M6 12h.01M18 12h.01"></path>
+                  </svg>
+                </div>
+                <div class="dr-cash-title-wrap">
+                  <h3 class="dr-cash-title">Count the cash drawer</h3>
+                  <span class="dr-cash-subtitle">Lottery cash only</span>
+                </div>
+              </div>
+
+              <div class="dr-cash-math-list">
+                <div class="dr-cash-math-row">
+                  <span class="dr-math-lbl"><span class="dr-math-op">+</span> Ticket sales</span>
+                  <strong class="dr-math-val text-emerald" id="drCardTicketSales">$1,237.00</strong>
+                </div>
+
+                <div class="dr-cash-math-row">
+                  <label class="dr-math-lbl" for="drInputPrizesPaid"><span class="dr-math-op">-</span> Prizes paid out</label>
+                  <div class="dr-mini-input-wrap">
+                    <span class="dr-input-pfx">$</span>
+                    <input type="number" step="0.01" min="0" class="dr-mini-input" id="drInputPrizesPaid" value="0.00">
+                  </div>
+                </div>
+
+                <div class="dr-cash-math-row">
+                  <label class="dr-math-lbl" for="drInputStartingCash"><span class="dr-math-op">+</span> Starting cash in drawer</label>
+                  <div class="dr-mini-input-wrap">
+                    <span class="dr-input-pfx">$</span>
+                    <input type="number" step="0.01" min="0" class="dr-mini-input" id="drInputStartingCash" value="0.00">
+                  </div>
+                </div>
+
+                <div class="dr-cash-math-row dr-math-row-total">
+                  <span class="dr-math-lbl"><span class="dr-math-op">=</span> Cash you should have</span>
+                  <strong class="dr-math-val" id="drCardExpectedCash">$1,237.00</strong>
+                </div>
+              </div>
+
+              <div class="dr-counted-block">
+                <label class="dr-counted-label" for="drInputCashCounted">Cash you counted</label>
+                <div class="dr-large-currency-input">
+                  <span class="dr-large-currency-sym">$</span>
+                  <input type="number" step="0.01" min="0" class="dr-large-input" id="drInputCashCounted" placeholder="0.00" value="0.00">
+                </div>
+              </div>
+
+              <div class="dr-cash-info-callout" id="drCashInfoCallout">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span id="drCashInfoText">Count the lottery cash and type the total above. We'll tell you if it's over or short.</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Quick Action Buttons & Toggle -->
             <div class="dr-action-card">
               <button type="button" class="dr-btn-print" id="drBtnPrintReport">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -574,6 +678,14 @@
                 <span>Save as PDF</span>
               </button>
 
+              <button type="button" class="dr-btn-pdf" id="drBtnEmailManager">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                <span>Email to manager</span>
+              </button>
+
               <div class="dr-toggle-wrap">
                 <span class="dr-toggle-label">Show empty boxes on report</span>
                 <label class="dr-switch" title="Toggle display of empty dispenser boxes">
@@ -583,7 +695,43 @@
               </div>
             </div>
 
-            <!-- Card 2: Today in numbers -->
+            <!-- Card 3: Shifts in this day (Matching Image 1) -->
+            <div class="dr-shifts-card">
+              <h3 class="dr-card-title">Shifts in this day</h3>
+              <div id="drShiftsList">
+                <div class="dr-shift-item">
+                  <div class="dr-shift-left">
+                    <strong class="dr-shift-name">#1 · Priya</strong>
+                    <span class="dr-shift-time">7:02 AM - 3:30 PM</span>
+                  </div>
+                  <div class="dr-shift-right">
+                    <strong class="dr-shift-amt">$731.00</strong>
+                    <button type="button" class="dr-btn-shift-inspect" title="Inspect Shift 1" data-shift-id="1">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="dr-shift-item">
+                  <div class="dr-shift-left">
+                    <strong class="dr-shift-name">#2 · Carlos</strong>
+                    <span class="dr-shift-time">3:30 PM - 9:41 PM</span>
+                  </div>
+                  <div class="dr-shift-right">
+                    <strong class="dr-shift-amt">$506.00</strong>
+                    <button type="button" class="dr-btn-shift-inspect" title="Inspect Shift 2" data-shift-id="2">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dr-shifts-note">
+                Day total matches the sum of each shift, reconciles perfectly.
+              </div>
+            </div>
+
+            <!-- Card 4: Today in numbers (Matching Image 1) -->
             <div class="dr-analytics-card">
               <h3 class="dr-analytics-heading">Today in numbers</h3>
 
@@ -606,10 +754,11 @@
                 <span class="dr-stat-sub" id="drStatSoldOutSub">Box 16</span>
               </div>
 
-              <!-- RETURNED Stat Box -->
+              <!-- ACTIVATED Stat Box (Matching Image 1) -->
               <div class="dr-stat-box">
-                <span class="dr-stat-lbl">RETURNED</span>
-                <strong class="dr-stat-val" id="drStatReturnedCount">0</strong>
+                <span class="dr-stat-lbl">ACTIVATED</span>
+                <strong class="dr-stat-val" id="drStatActivatedCount">2</strong>
+                <span class="dr-stat-sub" id="drStatActivatedSub">EFT $600.00 · invoice in 21 days</span>
               </div>
 
               <div class="dr-analytics-divider"></div>
@@ -623,7 +772,7 @@
               </div>
             </div>
 
-            <!-- Card 3: Ready for tomorrow? -->
+            <!-- Card 5: Ready for the next shift? (Matching Image 1) -->
             <div class="dr-ready-card">
               <div class="dr-ready-header">
                 <div class="dr-ready-icon-wrap">
@@ -633,12 +782,12 @@
                   </svg>
                 </div>
                 <div class="dr-ready-text">
-                  <h4 class="dr-ready-title">Ready for tomorrow?</h4>
-                  <p class="dr-ready-desc">Every box will start from today's closing ticket number.</p>
+                  <h4 class="dr-ready-title">Ready for the next shift?</h4>
+                  <p class="dr-ready-desc">Every box starts from the closing position confirmed in this report.</p>
                 </div>
               </div>
               <button type="button" class="dr-btn-start-new-day" id="drBtnStartNewDay">
-                Start new day
+                Start new shift
               </button>
             </div>
           </div>
@@ -4051,6 +4200,137 @@
       <button type="button" class="btn btn-primary" id="btnOkMysqlModal" style="padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; background: #2563eb; color: #fff; border: none;">
         Done
       </button>
+    </div>
+  </dialog>
+  <!-- ============================================================
+       MODAL: Correct this report (Matching Image 2 Reference Design)
+       ============================================================ -->
+  <dialog id="correctReportModal" class="modal-correct-report">
+    <div class="cr-modal-wrapper">
+      <!-- Header -->
+      <div class="cr-header">
+        <div class="cr-header-left">
+          <div class="cr-icon-box">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </div>
+          <div class="cr-title-block">
+            <h2 class="cr-main-title">Correct this report</h2>
+            <p class="cr-main-subtitle">Creates Corrected v2. The original v1 stays in the archive and both are emailed with clear labels.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeCorrectReportModalBtn" title="Close Dialog">&times;</button>
+      </div>
+
+      <!-- Form Body -->
+      <div class="cr-body">
+        <div class="cr-form-row-3">
+          <div class="cr-field">
+            <label class="cr-label" for="crShiftSelect">Shift</label>
+            <select id="crShiftSelect" class="cr-select">
+              <option value="1">#1 · Priya</option>
+              <option value="2" selected>#2 · Carlos</option>
+            </select>
+          </div>
+
+          <div class="cr-field">
+            <label class="cr-label" for="crBoxSelect">Box</label>
+            <select id="crBoxSelect" class="cr-select">
+              <!-- Dynamically populated options -->
+            </select>
+          </div>
+
+          <div class="cr-field">
+            <label class="cr-label" for="crClosingPosInput">Correct closing position</label>
+            <input type="number" id="crClosingPosInput" class="cr-input" value="13" min="0" max="999">
+          </div>
+        </div>
+
+        <!-- Info calculation banner pill (Matching Image 2) -->
+        <div class="cr-calc-banner" id="crCalcBanner">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span id="crCalcBannerText">Box 14 closing #011 &rarr; #013 · +2 tickets · +$20.00 in sales</span>
+        </div>
+
+        <div class="cr-field cr-field-full">
+          <label class="cr-label" for="crReasonInput">Reason (required)</label>
+          <input type="text" id="crReasonInput" class="cr-input" placeholder="e.g. Closing position misread at close">
+        </div>
+
+        <div class="cr-field cr-field-pin">
+          <label class="cr-label" for="crPinInput">Manager PIN</label>
+          <input type="password" id="crPinInput" class="cr-input" placeholder="••••" maxlength="8">
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="cr-footer">
+        <button type="button" class="btn-cr-cancel" id="btnCrCancel">Cancel</button>
+        <button type="button" class="btn-cr-save" id="btnCrSave">Save Corrected v2</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============================================================
+       MODAL: Email to manager (Day Report)
+       ============================================================ -->
+  <dialog id="emailDayReportModal" class="modal-correct-report">
+    <div class="cr-modal-wrapper">
+      <!-- Header -->
+      <div class="cr-header">
+        <div class="cr-header-left">
+          <div class="cr-icon-box" style="background: #eff6ff; border-color: #dbeafe;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <div class="cr-title-block">
+            <h2 class="cr-main-title">Email to manager</h2>
+            <p class="cr-main-subtitle">Send official Day Report summary &amp; PDF directly to store management.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeEmailReportModalBtn" title="Close Dialog">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="cr-body">
+        <div class="cr-field cr-field-full">
+          <label class="cr-label" for="drEmailRecipientInput">Manager email address (To)</label>
+          <input type="email" id="drEmailRecipientInput" class="cr-input" value="manager@amigofoodmart.com" placeholder="manager@amigofoodmart.com">
+        </div>
+
+        <div class="cr-calc-banner" id="drEmailPreviewBanner" style="background:#f8fafc; border-color:#e2e8f0; color:#334155;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span id="drEmailPreviewText">Day Report (Final v1) · Total Instant Sales: $1,237.00 attached as PDF</span>
+        </div>
+
+        <div class="cr-field cr-field-full">
+          <label class="cr-label" for="drEmailNotesInput">Optional note for manager</label>
+          <input type="text" id="drEmailNotesInput" class="cr-input" placeholder="e.g. All shifts reconciled, cash drawer balanced.">
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="cr-footer">
+        <button type="button" class="btn-cr-cancel" id="btnCancelEmailReport">Cancel</button>
+        <button type="button" class="btn-cr-save" id="btnSendDayReportEmail" style="display:inline-flex; align-items:center; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          <span id="btnSendDayReportEmailText">Send email</span>
+        </button>
+      </div>
     </div>
   </dialog>
 

@@ -5,3 +5,4 @@ dist-ssr
 .DS_Store
 Thumbs.db
 pos_preview*.png
+scratch/chrome-test-profile/

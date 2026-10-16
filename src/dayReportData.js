@@ -457,6 +457,10 @@ export const AMIGO_SCREENSHOT_DAY_REPORT = {
   soldOutCount: 1,
   soldOutBox: 'Box 16',
   returnedCount: 0,
+  shifts: [
+    { id: 1, name: 'Shift #1 · Priya', cashier: 'Priya', time: '7:02 AM – 3:30 PM', total: 731.00 },
+    { id: 2, name: 'Shift #2 · Carlos', cashier: 'Carlos', time: '3:30 PM – 9:41 PM', total: 506.00 }
+  ],
   priceBreakdown: [
     { price: 1, count: 22, total: 22.00 },
     { price: 2, count: 53, total: 106.00 },
