@@ -84,6 +84,8 @@ async function run() {
       window.state = window.state || {};
       window.state.shiftStatus = 'IN_PROGRESS';
       window.state.currentShiftNumber = 13;
+      window.state.inStockInventory = [];
+      window.state.inventory = [];
       window.state.slots = window.state.slots || [];
       window.state.slots[0] = {
         boxNumber: 1,

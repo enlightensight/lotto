@@ -38,7 +38,7 @@ async function run() {
     '--no-first-run',
     '--no-default-browser-check',
     '--window-size=1280,800',
-    'http://localhost:5173'
+    'http://127.0.0.1:5173/?bypass_login=1'
   ]);
 
   try {

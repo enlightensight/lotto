@@ -3,12 +3,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   server: {
     host: true, // Expose to all network interfaces (LAN / Wi-Fi)
-    port: 5173,
+    port: parseInt(process.env.VITE_PORT || '5173', 10),
     strictPort: true,
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_TARGET || 'http://localhost:3001',
         changeOrigin: true
       }
     }

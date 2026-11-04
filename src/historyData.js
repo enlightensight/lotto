@@ -1,6 +1,8 @@
 // History & Past Days Screen Data Model & Reconciler
 // Matches LottoTrack Reference UI Specification
 
+import { isSameBusinessDay } from './dayReportData.js';
+
 export const REFERENCE_HISTORY_DAYS = [
   {
     id: 'day_14',
@@ -341,25 +343,27 @@ export function getHistoryScreenData(state) {
   const rawHistory = Array.isArray(state?.shiftHistory) ? state.shiftHistory : [];
 
   if (rawHistory.length === 0) {
+    const totalRefSales = REFERENCE_CLOSED_SHIFTS.reduce((acc, s) => acc + (Number(s.sales) || 0), 0);
+    const totalRefTickets = REFERENCE_CLOSED_SHIFTS.reduce((acc, s) => acc + (Number(s.tickets) || 0), 0);
     return {
       kpis: {
-        totalSales: 0,
-        daysCount: 0,
-        ticketsSold: 0,
-        dailyAverage: 0,
-        bestDayAmount: 0,
-        bestDayDate: '—',
-        closedShiftsCount: 0,
-        closedShiftsDays: '0 days',
+        totalSales: totalRefSales,
+        daysCount: REFERENCE_HISTORY_DAYS.length,
+        ticketsSold: totalRefTickets,
+        dailyAverage: Math.round(totalRefSales / (REFERENCE_HISTORY_DAYS.length || 1)),
+        bestDayAmount: 2011.00,
+        bestDayDate: 'Sun, Sep 27',
+        closedShiftsCount: REFERENCE_CLOSED_SHIFTS.length,
+        closedShiftsDays: `${REFERENCE_HISTORY_DAYS.length} days`,
         correctedReportsCount: 0,
         correctedReportsSub: 'none'
       },
       chart: {
-        days: [],
-        maxSales: 0
+        days: REFERENCE_HISTORY_DAYS,
+        maxSales: 2011.00
       },
-      days: [],
-      shifts: []
+      days: REFERENCE_HISTORY_DAYS,
+      shifts: REFERENCE_CLOSED_SHIFTS
     };
   }
 
@@ -461,16 +465,17 @@ export function getHistoryScreenData(state) {
 
 export function getDailyReportData(state, selectedDate = 'Today') {
   const { shifts } = getHistoryScreenData(state);
-  const normDate = (selectedDate || 'Today').trim().toLowerCase();
+  const normDate = (selectedDate || 'Today').trim();
 
-  const filtered = shifts.filter(s => {
-    const sDate = (s.date || s.day || '').toLowerCase();
-    if (normDate === 'today') {
-      const todayShort = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toLowerCase();
-      return sDate.includes('today') || sDate === todayShort || (s.id && s.id.startsWith('live_'));
+  const isMatching = (s) => {
+    const sDate = s.date || s.day || '';
+    if (normDate.toLowerCase() === 'today') {
+      return isSameBusinessDay(sDate, new Date()) || sDate.toLowerCase().includes('today') || (s.id && String(s.id).startsWith('live_'));
     }
-    return sDate.includes(normDate);
-  });
+    return isSameBusinessDay(sDate, normDate);
+  };
+
+  const filtered = shifts.filter(isMatching);
 
   const totalTickets = filtered.reduce((acc, s) => acc + (Number(s.tickets) || 0), 0);
   const totalSales = filtered.reduce((acc, s) => acc + (Number(s.sales) || 0), 0);

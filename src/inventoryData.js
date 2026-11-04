@@ -454,6 +454,31 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
     inStockItems = JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
   }
 
+  // 1b. Pending Setup / Unconfigured Items from automatic new barcode detection
+  let pendingItems = [];
+  if (Array.isArray(state?.pendingTickets)) {
+    state.pendingTickets.filter(pt => pt && pt.status === 'PENDING_SETUP').forEach((pt, idx) => {
+      pendingItems.push({
+        id: `pending_${idx}_${pt.barcode}`,
+        gameName: pt.gameName || 'New Unconfigured Ticket',
+        gameNumber: pt.gameNumber ? `Game ${pt.gameNumber}` : `Barcode ${pt.barcode ? pt.barcode.slice(-4) : ''}`,
+        packNumber: String(pt.packNumber || pt.barcode),
+        price: (pt.ticketPrice !== undefined && pt.ticketPrice !== null && !isNaN(pt.ticketPrice)) ? Number(pt.ticketPrice) : '—',
+        packSize: 'Pending setup',
+        packSizeNum: 0,
+        status: 'PENDING_SETUP',
+        statusLabel: 'Pending Setup',
+        statusBadgeClass: 'badge-removed',
+        boxNumber: null,
+        position: '—',
+        receivedDate: pt.discoveredAt ? new Date(pt.discoveredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today',
+        barcode: pt.barcode
+      });
+    });
+    // Add pending items to In Stock view so cashiers see unconfigured tickets in inventory
+    inStockItems.push(...pendingItems);
+  }
+
   // 2. Active Items on the Rack (19 items from state.slots or reference)
   let activeItems = [];
   const hasLiveSlots = state && Array.isArray(state.slots) && state.slots.some(s => s && s.status === 'ACTIVE' && s.packNumber && !s.needsActivation);

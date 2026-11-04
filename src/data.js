@@ -21,6 +21,15 @@ export const DEFAULT_STORES = [
     phone: '(478) 953-8821',
     totalBoxes: 60,
     status: 'ACTIVE'
+  },
+  {
+    id: 'store_anish',
+    name: 'ANISH STORE',
+    address: 'Georgia, USA',
+    retailerNumber: 'GA-ANISH01',
+    phone: '(478) 555-0199',
+    totalBoxes: 65,
+    status: 'ACTIVE'
   }
 ];
 
@@ -51,9 +60,6 @@ export function setCurrentStoreId(storeId) {
 
 export function getStoreStorageKey(storeId = null) {
   const sid = storeId || getCurrentStoreId();
-  if (sid === 'store_amigo') {
-    return STORAGE_KEY;
-  }
   return `lotto_track_pos_data_v3_${sid}`;
 }
 
@@ -90,7 +96,21 @@ export const SAMPLE_GAMES = [
   { id: 'g1153', name: 'HIT 100', price: 1, bookValue: 300, packSize: 300, barcodePrefix: '1153' },
   { id: 'g1451', name: '50K EXTREME', price: 2, bookValue: 300, packSize: 150, barcodePrefix: '1451' },
   { id: 'g1409', name: 'GOLD $500,000', price: 5, bookValue: 300, packSize: 60, barcodePrefix: '1409' },
-  { id: 'g1917', name: '50X MERRY MONEY', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1917' }
+  { id: 'g1917', name: '50X MERRY MONEY', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1917' },
+  { id: 'g1910', name: 'JUMBO BREW BUCKS', price: 2, bookValue: 300, packSize: 150, barcodePrefix: '1910' },
+  { id: 'g1658', name: 'PLAYERS CLUB', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1658' },
+  { id: 'g1904', name: '15XTRA', price: 2, bookValue: 300, packSize: 150, barcodePrefix: '1904' },
+  { id: 'g1906', name: '50XTRA', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1906' },
+  { id: 'g1907', name: '100XTRA', price: 20, bookValue: 300, packSize: 15, barcodePrefix: '1907' },
+  { id: 'g1908', name: 'BULLDOG BUCKS', price: 5, bookValue: 300, packSize: 60, barcodePrefix: '1908' },
+  { id: 'g1911', name: '30X BINGO MULTIPLIER', price: 3, bookValue: 300, packSize: 100, barcodePrefix: '1911' },
+  { id: 'g1914', name: 'HOLIDAY $100S', price: 2, bookValue: 300, packSize: 150, barcodePrefix: '1914' },
+  { id: 'g1915', name: 'CHRISTMAS VACATION', price: 3, bookValue: 300, packSize: 100, barcodePrefix: '1915' },
+  { id: 'g1916', name: 'HOLIDAY $500S', price: 5, bookValue: 300, packSize: 60, barcodePrefix: '1916' },
+  { id: 'g1900', name: 'MYSTERY BOX GIVEAWAY', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1900' },
+  { id: 'g1901', name: 'DOUBLE YOUR LUCK', price: 20, bookValue: 300, packSize: 15, barcodePrefix: '1901' },
+  { id: 'g1902', name: 'KICK \'N CASH', price: 2, bookValue: 300, packSize: 150, barcodePrefix: '1902' },
+  { id: 'g1903', name: '$600 CASH IN HAND', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1903' }
 ];
 
 export function getStandardPackDetails(price) {
@@ -211,7 +231,7 @@ export function computeLotterySeriesCode(gamePrefixOrNumber, ticketNumber, custo
     else if (tix >= 100) packSize = 150;
     else if (tix >= 60) packSize = 100;
     else if (tix >= 30) packSize = 60;
-    else packSize = 30;
+    else packSize = 150;
   }
 
   const maxIndex = Math.max(0, packSize - 1);
@@ -287,10 +307,11 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode: `${gameNumber}${packNumber}${checkCode || '0'}${ticketString}`,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
-      displayBarcode: `${gameNumber}-${packCombined}-${ticketString} (${sec})`,
+      displayBarcode: (checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString} (${sec})` : `${gameNumber}-${packCombined}-${ticketString} (${sec})`),
       raw
     };
   }
@@ -328,6 +349,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode: `${gameNumber}${packNumber}${checkCode || '0'}${ticketString}`,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
@@ -390,6 +412,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode: `${gameNumber}${packNumber}${checkCode || '0'}${ticketString}`,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
@@ -433,6 +456,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode: `${gameNumber}${packNumber}${checkCode || '0'}${ticketString}`,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
@@ -531,6 +555,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
@@ -579,6 +604,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode: null,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode,
       canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
       fullId: `${gameNumber}-${packNumber}-${ticketString}(${sec})`,
@@ -588,10 +614,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
   }
 
   // 14 digits: Standard Interleaved 2 of 5 / Code 128 barcode on Georgia Lottery & US scratch tickets:
-  // Format: [4 Game][6 Pack][1 Check][3 Ticket]
-  // e.g. 16480183788029 -> Game 1648, Pack 018378, Check 8, Ticket 029
-  // e.g. 14170670170009 -> Game 1417, Pack 067017, Check 0, Ticket 009
-  // e.g. 16480183780001 -> Game 1648, Pack 018378, Check 0, Ticket 001
+  // Dual standards:
+  // Layout A (e.g. GA Lottery / IGT): [4 Game][6 Pack][1 Check][3 Ticket] (e.g. 16480183788029 -> Game 1648, Pack 018378, Check 8, Ticket 029)
+  // Layout B (e.g. SCEL / Scientific Games): [4 Game][6 Pack][3 Ticket][1 Trailer] (e.g. 16583508770290 -> Game 1658, Pack 350877, Ticket 029, Trailer 0)
   if (digits.length === 14) {
     const gameNumber = digits.slice(0, 4);
     const gNum = parseInt(gameNumber, 10);
@@ -605,13 +630,38 @@ export function parseLotteryBarcode(raw, customGames = []) {
       };
     }
 
-    const packNumber = digits.slice(4, 10); // 6-digit pack (018378, 067017)
+    const packNumber = digits.slice(4, 10); // 6-digit pack (018378, 350877)
 
-    // In Georgia Lottery & Scientific Games scratch tickets, the 11th digit (index 10) is check code,
-    // and the last 3 digits (indices 11..14) are the ticket number (000..999).
-    const ticketNumber = parseInt(digits.slice(11, 14), 10);
-    const ticketString = digits.slice(11, 14);
-    const checkCode = digits.slice(10, 11);
+    // Layout A: [Game 4][Pack 6][Check 1][Ticket 3]
+    const checkA = digits.slice(10, 11);
+    const tixStrA = digits.slice(11, 14);
+    const tixNumA = parseInt(tixStrA, 10);
+
+    // Layout B: [Game 4][Pack 6][Ticket 3][Trailer 1]
+    const tixStrB = digits.slice(10, 13);
+    const tixNumB = parseInt(tixStrB, 10);
+    const trailerB = digits.slice(13, 14);
+
+    const matched = SAMPLE_GAMES.find(g => g.barcodePrefix === gameNumber || String(g.id).replace(/[^0-9]/g, '') === gameNumber)
+      || (customGames || []).find(g => g.barcodePrefix === gameNumber || String(g.id).replace(/[^0-9]/g, '') === gameNumber);
+    const knownPackSize = matched?.packSize || (matched?.price ? getStandardPackDetails(matched.price).packSize : null);
+
+    let isLayoutB = false;
+    if (tixNumB > 299) {
+      isLayoutB = false;
+    } else if (tixNumA > 299) {
+      isLayoutB = true;
+    } else if (knownPackSize && tixNumA >= knownPackSize && tixNumB < knownPackSize) {
+      isLayoutB = true;
+    } else if (knownPackSize && tixNumB >= knownPackSize && tixNumA < knownPackSize) {
+      isLayoutB = false;
+    } else if (tixNumA >= 100 && tixNumB < 100 && trailerB === '0') {
+      isLayoutB = true;
+    }
+
+    const ticketNumber = isLayoutB ? tixNumB : tixNumA;
+    const ticketString = isLayoutB ? tixStrB : tixStrA;
+    const checkCode = isLayoutB ? null : checkA;
 
     if (isNaN(ticketNumber) || ticketNumber > 999) {
       return {
@@ -637,11 +687,15 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketNumber,
       ticketString,
       checkCode,
+      trailer: isLayoutB ? trailerB : null,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode: digits,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
-      displayBarcode: `${gameNumber}-${packCombined}-${ticketString} (${sec})`,
+      displayBarcode: (isLayoutB || !checkCode)
+        ? `${gameNumber}-${packNumber}-${ticketString} (${sec})`
+        : `${gameNumber}-${packCombined}-${ticketString} (${sec})`,
       raw
     };
   }
@@ -670,6 +724,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
           ticketString,
           checkCode,
           securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
           standardBarcode,
           canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
           fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
@@ -726,6 +781,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       ticketString,
       checkCode,
       securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
       standardBarcode,
       canonicalId: `${gameNumber}-${packCombined}-${ticketString}`,
       fullId: `${gameNumber}-${packCombined}-${ticketString}(${sec})`,
@@ -756,6 +812,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
           ticketString,
           checkCode: null,
           securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
           standardBarcode: `${gameNumber}${packNumber}0${ticketString}`,
           canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
           fullId: `${gameNumber}-${packNumber}-${ticketString}(${sec})`,
@@ -791,6 +848,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
           ticketString,
           checkCode: null,
           securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
           standardBarcode: `${gameNumber}${packNumber}0${ticketString}`,
           canonicalId: `${gameNumber}-${packNumber}-${ticketString}`,
           fullId: `${gameNumber}-${packNumber}-${ticketString}(${sec})`,
@@ -835,6 +893,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
         ticketString: '000',
         checkCode,
         securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
         canonicalId: `${gameNumber}-${digits.slice(4, 11)}`,
         fullId: `${gameNumber}-${packNumber}-${checkCode}`,
         standardBarcode: digits,
@@ -869,6 +928,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
         ticketString: '000',
         checkCode: null,
         securityCode: sec,
+      hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
         canonicalId: `${gameNumber}-${packNumber}`,
         fullId: `${gameNumber}-${packNumber}`,
         standardBarcode: digits,
@@ -1074,111 +1134,13 @@ export function findGameByBarcode(rawCode, customGames = []) {
 }
 
 export function getInitialState() {
-  const slots = [];
-  const TOTAL_SLOTS = 65; // Matches full Georgia Lottery store rack (Boxes 1-65)
-
-  for (let i = 1; i <= TOTAL_SLOTS; i++) {
-    slots.push({
-      boxNumber: i,
-      status: 'EMPTY',
-      gameId: null,
-      gameName: null,
-      price: null,
-      packNumber: null,
-      packSize: null,
-      startTicket: 0,
-      currentTicket: 0,
-      ticketsInBox: 0,
-      scannedBarcodes: [],
-      soldBarcodes: [],
-      activatedThisShift: false,
-      daysActive: 0,
-      scannedInEndShift: false
-    });
-  }
-
-  const refBoxes = [
-    { boxNumber: 1, gameName: '5X Money', price: 1, packNumber: '128842', packSize: 300, currentTicket: 13, startTicket: 13, daysActive: 2 },
-    { boxNumber: 2, gameName: 'Jr Jumbo', price: 1, packNumber: '745508', packSize: 300, currentTicket: 9, startTicket: 9, daysActive: 2 },
-    { boxNumber: 3, gameName: 'Loteria', price: 2, packNumber: '933093', packSize: 150, currentTicket: 3, startTicket: 3, daysActive: 7 },
-    { boxNumber: 4, gameName: 'Hit 100', price: 2, packNumber: '558845', packSize: 150, currentTicket: 11, startTicket: 11, daysActive: 4 },
-    { boxNumber: 6, gameName: 'Cross Word', price: 3, packNumber: '935561', packSize: 100, currentTicket: 4, startTicket: 4, daysActive: 3 },
-    { boxNumber: 7, gameName: '2026 Happy New', price: 3, packNumber: '558848', packSize: 100, currentTicket: 4, startTicket: 4, daysActive: 12 },
-    { boxNumber: 14, gameName: '50X Money', price: 10, packNumber: '493848', packSize: 30, currentTicket: 11, startTicket: 11, daysActive: 3 },
-    { boxNumber: 17, gameName: 'Gold $500,000', price: 5, packNumber: '176917', packSize: 60, currentTicket: 12, startTicket: 12, daysActive: 2 },
-    { boxNumber: 18, gameName: '25X Tra', price: 5, packNumber: '196515', packSize: 60, currentTicket: 8, startTicket: 8, daysActive: 2 },
-    { boxNumber: 21, gameName: 'Lucky 7s', price: 5, packNumber: '903287', packSize: 60, currentTicket: 7, startTicket: 7, daysActive: 7 },
-    { boxNumber: 22, gameName: 'Epic Riches', price: 10, packNumber: '500022', packSize: 30, currentTicket: 3, startTicket: 3, daysActive: 1 },
-    { boxNumber: 25, gameName: 'Jumbo Bucks Ext', price: 50, packNumber: '593958', packSize: 18, currentTicket: 1, startTicket: 1, daysActive: 2 },
-    { boxNumber: 27, gameName: 'Cash 500,000', price: 50, packNumber: '277184', packSize: 20, currentTicket: 4, startTicket: 4, daysActive: 21 },
-    { boxNumber: 56, gameName: 'Hit 1000', price: 20, packNumber: '568218', packSize: 15, currentTicket: 11, startTicket: 11, daysActive: 4 },
-    { boxNumber: 57, gameName: 'Frogger', price: 5, packNumber: '572198', packSize: 60, currentTicket: 8, startTicket: 8, daysActive: 2 },
-    { boxNumber: 60, gameName: 'Jumbo Bucks', price: 2, packNumber: '600871', packSize: 150, currentTicket: 8, startTicket: 8, daysActive: 12 },
-    { boxNumber: 61, gameName: '10X Money', price: 2, packNumber: '610455', packSize: 150, currentTicket: 10, startTicket: 10, daysActive: 2 },
-    { boxNumber: 62, gameName: 'Spicy Hot Cash', price: 2, packNumber: '620913', packSize: 150, currentTicket: 9, startTicket: 9, daysActive: 7 },
-    { boxNumber: 63, gameName: 'Jackpots', price: 2, packNumber: '631482', packSize: 150, currentTicket: 52, startTicket: 52, daysActive: 21 }
-  ];
-
-  refBoxes.forEach(rb => {
-    const s = slots.find(x => x.boxNumber === rb.boxNumber);
-    if (s) {
-      s.status = 'ACTIVE';
-      s.gameName = rb.gameName;
-      s.price = rb.price;
-      s.packNumber = rb.packNumber;
-      s.packSize = rb.packSize;
-      s.currentTicket = rb.currentTicket;
-      s.startTicket = rb.startTicket;
-      s.ticketsInBox = Math.max(0, rb.packSize - rb.currentTicket);
-      s.daysActive = rb.daysActive;
-      const cleanRbName = cleanGameTitle(rb.gameName).toLowerCase();
-      const matchedGame = SAMPLE_GAMES.find(g => cleanGameTitle(g.name).toLowerCase() === cleanRbName);
-      if (matchedGame) {
-        s.gameId = matchedGame.id;
-        s.barcodePrefix = matchedGame.barcodePrefix;
-      }
-    }
-  });
-
-  return {
+  return getCleanEmptyState({
+    storeId: 'store_amigo',
     storeName: 'AMIGO FOOD MART',
     storeAddress: '2300 MOODY RD WARNER ROBINS, GA, 31088',
-    shiftNumber: 13,
-    cashierName: 'Admin',
-    shiftStatus: 'IN_PROGRESS', // 'IN_PROGRESS' | 'SCANNING_END_SHIFT' | 'SHIFT_ENDED'
-    shiftStartedAt: new Date().toISOString(),
-    totalSlots: TOTAL_SLOTS,
-    slots,
-    visibleBoxNumbers: [3, 7, 21, 27, 60, 62, 63, 1, 2, 4, 6, 14, 17, 18, 22, 25, 56, 57, 61],
-    boxAccessTimes: {},
-    inventory: [
-      { packNumber: '600994', gameName: 'Jumbo Bucks', price: 2, packSize: 150, bookValue: 300, status: 'STORED', scannedAt: new Date().toISOString() },
-      { packNumber: '903342', gameName: 'Lucky 7s', price: 5, packSize: 60, bookValue: 300, status: 'STORED', scannedAt: new Date().toISOString() }
-    ],
-    inventoryBarcodes: {},
-    customGames: [],
-    onlineSales: 0,
-    cashes: 0,
-    onlineCashes: 0,
-    discontinuedCount: 0,
-    shiftOpeningActiveCount: 19,
-    soldOutThisShift: [
-      { boxNumber: 16, packNumber: '130508', gameName: 'Treasure Hunt', price: 3, packSize: 100 }
-    ],
-    partialTakeOuts: [],
-    shiftHistory: [],
-    lastScannedBarcode: '',
-    lastScannedSlot: 6,
-    soldBarcodes: [],
-    dataCleared: false,
-    settings: {
-      soundEnabled: true,
-      voiceEnabled: true,
-      autoPrint: true,
-      autoEmail: false,
-      targetEmails: 'manager@amigofoodmart.com'
-    }
-  };
+    retailerNumber: 'GA-89412',
+    totalSlots: 65
+  });
 }
 
 export function loadState(targetStoreId = null) {
@@ -1230,8 +1192,10 @@ export function loadState(targetStoreId = null) {
               const bStr = typeof firstValid === 'string' ? firstValid : firstValid.barcode;
               const p = parseLotteryBarcode(bStr, parsed.customGames);
               if (p && p.isValid) {
-                const accuratePack = p.packCombined || p.packNumber;
-                s.packNumber = accuratePack;
+                if (!s.packNumber || !isPackNumberMatch(s.packNumber, p.packNumber)) {
+                  const accuratePack = p.packNumber || p.packCombined;
+                  s.packNumber = accuratePack;
+                }
                 if ((s.startTicket === 0 || s.startTicket === null || s.startTicket === undefined) && p.ticketNumber !== null && p.ticketNumber !== undefined) {
                   s.startTicket = p.ticketNumber;
                   s.currentTicket = p.ticketNumber;
@@ -1304,7 +1268,7 @@ export function loadState(targetStoreId = null) {
     totalBoxes: 65,
     status: 'ACTIVE'
   };
-  const fresh = (storeId === 'store_amigo') ? getInitialState() : getCleanEmptyState({
+  const fresh = getCleanEmptyState({
     storeId: storeId,
     storeName: storeMeta.name,
     storeAddress: storeMeta.address,
@@ -1312,7 +1276,10 @@ export function loadState(targetStoreId = null) {
     totalSlots: storeMeta.totalBoxes || 65
   });
   fresh.storeId = storeId;
-  saveState(fresh, storeId);
+  fresh.dataCleared = false;
+  try {
+    localStorage.setItem(key, JSON.stringify(fresh));
+  } catch (_) {}
   return fresh;
 }
 
@@ -1320,6 +1287,10 @@ export function saveState(state, targetStoreId = null) {
   const storeId = targetStoreId || (state && state.storeId) || getCurrentStoreId();
   if (state) {
     state.storeId = storeId;
+    const hasActiveBoxes = Array.isArray(state.slots) && state.slots.some(s => s && s.status === 'ACTIVE' && s.packNumber);
+    if (hasActiveBoxes) {
+      state.dataCleared = false;
+    }
   }
   const key = getStoreStorageKey(storeId);
   try {
@@ -1368,7 +1339,7 @@ export function getCleanEmptyState(existingState = null) {
     voiceEnabled: true,
     autoPrint: true,
     autoEmail: false,
-    targetEmails: 'manager@amigofoodmart.com',
+    targetEmails: 'amigofoodmart2300@gmail.com',
     operationMode: 'DAILY',
     warning1Days: 7,
     warning2Days: 12,
@@ -1406,7 +1377,7 @@ export function getCleanEmptyState(existingState = null) {
     lastScannedSlot: null,
     lastScanData: null,
     soldBarcodes: [],
-    dataCleared: true,
+    dataCleared: false,
     settings
   };
 }
@@ -1414,12 +1385,20 @@ export function getCleanEmptyState(existingState = null) {
 export function resetToDefaults() {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('lotto_track_pos_data_v3_store_amigo');
     localStorage.removeItem('lotto_track_pos_data_v1');
+    localStorage.removeItem('lotto_track_pos_data_v2');
   } catch (e) {
     console.error('Failed to clear storage:', e);
   }
-  const seeded = getInitialState();
-  saveState(seeded);
+  const seeded = getCleanEmptyState({
+    storeId: 'store_amigo',
+    storeName: 'AMIGO FOOD MART',
+    storeAddress: '2300 MOODY RD WARNER ROBINS, GA, 31088',
+    retailerNumber: 'GA-89412',
+    totalSlots: 65
+  });
+  saveState(seeded, 'store_amigo');
   return seeded;
 }
 
@@ -1439,15 +1418,11 @@ export function resetToCleanState(existingState = null) {
   empty.shiftNumber = 1;
   const storeKey = getStoreStorageKey(storeId);
   try {
-    if (storeId === 'store_amigo') {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('lotto_track_pos_data_v1');
-      localStorage.removeItem('lotto_track_pos_data_v2');
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(empty));
-    } else {
-      localStorage.removeItem(storeKey);
-      localStorage.setItem(storeKey, JSON.stringify(empty));
-    }
+    localStorage.removeItem(storeKey);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('lotto_track_pos_data_v1');
+    localStorage.removeItem('lotto_track_pos_data_v2');
+    localStorage.setItem(storeKey, JSON.stringify(empty));
   } catch (e) {
     console.error('Failed to clear storage:', e);
   }

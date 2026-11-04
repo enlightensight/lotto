@@ -22268,22 +22268,42 @@ dialog#modalShiftReportViewer[open] {
     overflow: visible !important;
   }
 
+  /* 1. When printing shift report from Dashboard (#shiftClosedReportSection) */
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) > *:not(.pos-app-layout),
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .pos-sidebar,
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .mobile-hamburger-btn,
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .sidebar-mobile-overlay,
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .pos-unified-header-bar,
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .pos-main-container > *:not(#viewSellCounter),
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .sell-counter-view > *:not(#shiftClosedReportSection),
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) #shiftClosedReportSection > *:not(.shift-rep-doc-viewport),
+  body.print-shift-report:not(:has(dialog#modalShiftReportViewer[open])) .shift-rep-toolbar {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 2. When printing from modal (#modalShiftReportViewer) */
+  body.print-shift-report:has(dialog#modalShiftReportViewer[open]) > *:not(#modalShiftReportViewer),
+  body.print-shift-report:has(dialog#modalShiftReportViewer[open]) .modal-shift-rep-header {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Universal print suppression for receipt slips, alerts, and other floating widgets */
   body.print-shift-report #printReceiptSection,
-  body.print-shift-report .sidebar-container,
+  body.print-shift-report .toast-container,
   body.print-shift-report .top-notification-bar,
-  body.print-shift-report .modal-shift-rep-header,
-  body.print-shift-report .shift-rep-toolbar,
   body.print-shift-report .btn-shift-rep-tool,
   body.print-shift-report .btn-shift-rep-done,
-  body.print-shift-report .shift-rep-email-badge,
-  body.print-shift-report .scanner-split-grid,
-  body.print-shift-report .kpi-metrics-row,
-  body.print-shift-report .dispenser-rack-container,
-  body.print-shift-report #cardAllBoxesMap,
-  body.print-shift-report .header-top-bar,
-  body.print-shift-report .reports-view-header,
-  body.print-shift-report .subview-shift-reports-table-card,
-  body.print-shift-report .daily-report-toolbar {
+  body.print-shift-report .shift-rep-email-badge {
     display: none !important;
     height: 0 !important;
     overflow: hidden !important;
@@ -22322,6 +22342,7 @@ dialog#modalShiftReportViewer[open] {
   }
 
   /* When printing from Dashboard */
+  body.print-shift-report .pos-app-layout,
   body.print-shift-report .pos-main-container,
   body.print-shift-report .sell-counter-view {
     display: block !important;
@@ -22330,8 +22351,10 @@ dialog#modalShiftReportViewer[open] {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
     background: #ffffff !important;
+    border: none !important;
   }
 
   body.print-shift-report #shiftClosedReportSection {
@@ -22370,17 +22393,38 @@ dialog#modalShiftReportViewer[open] {
     visibility: visible !important;
   }
 
+  body.print-shift-report .rep-doc-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 8px !important;
+  }
+
   body.print-shift-report .rep-doc-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    font-size: 10.5px !important;
+    font-size: 10px !important;
   }
 
-  body.print-shift-report .rep-doc-table th,
-  body.print-shift-report .rep-doc-table td {
-    border: 1px solid #64748b !important;
+  body.print-shift-report .rep-doc-table th {
+    border: 1px solid #000000 !important;
+    background: #f8fafc !important;
     color: #000000 !important;
-    padding: 4px 6px !important;
+    padding: 2.5px 4px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.print-shift-report .rep-doc-table td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    padding: 2px 4px !important;
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -22390,6 +22434,13 @@ dialog#modalShiftReportViewer[open] {
   }
 
   body.print-shift-report .rep-doc-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  body.print-shift-report .rep-doc-footer-summary {
+    margin-top: 10px !important;
+    padding-top: 6px !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
@@ -22405,14 +22456,27 @@ dialog#modalShiftReportViewer[open] {
     overflow: visible !important;
   }
 
+  body.print-daily-report > *:not(.pos-app-layout),
+  body.print-daily-report .pos-sidebar,
+  body.print-daily-report .mobile-hamburger-btn,
+  body.print-daily-report .sidebar-mobile-overlay,
+  body.print-daily-report .pos-unified-header-bar,
+  body.print-daily-report .pos-main-container > *:not(#viewHistory),
+  body.print-daily-report #viewHistory > *:not(#subviewDailyReport),
   body.print-daily-report #printReceiptSection,
-  body.print-daily-report .sidebar-container,
   body.print-daily-report .top-notification-bar,
   body.print-daily-report .reports-view-header,
-  body.print-daily-report .daily-report-toolbar {
+  body.print-daily-report .daily-report-toolbar,
+  body.print-daily-report .btn-daily-shift-view {
     display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
+  body.print-daily-report .pos-app-layout,
   body.print-daily-report .pos-main-container,
   body.print-daily-report #viewHistory,
   body.print-daily-report #subviewDailyReport {
@@ -22421,8 +22485,11 @@ dialog#modalShiftReportViewer[open] {
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
     background: #ffffff !important;
+    border: none !important;
   }
 
   body.print-daily-report .daily-kpi-grid,

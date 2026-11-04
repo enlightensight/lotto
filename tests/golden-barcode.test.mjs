@@ -373,6 +373,57 @@ for (const p of standardPrices) {
 }
 
 // ----------------------------------------------------------------------------
+// 9. GOLDEN TEST: PHYSICAL TICKET #1658 (PLAYERS CLUB $10 - SCEL DUAL LAYOUT)
+// ----------------------------------------------------------------------------
+console.log('\n--- Group 9: Physical Ticket #1658 (PLAYERS CLUB $10) ---');
+
+test('Physical Ticket 1658 printed text: 1658-350877-3-029(000)', () => {
+  const p = parseLotteryBarcode('1658-350877-3-029(000)');
+  assert(p && p.isValid, 'Barcode must be valid');
+  assert.equal(p.gameNumber, '1658');
+  assert.equal(p.packNumber, '350877');
+  assert.equal(p.checkCode, '3');
+  assert.equal(p.ticketNumber, 29);
+  assert.equal(p.ticketString, '029');
+  assert.equal(p.securityCode, '000');
+  assert.equal(p.displayBarcode, '1658-350877-3-029 (000)');
+
+  const formatted = formatLotteryBarcode('1658-350877-3-029(000)');
+  assert.equal(formatted, '1658-350877-3-029 (000)');
+
+  const game = findGameByBarcode('1658-350877-3-029(000)');
+  assert(game, 'Game must be identified');
+  assert.equal(game.name, 'PLAYERS CLUB');
+  assert.equal(game.price, 10);
+});
+
+test('Physical Ticket 1658 scanned raw 14-digit barcode: 16583508770290', () => {
+  const p = parseLotteryBarcode('16583508770290');
+  assert(p && p.isValid, 'Barcode must be valid');
+  assert.equal(p.gameNumber, '1658');
+  assert.equal(p.packNumber, '350877');
+  assert.equal(p.ticketNumber, 29, 'Ticket number must be 29 (ticket 029), NOT 290!');
+  assert.equal(p.ticketString, '029');
+  assert.equal(p.securityCode, '000', 'Security PIN for ticket 29 in 30-pack is (30-1)-29 = 000');
+  assert.equal(p.displayBarcode, '1658-350877-029 (000)');
+
+  const formatted = formatLotteryBarcode('16583508770290');
+  assert.equal(formatted, '1658-350877-029 (000)', 'Formatted barcode must match our barcode style');
+
+  const game = findGameByBarcode('16583508770290');
+  assert(game, 'Game must be identified');
+  assert.equal(game.name, 'PLAYERS CLUB');
+  assert.equal(game.price, 10);
+});
+
+test('Cross-matching 1658 printed text with scanned barcode pack', () => {
+  assert.equal(isPackNumberMatch('350877', '16583508770290'), true);
+  assert.equal(isPackNumberMatch('350877', '1658-350877-3-029(000)'), true);
+  assert.equal(normalizePackNumber('16583508770290'), '350877');
+  assert.equal(normalizePackNumber('1658-350877-3-029(000)'), '350877');
+});
+
+// ----------------------------------------------------------------------------
 // SUMMARY REPORT
 // ----------------------------------------------------------------------------
 console.log('\n====================================================');

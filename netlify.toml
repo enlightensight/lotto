@@ -13,6 +13,19 @@
   [headers.values]
     Content-Type = "application/manifest+json"
 
+# ==============================================================================
+# API REVERSE PROXY TO ENZONIC PRODUCTION BACKEND
+# Must appear BEFORE the SPA frontend fallback rule.
+# ==============================================================================
+[[redirects]]
+  from = "/api/*"
+  to = "https://jackpotlo-api.enzonic.dev/api/:splat"
+  status = 200
+  force = true
+
+# ==============================================================================
+# SPA FRONTEND ROUTING FALLBACK
+# ==============================================================================
 [[redirects]]
   from = "/*"
   to = "/index.html"

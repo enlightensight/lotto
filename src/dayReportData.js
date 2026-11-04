@@ -132,312 +132,60 @@ export function formatReportGameName(name) {
 }
 
 /**
- * Generates a 100% dynamic, mathematically reconciled Georgia Lottery Day Report
- * directly from the live POS store state.
+ * Parses flexible date inputs (e.g. 'Oct 17', 'Sat, Oct 17', '10/17/2026', '2026-10-17', 'Today')
  */
-export function generateLiveDayReport(state) {
-  const now = new Date();
-  const reportDate = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-  const reportTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-  const isToday = (dateStr) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    return d.getFullYear() === now.getFullYear() &&
-           d.getMonth() === now.getMonth() &&
-           d.getDate() === now.getDate();
-  };
-
-  const isDaily = state?.settings?.operationMode !== 'SHIFTS';
-
-  // In Daily Mode: Find all past shifts that completed today (if any)
-  // In Shift Mode: Only report data for the current active shift
-  const todayPastShifts = isDaily
-    ? (state?.shiftHistory || [])
-        .filter(h => isToday(h.endedAt || h.startedAt))
-        .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0))
-    : [];
-
-  const earliestTodayShift = isDaily && todayPastShifts.length > 0 ? todayPastShifts[0] : null;
-
-  // Determine true opening ticket (day's opening in Daily Mode, shift's opening in Shift Mode)
-  const getDayOpenTicket = (slot) => {
-    if (isDaily && earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
-      const pastSlot = earliestTodayShift.slotsSnapshot.find(s => s.boxNumber === slot.boxNumber);
-      if (pastSlot && pastSlot.packNumber === slot.packNumber && typeof pastSlot.startTicket === 'number') {
-        return pastSlot.startTicket;
-      }
-    }
-    return slot.startTicket || 0;
-  };
-
-  // Map any sold out packs across all today's shifts (Daily Mode) or current session (Shift Mode)
-  const soldOutMap = new Map();
-  const allSoldOutToday = [];
-  if (isDaily) {
-    todayPastShifts.forEach(h => {
-      (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
-    });
+export function parseFlexibleDate(val, refYear = new Date().getFullYear()) {
+  if (!val) return null;
+  if (typeof val === 'string' && val.toLowerCase() === 'today') {
+    const n = new Date();
+    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
   }
-  (state?.soldOutThisShift || []).forEach(so => allSoldOutToday.push(so));
-
-  allSoldOutToday.forEach(so => {
-    if (so && so.boxNumber) {
-      if (!soldOutMap.has(so.boxNumber)) {
-        soldOutMap.set(so.boxNumber, []);
-      }
-      const existing = soldOutMap.get(so.boxNumber);
-      if (!existing.some(x => x.packNumber === so.packNumber)) {
-        existing.push(so);
-      }
-    }
-  });
-
-  const boxes = [];
-  let totalScratcherSales = 0;
-
-  // Georgia Lottery Dispenser standard rack capacity: at least 70 boxes (Boxes 1 to 70+)
-  const maxBoxNum = Math.max(70, ...(state?.slots || []).map(s => s.boxNumber || 0));
-  for (let boxNum = 1; boxNum <= maxBoxNum; boxNum++) {
-    const slot = (state?.slots || []).find(s => s.boxNumber === boxNum);
-    const soldPacks = soldOutMap.get(boxNum) || [];
-    const isSlotActive = Boolean(slot && slot.status === 'ACTIVE' && slot.packNumber);
-
-    if (isSlotActive && soldPacks.length > 0) {
-      // Multi-Pack Box: e.g. Box 6 in the official PDF where a pack finished and a new pack was activated
-      const openTicket = getDayOpenTicket(slot);
-      const activeSold = (slot.ticketsSold !== undefined && slot.ticketsSold !== null && slot.scannedInEndShift)
-        ? slot.ticketsSold
-        : Math.abs((slot.currentTicket || 0) - openTicket);
-      const activeTotal = activeSold * (slot.price || 0);
-      totalScratcherSales += activeTotal;
-
-      const subRows = [
-        {
-          pack: slot.packNumber,
-          name: formatReportGameName(slot.gameName),
-          open: openTicket,
-          close: slot.currentTicket || 0,
-          price: slot.price || 0,
-          total: activeTotal,
-          highlight: slot.activatedThisShift ? 'green' : null
-        }
-      ];
-
-      soldPacks.forEach(sp => {
-        const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.abs((sp.closeTicket || 0) - (sp.startTicket || 0));
-        const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * (sp.price || 0));
-        totalScratcherSales += sTotal;
-        const retSuffix = sp.isReturned ? ` (Ret ${sp.ticketsReturned || 0})` : '';
-        subRows.push({
-          pack: sp.packNumber,
-          name: formatReportGameName(sp.gameName) + (sp.isReturned ? ' [RETURNED]' : ''),
-          open: sp.startTicket || 0,
-          close: (sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold) + retSuffix,
-          price: sp.price || 0,
-          total: sTotal,
-          highlight: sp.isReturned ? 'purple' : 'red'
-        });
-      });
-
-      boxes.push({
-        box: boxNum,
-        isMultiPack: true,
-        subRows
-      });
-    } else if (isSlotActive) {
-      // Single active pack in dispenser
-      const openTicket = getDayOpenTicket(slot);
-      const sold = (slot.ticketsSold !== undefined && slot.ticketsSold !== null && slot.scannedInEndShift)
-        ? slot.ticketsSold
-        : Math.abs((slot.currentTicket || 0) - openTicket);
-      const total = sold * (slot.price || 0);
-      totalScratcherSales += total;
-
-      boxes.push({
-        box: boxNum,
-        pack: slot.packNumber,
-        name: formatReportGameName(slot.gameName),
-        open: openTicket,
-        close: slot.currentTicket || 0,
-        price: slot.price || 0,
-        total,
-        highlight: slot.activatedThisShift ? 'green' : null
-      });
-    } else if (soldPacks.length > 0) {
-      // Slot is currently inactive/empty, but sold out or returned a pack during this shift
-      if (soldPacks.length === 1) {
-        const sp = soldPacks[0];
-        const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
-        const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * (sp.price || 0));
-        totalScratcherSales += sTotal;
-        const retSuffix = sp.isReturned ? ` (Ret ${sp.ticketsReturned || 0})` : '';
-
-        boxes.push({
-          box: boxNum,
-          pack: sp.packNumber,
-          name: formatReportGameName(sp.gameName) + (sp.isReturned ? ' [RETURNED]' : ''),
-          open: sp.startTicket || 0,
-          close: (sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold) + retSuffix,
-          price: sp.price || 0,
-          total: sTotal,
-          highlight: sp.isReturned ? 'purple' : 'red'
-        });
-      } else {
-        const subRows = soldPacks.map(sp => {
-          const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
-          const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * (sp.price || 0));
-          totalScratcherSales += sTotal;
-          const retSuffix = sp.isReturned ? ` (Ret ${sp.ticketsReturned || 0})` : '';
-          return {
-            pack: sp.packNumber,
-            name: formatReportGameName(sp.gameName) + (sp.isReturned ? ' [RETURNED]' : ''),
-            open: sp.startTicket || 0,
-            close: (sp.closeTicket !== undefined ? sp.closeTicket : (sp.startTicket || 0) + sSold) + retSuffix,
-            price: sp.price || 0,
-            total: sTotal,
-            highlight: sp.isReturned ? 'purple' : 'red'
-          };
-        });
-
-        boxes.push({
-          box: boxNum,
-          isMultiPack: true,
-          subRows
-        });
-      }
-    } else {
-      // Empty slot — explicitly included per user request
-      boxes.push({
-        box: boxNum,
-        pack: '---',
-        name: 'EMPTY',
-        open: '-',
-        close: '-',
-        price: '-',
-        total: 0,
-        isEmpty: true
-      });
+  const s = String(val).trim();
+  const cleaned = s.replace(/^[A-Za-z]+,\s*/, '').trim();
+  const parts = cleaned.split(/[\s,]+/);
+  const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  if (parts.length >= 2) {
+    const mStr = parts[0].toLowerCase().slice(0, 3);
+    if (mStr in months) {
+      const day = parseInt(parts[1], 10);
+      const year = parts[2] ? parseInt(parts[2], 10) : refYear;
+      if (!isNaN(day)) return new Date(Date.UTC(year, months[mStr], day));
     }
   }
-
-  // Financial Summary & Reconciled Totals (includes past today shifts + current)
-  const pastCashes = todayPastShifts.reduce((sum, h) => sum + Number(h.cashes || 0), 0);
-  const pastOnlineSales = todayPastShifts.reduce((sum, h) => sum + Number(h.onlineSales || 0), 0);
-  const pastOnlineCashes = todayPastShifts.reduce((sum, h) => sum + Number(h.onlineCashes || 0), 0);
-
-  const cashes = Number(state?.cashes || 0) + pastCashes;
-  const onlineSales = Number(state?.onlineSales || 0) + pastOnlineSales;
-  const onlineCashes = Number(state?.onlineCashes || 0) + pastOnlineCashes;
-  const totalSales = totalScratcherSales + onlineSales;
-  const totalCashes = cashes + onlineCashes;
-  const totalDrop = totalSales - totalCashes;
-  const scratchProfit = totalScratcherSales > 0 ? Math.max(0, (totalScratcherSales * 0.06) - 1.30) : 0;
-
-  // Dynamic Inventory Statistics
-  const activeSlots = (state?.slots || []).filter(s => s.status === 'ACTIVE' && s.packNumber);
-  const endingCount = activeSlots.length;
-  const activationsCount = activeSlots.filter(s => s.activatedThisShift).length;
-  const soldCount = allSoldOutToday.filter(so => !so.isReturned).length;
-  const returnedCount = allSoldOutToday.filter(so => so.isReturned).length;
-  const discontinuedCount = Math.max(Number(state?.discontinuedCount || 0), returnedCount);
-
-  // Exact Opening Count formula from Georgia Lottery manual:
-  // Opening Active Count + Activations - Sold - Discontinued = Ending Active Count
-  let openingCount = endingCount - activationsCount + soldCount + discontinuedCount;
-  if (earliestTodayShift && typeof earliestTodayShift.emptySlotsCount === 'number') {
-    openingCount = (state?.totalSlots || 70) - earliestTodayShift.emptySlotsCount;
-  } else if (typeof state?.shiftOpeningActiveCount === 'number' && state.shiftOpeningActiveCount > 0) {
-    openingCount = state.shiftOpeningActiveCount;
-  } else {
-    openingCount = Math.max(0, openingCount);
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    if (s.includes('T') && s.endsWith('Z')) {
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    }
+    return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   }
-
-  const backInventory = (state?.inventory || []).length;
-  const totalInventory = endingCount + backInventory;
-
-  // Active Retail Value: Total dollar value of unsold tickets inside all active dispensers
-  const activeValue = activeSlots.reduce((sum, s) => {
-    const packSize = s.packSize || (s.price ? (s.price >= 50 ? 18 : Math.max(1, Math.floor(300 / s.price))) : 100);
-    const remaining = Math.max(0, packSize - (s.currentTicket || 0));
-    return sum + (remaining * (s.price || 0));
-  }, 0);
-
-  // Activations Subtable (Page 2) - includes today's past shifts activations + current
-  const activationsList = [];
-  todayPastShifts.forEach(h => {
-    (h.slotsSnapshot || []).forEach(s => {
-      if (s.activatedThisShift && !activationsList.some(a => a.packNumber === s.packNumber)) {
-        activationsList.push({
-          box: s.boxNumber,
-          time: s.activatedAt || reportTime,
-          packNumber: s.packNumber,
-          price: s.price || 0,
-          name: formatReportGameName(s.gameName)
-        });
-      }
-    });
-  });
-  activeSlots.forEach(s => {
-    if (s.activatedThisShift && !activationsList.some(a => a.packNumber === s.packNumber)) {
-      activationsList.push({
-        box: s.boxNumber,
-        time: s.activatedAt || reportTime,
-        packNumber: s.packNumber,
-        price: s.price || 0,
-        name: formatReportGameName(s.gameName)
-      });
-    }
-  });
-
-  // Sold Out Subtable (Page 2)
-  const soldOutList = [];
-  allSoldOutToday.forEach(so => {
-    if (!soldOutList.some(x => x.packNumber === so.packNumber)) {
-      soldOutList.push({
-        box: so.boxNumber,
-        packNumber: so.packNumber,
-        price: so.price || 0,
-        name: formatReportGameName(so.gameName) + (so.isReturned ? ` [RET: ${so.ticketsReturned || 0} tix]` : '')
-      });
-    }
-  });
-
-  return {
-    isLive: true,
-    isDailyMode: isDaily,
-    reportHeading: isDaily ? 'Day Report' : `Shift #${state?.shiftNumber || 1} Report`,
-    shiftNumber: state?.shiftNumber || 1,
-    storeName: state?.storeName || 'AMIGO FOOD MART',
-    storeAddress: state?.storeAddress || '2300 MOODY RD WARNER ROBINS, GA, 31088',
-    userId: state?.cashierName || 'master',
-    reportDate,
-    reportTime,
-    totalScratcherSales,
-    cashes,
-    onlineSales,
-    onlineCashes,
-    totalSales,
-    totalCashes,
-    totalDrop,
-    scratchProfit,
-    inventoryStats: {
-      openingCount,
-      endingCount,
-      activations: activationsCount,
-      sold: soldCount,
-      discontinued: discontinuedCount,
-      removed: '-',
-      backInventory,
-      totalInventory,
-      activeValue
-    },
-    activations: activationsList,
-    soldOut: soldOutList,
-    boxes
-  };
+  return null;
 }
 
+/**
+ * Checks whether two date representations match the same calendar business day.
+ */
+export function isSameBusinessDay(valA, valB) {
+  if (!valA || !valB) return false;
+  const dA = parseFlexibleDate(valA);
+  const refYear = dA ? dA.getUTCFullYear() : new Date().getFullYear();
+  const dB = parseFlexibleDate(valB, refYear);
+  if (!dA || !dB) {
+    return String(valA).toLowerCase().includes(String(valB).toLowerCase()) || String(valB).toLowerCase().includes(String(valA).toLowerCase());
+  }
+  return dA.getUTCFullYear() === dB.getUTCFullYear() &&
+         dA.getUTCMonth() === dB.getUTCMonth() &&
+         dA.getUTCDate() === dB.getUTCDate();
+}
+
+/**
+ * Generates a 100% dynamic, mathematically reconciled Georgia Lottery Day Report
+ * directly from the POS store state or historical shift history.
+ */
+export function generateLiveDayReport(state, options = {}) {
+  const targetDate = options.targetDate || options.date || null;
+  return getScreenDayReportData(state, { ...options, targetDate });
+}
 /**
  * Returns dynamic live store Georgia Lottery Day Report.
  * @param {Object} state Live application state
@@ -445,6 +193,171 @@ export function generateLiveDayReport(state) {
 export function getDayReportData(state) {
   return generateLiveDayReport(state);
 }
+
+export const REFERENCE_CLOSED_SHIFTS = [
+  {
+    id: 'shift_13',
+    shift: '#13',
+    shiftNumber: 13,
+    date: 'Sat, Oct 18',
+    day: 'Sat, Oct 18',
+    salesperson: 'Rosa',
+    employee: 'Rosa',
+    started: '7:02 AM',
+    closed: '3:00 PM',
+    openClose: '7:02 AM — 3:00 PM',
+    tickets: 214,
+    sales: 1284.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_12',
+    shift: '#12',
+    shiftNumber: 12,
+    date: 'Fri, Oct 17',
+    day: 'Fri, Oct 17',
+    salesperson: 'Daniel',
+    employee: 'Daniel',
+    started: '3:04 PM',
+    closed: '10:05 PM',
+    openClose: '3:04 PM — 10:05 PM',
+    tickets: 251,
+    sales: 1512.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_11',
+    shift: '#11',
+    shiftNumber: 11,
+    date: 'Fri, Oct 17',
+    day: 'Fri, Oct 17',
+    salesperson: 'Rosa',
+    employee: 'Rosa',
+    started: '7:00 AM',
+    closed: '3:01 PM',
+    openClose: '7:00 AM — 3:01 PM',
+    tickets: 198,
+    sales: 1173.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_10',
+    shift: '#10',
+    shiftNumber: 10,
+    date: 'Thu, Oct 16',
+    day: 'Thu, Oct 16',
+    salesperson: 'Daniel',
+    employee: 'Daniel',
+    started: '3:02 PM',
+    closed: '10:02 PM',
+    openClose: '3:02 PM — 10:02 PM',
+    tickets: 233,
+    sales: 1396.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_9',
+    shift: '#9',
+    shiftNumber: 9,
+    date: 'Thu, Oct 16',
+    day: 'Thu, Oct 16',
+    salesperson: 'Rosa',
+    employee: 'Rosa',
+    started: '7:05 AM',
+    closed: '3:00 PM',
+    openClose: '7:05 AM — 3:00 PM',
+    tickets: 176,
+    sales: 1045.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_8',
+    shift: '#8',
+    shiftNumber: 8,
+    date: 'Wed, Oct 15',
+    day: 'Wed, Oct 15',
+    salesperson: 'Daniel',
+    employee: 'Daniel',
+    started: '3:00 PM',
+    closed: '10:04 PM',
+    openClose: '3:00 PM — 10:04 PM',
+    tickets: 240,
+    sales: 1420.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_7',
+    shift: '#7',
+    shiftNumber: 7,
+    date: 'Wed, Oct 15',
+    day: 'Wed, Oct 15',
+    salesperson: 'Rosa',
+    employee: 'Rosa',
+    started: '7:01 AM',
+    closed: '3:02 PM',
+    openClose: '7:01 AM — 3:02 PM',
+    tickets: 187,
+    sales: 1098.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_6',
+    shift: '#6',
+    shiftNumber: 6,
+    date: 'Tue, Oct 14',
+    day: 'Tue, Oct 14',
+    salesperson: 'Daniel',
+    employee: 'Daniel',
+    started: '3:03 PM',
+    closed: '10:00 PM',
+    openClose: '3:03 PM — 10:00 PM',
+    tickets: 228,
+    sales: 1331.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  },
+  {
+    id: 'shift_5',
+    shift: '#5',
+    shiftNumber: 5,
+    date: 'Tue, Oct 14',
+    day: 'Tue, Oct 14',
+    salesperson: 'Rosa',
+    employee: 'Rosa',
+    started: '7:00 AM',
+    closed: '3:01 PM',
+    openClose: '7:00 AM — 3:01 PM',
+    tickets: 185,
+    sales: 1105.00,
+    email: 'Sent',
+    emailStatus: 'sent',
+    version: 'Final v1',
+    versionBadge: 'final'
+  }
+];
 
 /**
  * Reference Day Report specification directly matching the UI Screenshot
@@ -543,8 +456,299 @@ export function getScreenDayReportData(state, options = {}) {
     return ref;
   }
 
-  // Calculate live report data from state
+  const targetDate = options.targetDate || options.date || null;
   const now = new Date();
+  const isTargetToday = !targetDate || isSameBusinessDay(targetDate, now);
+
+  // =========================================================================
+  // 1. HISTORICAL DATE CALCULATION (when targetDate is not today)
+  // =========================================================================
+  if (!isTargetToday) {
+    const shiftsOnDate = (Array.isArray(state?.shiftHistory) ? state.shiftHistory : [])
+      .filter(h => isSameBusinessDay(h.endedAt || h.startedAt || h.date, targetDate))
+      .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0));
+
+    if (shiftsOnDate.length > 0) {
+      const earliestShift = shiftsOnDate[0];
+      const latestShift = shiftsOnDate[shiftsOnDate.length - 1];
+
+      const dObj = parseFlexibleDate(targetDate) || new Date(earliestShift.endedAt || earliestShift.startedAt || Date.now());
+      const dateStr = dObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const dayName = dObj.toLocaleDateString('en-US', { weekday: 'long' });
+      const monthName = dObj.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = dObj.getDate();
+      const yearNum = dObj.getFullYear();
+
+      const openTime = earliestShift.startedAt
+        ? new Date(earliestShift.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+        : (earliestShift.openedTime || '7:00 AM');
+      const closeTime = latestShift.endedAt
+        ? new Date(latestShift.endedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+        : (latestShift.closedTime || '10:00 PM');
+
+      const user = latestShift.cashier || latestShift.cashierName || earliestShift.cashier || 'Clerk';
+
+      let totalTickets = 0;
+      let totalInstantSales = 0;
+      const priceMap = new Map();
+      const boxes = [];
+
+      // Collect all sold-out packs that occurred in any shift on this historical date
+      const allSoldOutOnDate = [];
+      shiftsOnDate.forEach(h => {
+        (h.soldOutSnapshot || []).forEach(so => allSoldOutOnDate.push(so));
+      });
+
+      const soldOutList = allSoldOutOnDate.filter(sp => {
+        const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
+        return sSold > 0;
+      });
+      const soldOutCount = soldOutList.length;
+      const soldOutBox = soldOutList.length > 0 ? `Box ${soldOutList[0].boxNumber || ''}` : '-';
+
+      // Calculate max box
+      let maxBox = 65;
+      shiftsOnDate.forEach(h => {
+        (h.slotsSnapshot || []).forEach(s => {
+          if (s.boxNumber > maxBox) maxBox = s.boxNumber;
+        });
+      });
+      soldOutList.forEach(s => {
+        if (s.boxNumber > maxBox) maxBox = s.boxNumber;
+      });
+
+      for (let b = 1; b <= maxBox; b++) {
+        const soldPacks = soldOutList.filter(so => so.boxNumber === b);
+        let boxHasRows = false;
+
+        // 1. Sold-out packs in this box on this date
+        soldPacks.forEach(sp => {
+          const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
+          const price = Number(sp.price) || 1;
+          const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * price);
+
+          totalTickets += sSold;
+          totalInstantSales += sTotal;
+
+          const pEntry = priceMap.get(price) || { count: 0, total: 0 };
+          pEntry.count += sSold;
+          pEntry.total += sTotal;
+          priceMap.set(price, pEntry);
+
+          boxes.push({
+            box: b,
+            pack: sp.packNumber,
+            game: sp.gameName || 'Scratch-off',
+            open: String(sp.startTicket || 0).padStart(3, '0'),
+            close: String(sp.closeTicket || (sp.startTicket || 0) + sSold).padStart(3, '0'),
+            sold: sSold,
+            price,
+            total: sTotal,
+            isSoldOut: true
+          });
+          boxHasRows = true;
+        });
+
+        // 2. Active pack in this box at the end of the day
+        const lastSlot = (latestShift.slotsSnapshot || []).find(s => s.boxNumber === b && s.status === 'ACTIVE' && s.packNumber);
+        if (lastSlot) {
+          // Find opening ticket from earliest shift that had this same pack
+          const firstShiftWithPack = shiftsOnDate.find(h => (h.slotsSnapshot || []).some(s => s.boxNumber === b && s.packNumber === lastSlot.packNumber));
+          const firstSlot = firstShiftWithPack ? (firstShiftWithPack.slotsSnapshot || []).find(s => s.boxNumber === b && s.packNumber === lastSlot.packNumber) : null;
+          const openTix = (firstSlot && typeof firstSlot.startTicket === 'number')
+            ? firstSlot.startTicket
+            : (typeof lastSlot.packStartTicket === 'number' ? lastSlot.packStartTicket : (typeof lastSlot.startTicket === 'number' ? lastSlot.startTicket : 0));
+          const closeTix = typeof lastSlot.currentTicket === 'number' ? lastSlot.currentTicket : openTix;
+          const sold = Math.max(0, closeTix - openTix);
+          const price = Number(lastSlot.price) || 1;
+          const rowTotal = sold * price;
+
+          totalTickets += sold;
+          totalInstantSales += rowTotal;
+
+          const pEntry = priceMap.get(price) || { count: 0, total: 0 };
+          pEntry.count += sold;
+          pEntry.total += rowTotal;
+          priceMap.set(price, pEntry);
+
+          boxes.push({
+            box: b,
+            pack: lastSlot.packNumber,
+            game: lastSlot.gameName || 'Scratch-off',
+            open: String(openTix).padStart(3, '0'),
+            close: String(closeTix).padStart(3, '0'),
+            sold,
+            price,
+            total: rowTotal,
+            isSoldOut: false
+          });
+          boxHasRows = true;
+        } else if (!boxHasRows && showEmptyBoxes) {
+          boxes.push({
+            box: b,
+            pack: '---',
+            game: 'EMPTY',
+            open: '-',
+            close: '-',
+            sold: '-',
+            price: '-',
+            total: 0,
+            isEmpty: true
+          });
+        }
+      }
+
+      const priceBreakdown = Array.from(priceMap.entries())
+        .map(([price, data]) => ({ price, count: data.count, total: data.total }))
+        .sort((a, b) => a.price - b.price);
+
+      const shifts = shiftsOnDate.map((h, idx) => {
+        const sNum = h.shiftNumber || (idx + 1);
+        const cName = h.cashier || h.cashierName || 'Cashier';
+        const sStart = h.startedAt ? new Date(h.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '7:00 AM';
+        const sEnd = h.endedAt ? new Date(h.endedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '3:00 PM';
+        return {
+          id: sNum,
+          name: `Shift #${sNum} · ${cName}`,
+          cashier: cName,
+          time: `${sStart} – ${sEnd}`,
+          total: Number(h.totalSalesRevenue || 0),
+          tickets: Number(h.totalTicketsSold || 0),
+          isOpen: false
+        };
+      });
+
+      const shiftsSummary = shifts.map(s => `${s.name.replace('Shift #', '#')} (${s.time})`).join(' · ');
+      const shiftsCount = `${shifts.length} shift${shifts.length === 1 ? '' : 's'}`;
+      const subtitle = `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${shiftsCount} · Closed ${closeTime} by ${user}`;
+
+      return {
+        isLive: true,
+        isDailyMode: true,
+        reportHeading: 'Day Report',
+        reportTitle: 'Day Report',
+        storeName: state?.storeName || earliestShift.storeName || 'AMIGO FOOD MART',
+        storeAddress: state?.storeAddress || earliestShift.storeAddress || '2300 Moody Rd, Warner Robins, GA 31088',
+        subtitle,
+        date: dateStr,
+        dateRange: dateStr,
+        generatedTime: `${monthName} ${dayNum}, ${closeTime}`,
+        openedTime: openTime,
+        closedTime: closeTime,
+        userId: user,
+        shifts,
+        shiftsCount,
+        shiftsSummary,
+        totalInstantSales,
+        totalTickets,
+        soldOutCount,
+        soldOutBox,
+        returnedCount: 0,
+        priceBreakdown,
+        boxes
+      };
+    }
+
+    // Fallback for sample reference dates (e.g. Oct 17, Oct 16, etc.) when state.shiftHistory has no records for that date
+    const refShifts = REFERENCE_CLOSED_SHIFTS.filter(s => isSameBusinessDay(s.date || s.day, targetDate));
+    if (refShifts.length > 0) {
+      const totalRefSales = refShifts.reduce((acc, s) => acc + s.sales, 0);
+      const totalRefTickets = refShifts.reduce((acc, s) => acc + s.tickets, 0);
+      const dObj = parseFlexibleDate(targetDate) || new Date();
+      const dateStr = dObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const dayName = dObj.toLocaleDateString('en-US', { weekday: 'long' });
+      const monthName = dObj.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = dObj.getDate();
+      const yearNum = dObj.getFullYear();
+      const shifts = refShifts.map((s, idx) => ({
+        id: s.shiftNumber || (idx + 1),
+        name: `Shift #${s.shiftNumber} · ${s.salesperson}`,
+        cashier: s.salesperson,
+        time: s.openClose || `${s.started} – ${s.closed}`,
+        total: s.sales,
+        tickets: s.tickets,
+        isOpen: false
+      }));
+      return {
+        isLive: false,
+        isDailyMode: true,
+        reportHeading: 'Day Report',
+        reportTitle: 'Day Report',
+        storeName: state?.storeName || 'AMIGO FOOD MART',
+        storeAddress: state?.storeAddress || '2300 Moody Rd, Warner Robins, GA 31088',
+        subtitle: `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${shifts.length} shifts · Closed by ${refShifts[0]?.salesperson || 'master'}`,
+        date: dateStr,
+        dateRange: dateStr,
+        generatedTime: `${monthName} ${dayNum}, 10:00 PM`,
+        openedTime: refShifts[refShifts.length - 1]?.started || '7:00 AM',
+        closedTime: refShifts[0]?.closed || '10:00 PM',
+        userId: refShifts[0]?.salesperson || 'master',
+        shifts,
+        shiftsCount: `${shifts.length} shifts`,
+        shiftsSummary: shifts.map(s => `${s.name} (${s.time})`).join(' · '),
+        totalInstantSales: totalRefSales,
+        totalTickets: totalRefTickets,
+        soldOutCount: 0,
+        soldOutBox: '-',
+        returnedCount: 0,
+        priceBreakdown: [],
+        boxes: showEmptyBoxes ? Array.from({ length: 65 }, (_, i) => ({
+          box: i + 1,
+          pack: '---',
+          game: 'EMPTY',
+          open: '-',
+          close: '-',
+          sold: '-',
+          price: '-',
+          total: 0,
+          isEmpty: true
+        })) : []
+      };
+    }
+
+    // No shifts on this date
+    const dObj = parseFlexibleDate(targetDate) || new Date();
+    const dateStr = dObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    return {
+      isLive: true,
+      isDailyMode: true,
+      reportHeading: 'Day Report',
+      reportTitle: 'Day Report',
+      storeName: state?.storeName || 'AMIGO FOOD MART',
+      storeAddress: state?.storeAddress || '2300 Moody Rd, Warner Robins, GA 31088',
+      subtitle: `${dateStr} · 0 shifts`,
+      date: dateStr,
+      dateRange: dateStr,
+      generatedTime: dateStr,
+      openedTime: '-',
+      closedTime: '-',
+      userId: state?.cashierName || 'Clerk',
+      shifts: [],
+      shiftsCount: '0 shifts',
+      shiftsSummary: 'No shifts recorded',
+      totalInstantSales: 0,
+      totalTickets: 0,
+      soldOutCount: 0,
+      soldOutBox: '-',
+      returnedCount: 0,
+      priceBreakdown: [],
+      boxes: showEmptyBoxes ? Array.from({ length: 65 }, (_, i) => ({
+        box: i + 1,
+        pack: '---',
+        game: 'EMPTY',
+        open: '-',
+        close: '-',
+        sold: '-',
+        price: '-',
+        total: 0,
+        isEmpty: true
+      })) : []
+    };
+  }
+
+  // =========================================================================
+  // 2. LIVE TODAY CALCULATION (current business day: closed shifts + live shift)
+  // =========================================================================
   const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
@@ -563,9 +767,34 @@ export function getScreenDayReportData(state, options = {}) {
   let totalInstantSales = 0;
   const priceMap = new Map();
   const boxes = [];
-  
+
+  // Find all past shifts that completed today
+  const todayPastShifts = (Array.isArray(state?.shiftHistory) ? state.shiftHistory : [])
+    .filter(h => isSameBusinessDay(h.endedAt || h.startedAt || h.date, now))
+    .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0));
+
+  const earliestTodayShift = todayPastShifts.length > 0 ? todayPastShifts[0] : null;
+
+  // Day's opening ticket for this pack (from earliest shift of today or activation ticket)
+  const getDayOpenTicket = (slot) => {
+    if (earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
+      const pastSlot = earliestTodayShift.slotsSnapshot.find(s => s.boxNumber === slot.boxNumber && s.packNumber === slot.packNumber);
+      if (pastSlot && typeof pastSlot.startTicket === 'number') {
+        return pastSlot.startTicket;
+      }
+    }
+    return (slot && typeof slot.packStartTicket === 'number') ? slot.packStartTicket : ((slot && typeof slot.startTicket === 'number') ? slot.startTicket : 0);
+  };
+
+  // Aggregate sold out packs belonging to today (both past shifts and current shift)
+  const allSoldOutToday = [];
+  todayPastShifts.forEach(h => {
+    (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
+  });
+  (state?.soldOutThisShift || []).forEach(so => allSoldOutToday.push(so));
+
   // Only count sold-out packs that had actual sales
-  const soldOutList = (state?.soldOutThisShift || []).filter(sp => {
+  const soldOutList = allSoldOutToday.filter(sp => {
     const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
     return sSold > 0;
   });
@@ -577,9 +806,41 @@ export function getScreenDayReportData(state, options = {}) {
   for (let b = 1; b <= maxBox; b++) {
     const slot = (state.slots || []).find(s => s.boxNumber === b);
     const soldPacks = soldOutList.filter(so => so.boxNumber === b);
+    let boxHasRows = false;
 
+    // 1. Include any packs that sold out in this box today
+    if (soldPacks.length > 0) {
+      soldPacks.forEach(sp => {
+        const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
+        const price = Number(sp.price) || 1;
+        const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * price);
+
+        totalTickets += sSold;
+        totalInstantSales += sTotal;
+
+        const pEntry = priceMap.get(price) || { count: 0, total: 0 };
+        pEntry.count += sSold;
+        pEntry.total += sTotal;
+        priceMap.set(price, pEntry);
+
+        boxes.push({
+          box: b,
+          pack: sp.packNumber,
+          game: sp.gameName || 'Scratch-off',
+          open: String(sp.startTicket || 0).padStart(3, '0'),
+          close: String(sp.closeTicket || (sp.startTicket || 0) + sSold).padStart(3, '0'),
+          sold: sSold,
+          price,
+          total: sTotal,
+          isSoldOut: true
+        });
+        boxHasRows = true;
+      });
+    }
+
+    // 2. Include the currently active pack in this box (if any)
     if (slot && slot.status === 'ACTIVE' && slot.packNumber) {
-      const openTix = typeof slot.startTicket === 'number' ? slot.startTicket : 0;
+      const openTix = getDayOpenTicket(slot);
       const closeTix = typeof slot.currentTicket === 'number' ? slot.currentTicket : openTix;
       const sold = Math.max(0, closeTix - openTix);
       const price = Number(slot.price) || 1;
@@ -604,32 +865,8 @@ export function getScreenDayReportData(state, options = {}) {
         total: rowTotal,
         isSoldOut: false
       });
-    } else if (soldPacks.length > 0) {
-      const sp = soldPacks[0];
-      const sSold = sp.ticketsSold !== undefined ? sp.ticketsSold : Math.max(0, (sp.closeTicket || 0) - (sp.startTicket || 0));
-      const price = Number(sp.price) || 1;
-      const sTotal = sp.salesAmount !== undefined ? sp.salesAmount : (sSold * price);
-
-      totalTickets += sSold;
-      totalInstantSales += sTotal;
-
-      const pEntry = priceMap.get(price) || { count: 0, total: 0 };
-      pEntry.count += sSold;
-      pEntry.total += sTotal;
-      priceMap.set(price, pEntry);
-
-      boxes.push({
-        box: b,
-        pack: sp.packNumber,
-        game: sp.gameName || 'Scratch-off',
-        open: String(sp.startTicket || 0).padStart(3, '0'),
-        close: String(sp.closeTicket || (sp.startTicket || 0) + sSold).padStart(3, '0'),
-        sold: sSold,
-        price,
-        total: sTotal,
-        isSoldOut: true
-      });
-    } else if (showEmptyBoxes) {
+      boxHasRows = true;
+    } else if (!boxHasRows && showEmptyBoxes) {
       boxes.push({
         box: b,
         pack: '---',
@@ -651,18 +888,11 @@ export function getScreenDayReportData(state, options = {}) {
 
   // Shift breakdown
   const shifts = [];
-  const isToday = (dStr) => {
-    if (!dStr) return false;
-    const d = new Date(dStr);
-    return d.getFullYear() === now.getFullYear() &&
-           d.getMonth() === now.getMonth() &&
-           d.getDate() === now.getDate();
-  };
 
   if (Array.isArray(state?.shiftHistory)) {
-    state.shiftHistory.filter(h => isToday(h.endedAt || h.startedAt)).forEach((h, idx) => {
+    state.shiftHistory.filter(h => isSameBusinessDay(h.endedAt || h.startedAt || h.date, now)).forEach((h, idx) => {
       const sNum = h.shiftNumber || (idx + 1);
-      const cName = h.cashierName || 'Cashier';
+      const cName = h.cashier || h.cashierName || 'Cashier';
       const sStart = h.startedAt ? new Date(h.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '7:02 AM';
       const sEnd = h.endedAt ? new Date(h.endedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '3:30 PM';
       shifts.push({
@@ -683,20 +913,22 @@ export function getScreenDayReportData(state, options = {}) {
     ? `Day · ${user}`
     : `Shift #${currentShiftNum} · ${user}`;
   const currentShiftTime = `${openTime} – Present`;
+  const pastShiftsSales = shifts.reduce((acc, s) => acc + (s.total || 0), 0);
+  const pastShiftsTickets = shifts.reduce((acc, s) => acc + (s.tickets || 0), 0);
   shifts.push({
     id: currentShiftNum,
     name: currentShiftName,
     cashier: user,
     time: currentShiftTime,
-    total: totalInstantSales,
-    tickets: totalTickets,
+    total: Math.max(0, totalInstantSales - pastShiftsSales),
+    tickets: Math.max(0, totalTickets - pastShiftsTickets),
     isOpen: true
   });
 
   const shiftsSummary = shifts.map(s => `${s.name.replace('Shift #', '#')} (${s.time})`).join(' · ');
   const shiftsCount = isDailyMode ? '1 day' : `${shifts.length} shift${shifts.length === 1 ? '' : 's'}`;
-  const reportHeading = isDailyMode ? 'Day Report' : 'Shift Report';
-  const reportTitle = isDailyMode ? 'Day Report' : `Shift #${currentShiftNum} Report`;
+  const reportHeading = 'Day Report';
+  const reportTitle = 'Day Report';
   const subtitle = `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${shiftsCount} · open since ${openTime} by ${user}`;
 
   return {
@@ -724,4 +956,131 @@ export function getScreenDayReportData(state, options = {}) {
     priceBreakdown,
     boxes
   };
+}
+
+/**
+ * Computes a side-by-side comparison between Today's complete daily report and
+ * Yesterday's complete daily report using the exact same calculation rules and
+ * accounting fields.
+ */
+export function getTodayVsYesterdayComparison(state) {
+  const now = new Date();
+  const isToday = (dStr) => {
+    if (!dStr) return false;
+    const d = new Date(dStr);
+    return d.getFullYear() === now.getFullYear() &&
+           d.getMonth() === now.getMonth() &&
+           d.getDate() === now.getDate();
+  };
+  const isYesterday = (dStr) => {
+    if (!dStr) return false;
+    const d = new Date(dStr);
+    const y = new Date(now);
+    y.setDate(now.getDate() - 1);
+    return d.getFullYear() === y.getFullYear() &&
+           d.getMonth() === y.getMonth() &&
+           d.getDate() === y.getDate();
+  };
+
+  const todayDateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const yDate = new Date(now);
+  yDate.setDate(now.getDate() - 1);
+  const yesterdayDateStr = yDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+  // 1. TODAY'S TOTALS (past closed shifts of today + current shift)
+  const todayPastShifts = (state?.shiftHistory || []).filter(h => isToday(h.endedAt || h.startedAt));
+  const todayPastTickets = todayPastShifts.reduce((acc, h) => acc + Number(h.totalTicketsSold || 0), 0);
+  const todayPastRevenue = todayPastShifts.reduce((acc, h) => acc + Number(h.totalSalesRevenue || 0), 0);
+  const todayPastCashes = todayPastShifts.reduce((acc, h) => acc + Number(h.cashes || 0), 0);
+  const todayPastOnline = todayPastShifts.reduce((acc, h) => acc + Number(h.onlineSales || 0), 0);
+  const todayPastOnlineCashes = todayPastShifts.reduce((acc, h) => acc + Number(h.onlineCashes || 0), 0);
+  const todayPastActivations = todayPastShifts.reduce((acc, h) => acc + Number(h.activationsCount || 0), 0);
+  const todayPastSoldOuts = todayPastShifts.reduce((acc, h) => acc + (Array.isArray(h.soldOutSnapshot) ? h.soldOutSnapshot.length : 0), 0);
+
+  // Current shift in-progress sales
+  let currentShiftTickets = 0;
+  let currentShiftRevenue = 0;
+  (state?.slots || []).forEach(s => {
+    if (s && s.status === 'ACTIVE' && s.packNumber) {
+      const openT = typeof s.startTicket === 'number' ? s.startTicket : 0;
+      const currT = typeof s.currentTicket === 'number' ? s.currentTicket : openT;
+      const sSold = Math.abs(currT - openT);
+      currentShiftTickets += sSold;
+      currentShiftRevenue += sSold * (s.price || 0);
+    }
+  });
+  (state?.soldOutThisShift || []).forEach(so => {
+    const sSold = so.ticketsSold !== undefined ? so.ticketsSold : Math.abs((so.closeTicket || 0) - (so.startTicket || 0));
+    currentShiftTickets += sSold;
+    currentShiftRevenue += so.salesAmount !== undefined ? so.salesAmount : (sSold * (so.price || 0));
+  });
+
+  const currentCashes = Number(state?.cashes || 0);
+  const currentOnline = Number(state?.onlineSales || 0);
+  const currentOnlineCashes = Number(state?.onlineCashes || 0);
+  const currentActivations = (state?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.activatedThisShift).length;
+  const currentSoldOuts = (state?.soldOutThisShift || []).length;
+
+  const todayTotalTickets = todayPastTickets + currentShiftTickets;
+  const todayTotalSales = todayPastRevenue + currentShiftRevenue;
+  const todayTotalCashes = todayPastCashes + currentCashes;
+  const todayTotalOnline = todayPastOnline + currentOnline;
+  const todayTotalOnlineCashes = todayPastOnlineCashes + currentOnlineCashes;
+  const todayNetSettlement = (todayTotalSales + todayTotalOnline) - (todayTotalCashes + todayTotalOnlineCashes);
+  const todayActivations = todayPastActivations + currentActivations;
+  const todaySoldOuts = todayPastSoldOuts + currentSoldOuts;
+
+  const todayReport = {
+    date: todayDateStr,
+    totalTickets: todayTotalTickets,
+    totalSales: todayTotalSales,
+    cashCollected: todayTotalCashes,
+    onlineSales: todayTotalOnline,
+    onlineCashes: todayTotalOnlineCashes,
+    netSettlement: todayNetSettlement,
+    packsActivated: todayActivations,
+    packsSoldOut: todaySoldOuts,
+    shiftsCount: todayPastShifts.length + ((state?.shiftStatus === 'IN_PROGRESS' || state?.shiftStatus === 'SCANNING_END_SHIFT') ? 1 : 0),
+    discrepancies: state?.dayReportAdjustments || null
+  };
+
+  // 2. YESTERDAY'S TOTALS (from actual recorded shift history of yesterday)
+  const yesterdayShifts = (state?.shiftHistory || []).filter(h => isYesterday(h.endedAt || h.startedAt));
+  const yesterdayTickets = yesterdayShifts.reduce((acc, h) => acc + Number(h.totalTicketsSold || 0), 0);
+  const yesterdayRevenue = yesterdayShifts.reduce((acc, h) => acc + Number(h.totalSalesRevenue || 0), 0);
+  const yesterdayCashes = yesterdayShifts.reduce((acc, h) => acc + Number(h.cashes || 0), 0);
+  const yesterdayOnline = yesterdayShifts.reduce((acc, h) => acc + Number(h.onlineSales || 0), 0);
+  const yesterdayOnlineCashes = yesterdayShifts.reduce((acc, h) => acc + Number(h.onlineCashes || 0), 0);
+  const yesterdayNetSettlement = (yesterdayRevenue + yesterdayOnline) - (yesterdayCashes + yesterdayOnlineCashes);
+  const yesterdayActivations = yesterdayShifts.reduce((acc, h) => acc + Number(h.activationsCount || 0), 0);
+  const yesterdaySoldOuts = yesterdayShifts.reduce((acc, h) => acc + (Array.isArray(h.soldOutSnapshot) ? h.soldOutSnapshot.length : 0), 0);
+
+  const yesterdayReport = {
+    date: yesterdayDateStr,
+    totalTickets: yesterdayTickets,
+    totalSales: yesterdayRevenue,
+    cashCollected: yesterdayCashes,
+    onlineSales: yesterdayOnline,
+    onlineCashes: yesterdayOnlineCashes,
+    netSettlement: yesterdayNetSettlement,
+    packsActivated: yesterdayActivations,
+    packsSoldOut: yesterdaySoldOuts,
+    shiftsCount: yesterdayShifts.length,
+    discrepancies: null
+  };
+
+  return {
+    today: todayReport,
+    yesterday: yesterdayReport,
+    differences: {
+      ticketsDelta: todayTotalTickets - yesterdayTickets,
+      salesDelta: todayTotalSales - yesterdayRevenue,
+      cashDelta: todayTotalCashes - yesterdayCashes,
+      netSettlementDelta: todayNetSettlement - yesterdayNetSettlement
+    }
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.getTodayVsYesterdayComparison = getTodayVsYesterdayComparison;
 }

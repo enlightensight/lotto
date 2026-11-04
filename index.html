@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/src/design-system.css">
   <link rel="stylesheet" href="/src/responsive.css">
   <link rel="stylesheet" href="/src/mockup-components.css">
+  <link rel="stylesheet" href="/src/admin-dashboard.css">
   <style id="inventoryModernStyles">
     /* ==========================================================================
        INVENTORY & AUDIT FULL-PAGE VIEW (Matching Reference Designs Image 1 & 2)
@@ -1229,7 +1230,7 @@
   <!-- ====================================================================
        FULLSCREEN SIGN IN SCREEN (Matching Reference Screenshot)
        ==================================================================== -->
-  <div id="viewSignIn" class="signin-screen-layout" style="display: none;">
+  <div id="viewSignIn" class="signin-screen-layout">
     <!-- Left Blue Hero Panel -->
     <div class="signin-left-panel">
       <div class="signin-left-content">
@@ -1302,17 +1303,14 @@
     <div class="signin-right-panel">
       <div class="signin-form-box">
         <h2 class="signin-form-title">Sign in</h2>
-        <div class="signin-store-subtitle" id="signInStoreSubtitle">Amigo Food Mart</div>
+        <div class="signin-store-subtitle" id="signInStoreSubtitle">Jackpotlo Portal</div>
 
         <form id="signInMainForm" autocomplete="on">
           <div class="signin-field-group">
-            <label for="inputSignInUser" class="signin-label">Sign-in name</label>
+            <label for="inputSignInUser" class="signin-label">Email Address</label>
             <input 
-              type="text" 
-              id="inputSignInUser" 
-              class="signin-input" 
-              placeholder="e.g. amigo or admin" 
-              autocomplete="username" 
+              type="email" id="inputSignInUser" class="signin-input" placeholder="name@example.com" 
+              autocomplete="email" 
               required
             >
           </div>
@@ -1324,8 +1322,8 @@
                 type="password" 
                 id="inputSignInPass" 
                 class="signin-input signin-input-pass" 
-                placeholder="Enter password or PIN" 
-                autocomplete="current-password"
+                placeholder="Enter password" 
+                autocomplete="current-password" 
                 required
               >
               <button type="button" class="btn-toggle-eye" id="btnToggleSignInPass" title="Toggle password visibility" aria-label="Show password">
@@ -1344,13 +1342,13 @@
           <div id="signInErrorAlert" class="signin-error-alert" style="display: none;" role="alert"></div>
 
           <button type="submit" id="btnSubmitSignIn" class="btn-signin-submit">
-            Sign in
+            Sign In
           </button>
-        </form>
 
-        <div class="signin-footer-hint">
-          New user? Enter your sign-in name &amp; password to register and open your store.
-        </div>
+          <div class="signin-forgot-wrapper" style="text-align: center; margin-top: 14px;">
+            <a href="#" id="linkForgotPassword" class="signin-forgot-link" style="color: #38bdf8; font-size: 0.86rem; font-weight: 500; text-decoration: underline; cursor: pointer;">Forgot password?</a>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -1359,7 +1357,7 @@
        MODERN POS APP SHELL (Page 2 Specification)
        240px Persistent Left Sidebar + Sell Counter Main Workspace
        ==================================================================== -->
-  <div class="pos-app-layout">
+  <div class="pos-app-layout" style="display: none;">
     <!-- MOBILE HAMBURGER BUTTON (visible only on small screens) -->
     <button type="button" class="mobile-hamburger-btn" id="mobileHamburgerBtn" title="Open Menu" aria-label="Open navigation menu">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1436,6 +1434,12 @@
             <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
           </svg>
           <span>Settings</span>
+        </button>
+        <button type="button" class="sidebar-nav-item" id="navFeedback" title="Feedback &amp; Support">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Feedback</span>
         </button>
       </nav>
 
@@ -1530,6 +1534,8 @@
                 placeholder="Scan a ticket" 
                 autocomplete="off" 
                 autofocus
+                maxlength="36"
+                inputmode="numeric"
               >
               <button type="button" class="btn-scanner-enter-pill" id="barcodeEnterBtn">Enter</button>
             </div>
@@ -1716,12 +1722,12 @@
             <div class="shift-rep-toolbar-right">
               <div class="shift-rep-email-badge">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                <span id="shiftRepEmail1">maulik@amigofoodmart.com</span>
+                <span id="shiftRepEmail1">amigofoodmart2300@gmail.com</span>
                 <span class="badge-status-sent">Sent</span>
               </div>
               <div class="shift-rep-email-badge">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                <span id="shiftRepEmail2">accounts@amigofoodmart.com</span>
+                <span id="shiftRepEmail2">amigofoodmart2300@gmail.com</span>
                 <span class="badge-status-failed">Failed</span>
                 <button type="button" class="btn-email-retry" id="btnShiftRepRetryEmail">Retry</button>
               </div>
@@ -2192,7 +2198,7 @@
               </div>
             </div>
             <div class="sc-card-row">
-              <span class="sc-row-lbl" id="scCardEmailLabel">Email to manager@amigofoodmart.com</span>
+              <span class="sc-row-lbl" id="scCardEmailLabel">Email to amigofoodmart2300@gmail.com</span>
               <div class="sc-row-val">
                 <span class="sc-badge-sent">Sent</span>
               </div>
@@ -3007,6 +3013,9 @@
                 </svg>
                 <span>Update Inventory</span>
               </button>
+              <button type="button" class="btn-inv-action-outlined" id="invBtnRequestTickets" title="Browse Lottery Catalog & Request Games" style="margin-right: 4px;">
+                <span>🎟️ Request Games</span>
+              </button>
               <button type="button" class="btn-inv-action-primary" id="invBtnAddNewBook" title="Add New Book">
                 <span class="btn-plus-icon">+</span>
                 <span>Add New Book</span>
@@ -3469,7 +3478,7 @@
                 <div class="settings-email-recipient-row">
                   <div class="settings-recipient-left">
                     <span class="settings-recipient-avatar">A</span>
-                    <span class="settings-recipient-email">accounts@amigofoodmart.com</span>
+                    <span class="settings-recipient-email">amigofoodmart2300@gmail.com</span>
                   </div>
                   <button type="button" class="btn-remove-email-recipient" id="btnRemovePrimaryEmail">Remove</button>
                 </div>
@@ -3525,6 +3534,7 @@
                 </h2>
               </div>
               <button type="button" class="btn-settings-action-blue" id="btnSettingsAddGame">&plus; Add game</button>
+              <button type="button" class="btn-settings-action-outlined" id="settingsBtnManageTickets" style="margin-left: 8px;"><span>Request State Games</span></button>
             </div>
             <div class="settings-table-wrapper" style="margin-top: 16px;">
               <table class="settings-modern-table" id="tableSettingsGames">
@@ -3627,7 +3637,7 @@
             <input type="checkbox" id="toggleBeepScan" checked>
           </div>
           <div id="paneSettingsPrinting">
-            <input type="email" id="setPrintingEmail" value="manager@amigofoodmart.com">
+            <input type="email" id="setPrintingEmail" value="amigofoodmart2300@gmail.com">
             <select id="setReportPrinter"><option value="receipt_80">Receipt</option></select>
             <input type="checkbox" id="toggleAutoPrintDayReport">
             <input type="checkbox" id="toggleShowEmptyBoxesReport">
@@ -3639,11 +3649,178 @@
           <input type="text" id="setStoreID" value="AFM-0412">
           <select id="setDayEndsAt"><option value="midnight">Midnight</option></select>
           <input type="text" id="setCurrency" value="US dollar ($) · 2 decimals">
-          <input type="email" id="setReportEmail" value="manager@amigofoodmart.com">
+          <input type="email" id="setReportEmail" value="amigofoodmart2300@gmail.com">
           <tbody id="settingsGamesTableBody"></tbody>
           <tbody id="settingsPeopleTableBody"></tbody>
         </div>
       </section>
+
+      <!-- ====================================================================
+           VIEW: MANAGE LOTTERY TICKETS (Store Owner Ticket Request Feature)
+           ==================================================================== -->
+      <section class="manage-tickets-view" id="viewManageTickets" style="display: none;">
+        <!-- Store Suspended Alert (hidden unless store is suspended) -->
+        <div id="storeSuspendedAlertBanner" class="store-suspended-alert-banner" style="display: none;">
+          <div>
+            <strong>⚠️ Store Account Suspended</strong>
+            <p style="margin: 2px 0 0; font-size: 0.82rem; opacity: 0.9;">Ticket dispensing and sales are currently paused by Lottery Administration. Please contact support.</p>
+          </div>
+          <span class="badge-status suspended">SUSPENDED</span>
+        </div>
+
+        <!-- Header Strip -->
+        <header class="admin-header-strip">
+          <div class="admin-title-group">
+            <h1>Store Ticket Type Requests</h1>
+            <p>Request permission to sell scratch-off ticket types for your store</p>
+          </div>
+          <div class="admin-header-actions">
+            <button type="button" class="btn-admin-pill" id="btnStoreReturnToPos">
+              <span>🏪 Return to Store POS</span>
+            </button>
+            <span class="badge-status approved" id="storeAuthStatusBadge">✓ Store Authorized</span>
+            <span class="btn-admin-pill" id="storeNamePillDisplay">Amigo Food Mart</span>
+          </div>
+        </header>
+
+        <!-- Subnav Tab Switcher -->
+        <div class="admin-subnav-strip" id="storeTicketsSubnav">
+          <button type="button" class="admin-subnav-tab active" data-store-tab="catalog">
+            <span>Browse Ticket Catalog</span>
+          </button>
+          <button type="button" class="admin-subnav-tab" data-store-tab="my_requests">
+            <span>My Ticket Requests</span>
+            <span class="admin-tab-count" id="countMyRequestsBadge">0</span>
+          </button>
+          <button type="button" class="admin-subnav-tab" data-store-tab="approved">
+            <span>Approved Ticket Types</span>
+            <span class="admin-tab-count" id="countApprovedTicketsBadge">0</span>
+          </button>
+          <button type="button" class="admin-subnav-tab" data-store-tab="allocations">
+            <span>Allocated Physical Stock</span>
+            <span class="admin-tab-count" id="countAllocationsBadge">0</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Available Catalog & Submit Request -->
+        <div class="admin-tab-pane" id="paneStoreTicketCatalog">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>State Lottery Ticket Catalog</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Select games to request authorization to sell at your store. Requests require Administrator approval.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-data-table" id="storeCatalogTable">
+                <thead>
+                  <tr>
+                    <th>Game Code</th>
+                    <th>Game Name</th>
+                    <th>Ticket Price</th>
+                    <th>Pack Size</th>
+                    <th>Pack Value</th>
+                    <th>Authorization Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="storeCatalogTableBody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: My Ticket Requests -->
+        <div class="admin-tab-pane" id="paneStoreMyRequests" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>Submitted Ticket Requests</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Track the status of ticket type requests submitted to the administrator.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Date Requested</th>
+                    <th>Game Name</th>
+                    <th>Price</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>Administrator Feedback</th>
+                  </tr>
+                </thead>
+                <tbody id="storeRequestsTableBody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Approved Ticket Types -->
+        <div class="admin-tab-pane" id="paneStoreApprovedTickets" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>Authorized Ticket Types for this Store</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Only authorized ticket games can be activated in counter dispensers or sold to customers.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Game Code</th>
+                    <th>Game Title</th>
+                    <th>Price</th>
+                    <th>Pack Size</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="storeApprovedTableBody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Allocated Physical Stock & Deliveries -->
+        <div class="admin-tab-pane" id="paneStoreAllocations" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>Physical Ticket Stock Allocations</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Physical ticket packs assigned to your store by the lottery administrator. Click "Receive Pack" to add to store safe stock.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Allocation Ref</th>
+                    <th>Allocation Date</th>
+                    <th>Game Title</th>
+                    <th>Pack Number</th>
+                    <th>Pack Size</th>
+                    <th>Pack Value</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="storeAllocationsTableBody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       <!-- MODAL: Add New Game (Settings) -->
       <dialog id="settingsAddGameModal" class="activation-dialog">
@@ -3755,6 +3932,603 @@
     </div>
   </div>
 
+  <!-- ====================================================================
+       PLATFORM ADMINISTRATOR ENTERPRISE PORTAL (/admin)
+       Separate top-level layout with persistent sidebar & navigation
+       ==================================================================== -->
+  <div class="admin-app-layout" id="viewAdminDashboard" style="display: none;">
+    <!-- Enterprise Admin Sidebar (Persistent Left Column, 260px) -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-sidebar-header">
+        <div class="admin-brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="admin-brand-text">
+          <span class="admin-brand-title">Jackpotlo</span>
+          <span class="admin-brand-badge">Platform Root</span>
+        </div>
+      </div>
+
+      <nav class="admin-sidebar-nav" id="adminDashboardSubnav">
+        <div class="admin-nav-section-label">Operations</div>
+        <button type="button" class="admin-subnav-tab active" data-admin-tab="overview">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button type="button" class="admin-subnav-tab" data-admin-tab="applications">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">Store Applications</span>
+          <span class="admin-tab-count" id="adminCountPendingAppsBadge">0</span>
+        </button>
+        <button type="button" class="admin-subnav-tab" data-admin-tab="stores">
+          <span class="nav-icon">🏪</span>
+          <span class="nav-label">Store Management</span>
+          <span class="admin-tab-count" id="adminCountStoresBadge">0</span>
+        </button>
+
+        <div class="admin-nav-section-label">Support &amp; Feedback</div>
+        <button type="button" class="admin-subnav-tab" data-admin-tab="feedback">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">Store Feedback</span>
+          <span class="admin-tab-count" id="adminCountPendingFeedbackBadge">0</span>
+        </button>
+
+        <div class="admin-nav-section-label">Analytics &amp; Audit</div>
+        <button type="button" class="admin-subnav-tab" data-admin-tab="reports">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Multi-Store Reports</span>
+        </button>
+        <button type="button" class="admin-subnav-tab" data-admin-tab="audit">
+          <span class="nav-icon">📜</span>
+          <span class="nav-label">Audit Trail</span>
+        </button>
+      </nav>
+
+      <div class="admin-sidebar-footer">
+        <div class="admin-footer-profile">
+          <div class="admin-avatar">AD</div>
+          <div class="admin-profile-meta">
+            <span class="admin-user-title">Platform Admin</span>
+            <span class="admin-user-sub">Superuser</span>
+          </div>
+          <button type="button" class="btn-admin-icon-logout" id="btnAdminLogout" title="Sign Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Admin Main Body (Right Column) -->
+    <main class="admin-main-viewport">
+      <header class="admin-topbar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button type="button" class="admin-mobile-toggle-btn" id="adminMobileToggleBtn" title="Toggle Navigation Sidebar" aria-label="Toggle Navigation Sidebar">☰</button>
+          <div class="admin-breadcrumb-cluster">
+            <span class="crumb-lead">Jackpotlo Platform</span>
+            <span class="crumb-divider">/</span>
+            <span class="crumb-active" id="adminActiveSectionTitle">Dashboard</span>
+          </div>
+        </div>
+        <div class="admin-topbar-pills">
+          <button type="button" class="admin-theme-toggle-btn" id="adminThemeToggleBtn" title="Switch Day/Light or Dark Mode" aria-label="Toggle Theme">
+            <span id="adminThemeIcon">☀️</span>
+            <span id="adminThemeLabel">Light Mode</span>
+          </button>
+          <div class="admin-status-pill">
+            <span class="status-pulse-dot"></span>
+            <span>Central Network Online</span>
+          </div>
+          <button type="button" class="btn-admin-pill-secondary" id="btnAdminTopSwitchPos">
+            <span>🏪 Switch to Store POS</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="admin-scrollable-content">
+        <div class="admin-tab-pane" id="paneAdminOverview">
+          <div class="admin-kpi-grid">
+            <div class="admin-kpi-card">
+              <span class="admin-kpi-label">Total Stores</span>
+              <span class="admin-kpi-value" id="adminKpiTotalStores">0</span>
+              <span class="admin-kpi-sub">Registered retailer locations</span>
+            </div>
+            <div class="admin-kpi-card kpi-amber">
+              <span class="admin-kpi-label">Pending Applications</span>
+              <span class="admin-kpi-value" id="adminKpiPendingApps">0</span>
+              <span class="admin-kpi-sub">Awaiting license verification</span>
+            </div>
+            <div class="admin-kpi-card kpi-emerald">
+              <span class="admin-kpi-label">Approved Stores</span>
+              <span class="admin-kpi-value" id="adminKpiApprovedStores">0</span>
+              <span class="admin-kpi-sub">Active &amp; authorized to sell</span>
+            </div>
+            <div class="admin-kpi-card kpi-rose">
+              <span class="admin-kpi-label">Suspended Stores</span>
+              <span class="admin-kpi-value" id="adminKpiSuspendedStores">0</span>
+              <span class="admin-kpi-sub">Sales temporarily blocked</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <!-- Store User Feedback Quick Card -->
+            <div class="admin-card-surface">
+              <div class="admin-card-header">
+                <h2>Recent Store Feedback &amp; Issues</h2>
+                <button type="button" class="btn-action-sm btn-info" id="btnAdminViewAllFeedback">View All &rarr;</button>
+              </div>
+              <div id="adminOverviewFeedbackList"></div>
+            </div>
+
+            <!-- Recent Activity Audit Feed -->
+            <div class="admin-card-surface">
+              <div class="admin-card-header">
+                <h2>Recent Administrative Actions</h2>
+                <span style="font-size: 0.8rem; color: #64748b;">Live Audit Trail</span>
+              </div>
+              <div id="adminOverviewRecentAuditList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Admin Pane: Store Applications -->
+        <div class="admin-tab-pane" id="paneAdminApplications" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>Store Onboarding &amp; License Applications</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Review retailer tax credentials, state lottery licenses, and documentation.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Store Name</th>
+                    <th>Applicant</th>
+                    <th>Contact</th>
+                    <th>Tax ID / License</th>
+                    <th>Documents</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="adminApplicationsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Admin Pane: Store Management -->
+        <div class="admin-tab-pane" id="paneAdminStores" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>Authorized Retailer Stores</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Manage store authorization and operational status. Suspended stores cannot sell tickets.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Store ID</th>
+                    <th>Store Name</th>
+                    <th>Owner</th>
+                    <th>Retailer #</th>
+                    <th>Address</th>
+                    <th>Authorization</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="adminStoresTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Admin Pane: Store User Feedback & Issue Reports -->
+        <div class="admin-tab-pane" id="paneAdminFeedback" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between;">
+              <div>
+                <h2>Store User Feedback &amp; Issue Reports</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Review and resolve system issues, scanner bugs, and operational feedback reported by lottery cashiers and store managers.</p>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="adminFeedbackSearchInput" class="admin-form-input" placeholder="🔍 Search feedback..." style="min-width: 190px;" />
+                <div class="admin-filter-group" id="adminFeedbackFilterGroup" style="display: flex; gap: 4px; background: var(--admin-pill-secondary-bg); border: 1px solid var(--admin-border-subtle); padding: 3px; border-radius: 8px;">
+                  <button type="button" class="btn-action-sm btn-info active" data-fb-filter="ALL" style="padding: 4px 10px; font-size: 0.78rem;">All</button>
+                  <button type="button" class="btn-action-sm btn-info" data-fb-filter="PENDING" style="padding: 4px 10px; font-size: 0.78rem;">Pending</button>
+                  <button type="button" class="btn-action-sm btn-info" data-fb-filter="IN_PROGRESS" style="padding: 4px 10px; font-size: 0.78rem;">In Progress</button>
+                  <button type="button" class="btn-action-sm btn-info" data-fb-filter="RESOLVED" style="padding: 4px 10px; font-size: 0.78rem;">Resolved</button>
+                </div>
+              </div>
+            </div>
+            <div class="admin-table-wrapper" style="margin-top: 14px;">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Store / Reporter</th>
+                    <th>Category</th>
+                    <th>Severity</th>
+                    <th>Subject &amp; Description</th>
+                    <th>Reported At</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="adminFeedbackTableBody">
+                  <tr><td colspan="7" style="text-align:center; padding: 24px; color:#94a3b8;">Loading store feedback...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Admin Pane: Reports Across Stores -->
+        <div class="admin-tab-pane" id="paneAdminReports" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header" style="flex-wrap: wrap; gap: 14px;">
+              <div>
+                <h2>Multi-Store Sales &amp; Operational Reports</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Aggregated lottery sales, ticket inventory, shift settlements, and discrepancies across authorized stores.</p>
+              </div>
+              <div class="admin-reports-subnav" id="adminReportsSubnav" style="display: flex; gap: 8px;">
+                <button type="button" class="btn-action-sm btn-info active" data-report-tab="sales">Store Sales</button>
+                <button type="button" class="btn-action-sm btn-info" data-report-tab="inventory">Ticket Inventory</button>
+                <button type="button" class="btn-action-sm btn-info" data-report-tab="shifts">Shift Reports</button>
+                <button type="button" class="btn-action-sm btn-info" data-report-tab="discrepancies">Stock Discrepancies</button>
+              </div>
+            </div>
+
+            <!-- 7a. Store Sales Section -->
+            <div id="adminReportSectionSales" class="admin-report-subpane">
+              <div class="admin-table-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Store Name</th>
+                      <th>Retailer #</th>
+                      <th>Authorization</th>
+                      <th>Active Dispensers</th>
+                      <th>Tickets Sold</th>
+                      <th>Scratcher Sales</th>
+                      <th>Payouts</th>
+                      <th>Net Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminReportSalesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 7b. Ticket Inventory Section -->
+            <div id="adminReportSectionInventory" class="admin-report-subpane" style="display: none;">
+              <div class="admin-table-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Store Name</th>
+                      <th>Counter Packs</th>
+                      <th>Safe Packs</th>
+                      <th>Storage Packs</th>
+                      <th>Total Packs</th>
+                      <th>Total Value</th>
+                      <th>Inventory Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminReportInventoryTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 7c. Shift Reports Section -->
+            <div id="adminReportSectionShifts" class="admin-report-subpane" style="display: none;">
+              <div class="admin-table-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Store Name</th>
+                      <th>Shift #</th>
+                      <th>Date</th>
+                      <th>Cashier</th>
+                      <th>Tickets Sold</th>
+                      <th>Sales Revenue</th>
+                      <th>Prize Payouts</th>
+                      <th>Counted Cash</th>
+                      <th>Over / Short</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminReportShiftsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 7d. Stock Discrepancies Section -->
+            <div id="adminReportSectionDiscrepancies" class="admin-report-subpane" style="display: none;">
+              <div class="admin-table-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Store Name</th>
+                      <th>Shift / Date</th>
+                      <th>Cashier</th>
+                      <th>Discrepancy Type</th>
+                      <th>Variance Amount</th>
+                      <th>Audit Status</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminReportDiscrepanciesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 8. Admin Pane: Audit Trail -->
+        <div class="admin-tab-pane" id="paneAdminAudit" style="display: none;">
+          <div class="admin-card-surface">
+            <div class="admin-card-header">
+              <div>
+                <h2>System Security &amp; Administrative Audit Trail</h2>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Immutable record of all administrator approvals, rejections, suspensions, and stock allocations.</p>
+              </div>
+            </div>
+            <div id="adminFullAuditTrailList"></div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Admin Action Modals -->
+      <!-- Modal: Review Store Feedback & Issue Report -->
+      <dialog id="adminReviewFeedbackModal" class="admin-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem;" id="adminReviewFeedbackModalTitle">Review Store Issue Report</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 4px 0 0;">Inspect issue context, update resolution status, and add administrative notes.</p>
+          </div>
+          <button type="button" id="closeAdminFeedbackModalBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div id="adminReviewFeedbackDetailsCard" style="font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;"></div>
+        <div class="admin-form-group">
+          <label class="admin-form-label">Update Status</label>
+          <select id="adminFeedbackStatusSelect" class="admin-form-select">
+            <option value="PENDING">Pending Review</option>
+            <option value="IN_PROGRESS">In Progress / Investigating</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="DISMISSED">Dismissed / Not a Bug</option>
+          </select>
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label">Admin Resolution Notes / Response</label>
+          <textarea id="adminFeedbackNotesTextarea" class="admin-form-input" rows="3" placeholder="Enter notes or resolution explanation..."></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+          <button type="button" class="btn-action-sm btn-secondary" id="cancelAdminFeedbackModalBtn">Cancel</button>
+          <button type="button" class="btn-action-sm btn-approve" id="btnSaveAdminFeedbackReview">Save &amp; Update Status</button>
+        </div>
+      </dialog>
+
+      <dialog id="adminReviewAppModal" class="admin-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 1.15rem;" id="adminAppModalTitle">Review Store Application</h3>
+          <button type="button" id="closeAdminAppModalBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div id="adminAppModalContent" style="font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;"></div>
+        <div class="admin-form-group">
+          <label class="admin-form-label">Review Notes / Reasons</label>
+          <textarea id="adminAppNotesInput" class="admin-form-input" rows="3" placeholder="Enter notes or request details..."></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn-action-sm btn-info" id="btnAdminAppRequestInfo">Request More Info</button>
+          <button type="button" class="btn-action-sm btn-reject" id="btnAdminAppReject">Reject</button>
+          <button type="button" class="btn-action-sm btn-approve" id="btnAdminAppApprove">Approve Store</button>
+        </div>
+      </dialog>
+
+      <!-- Modal: Review Ticket Request -->
+      <dialog id="adminReviewRequestModal" class="admin-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 1.15rem;" id="adminRequestModalTitle">Review Ticket Type Request</h3>
+          <button type="button" id="closeAdminRequestModalBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div id="adminRequestModalDetails" style="font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;"></div>
+        <div class="admin-form-group">
+          <label class="admin-form-label">Decision Notes / Reason</label>
+          <textarea id="adminRequestReasonInput" class="admin-form-input" rows="3" placeholder="Reason for decision..."></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn-action-sm btn-info" id="btnAdminReqMoreInfo">Request Info</button>
+          <button type="button" class="btn-action-sm btn-reject" id="btnAdminReqReject">Reject Request</button>
+          <button type="button" class="btn-action-sm btn-approve" id="btnAdminReqApprove">Approve Ticket Type</button>
+        </div>
+      </dialog>
+
+      <!-- Modal: Add Game to Catalog -->
+      <dialog id="adminAddCatalogGameModal" class="admin-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 1.15rem;" id="adminCatalogModalTitle">Add Game to State Lottery Catalog</h3>
+          <button type="button" id="closeAdminAddGameModalBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <form id="adminAddGameForm">
+          <input type="hidden" id="adminGameIsEdit" value="0">
+          <div class="admin-form-group">
+            <label class="admin-form-label">Game Code / ID (e.g. 1780)</label>
+            <input type="text" id="adminGameCodeInput" class="admin-form-input" placeholder="e.g. 1780" required>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">Game Title</label>
+            <input type="text" id="adminGameTitleInput" class="admin-form-input" placeholder="e.g. Millionaire Bucks" required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="admin-form-group">
+              <label class="admin-form-label">Ticket Price ($)</label>
+              <input type="number" id="adminGamePriceInput" class="admin-form-input" step="1" min="1" max="100" value="5" required>
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-form-label">Pack Size (Tickets)</label>
+              <input type="number" id="adminGamePackSizeInput" class="admin-form-input" step="1" min="10" max="600" value="60" required>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+            <button type="button" class="btn-action-sm" id="cancelAdminAddGameBtn" style="background: rgba(255,255,255,0.1); color: #fff;">Cancel</button>
+            <button type="submit" class="btn-action-sm btn-approve" id="btnAdminCatalogSubmit">Add to Catalog</button>
+          </div>
+        </form>
+      </dialog>
+
+      <!-- Modal: Allocate Stock to Store -->
+      <dialog id="adminCreateAllocationModal" class="admin-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 1.15rem;">Allocate Physical Ticket Stock</h3>
+          <button type="button" id="closeAdminAllocModalBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <form id="adminCreateAllocForm">
+          <div class="admin-form-group">
+            <label class="admin-form-label">Target Authorized Store</label>
+            <select id="adminAllocStoreSelect" class="admin-form-select" required></select>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">Approved Game for Selected Store</label>
+            <select id="adminAllocGameSelect" class="admin-form-select" required></select>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">Pack Number (Unique Barcode Pack #)</label>
+            <input type="text" id="adminAllocPackNumInput" class="admin-form-input" placeholder="e.g. 149920" required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="admin-form-group">
+              <label class="admin-form-label">Pack Size (Tickets)</label>
+              <input type="number" id="adminAllocPackSizeInput" class="admin-form-input" value="100" readonly>
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-form-label">Ticket Price ($)</label>
+              <input type="number" id="adminAllocPriceInput" class="admin-form-input" value="1" readonly>
+            </div>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label">Allocation Reference (Auto-generated or custom)</label>
+            <input type="text" id="adminAllocRefInput" class="admin-form-input" placeholder="e.g. ALC-2026-002">
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+            <button type="button" class="btn-action-sm" id="cancelAdminAllocBtn" style="background: rgba(255,255,255,0.1); color: #fff;">Cancel</button>
+            <button type="submit" class="btn-action-sm btn-approve">Confirm Allocation</button>
+          </div>
+        </form>
+      </dialog>
+
+  <!-- Store POS: Report Issue & Feedback Modal -->
+  <dialog id="modalStoreFeedback" class="pos-modal-dialog" style="max-width: 540px; width: 92%; border-radius: 16px; border: 1px solid #334155; padding: 0; box-shadow: 0 25px 50px rgba(0,0,0,0.6); background: #1e293b; color: #f8fafc;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3 style="margin: 0; font-size: 1.18rem; font-weight: 700; color: #fff;">💬 Report an Issue / Send Feedback</h3>
+        <p style="margin: 4px 0 0; font-size: 0.8rem; color: #94a3b8;">Experiencing a problem in the lottery system? Send feedback to Platform Support.</p>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseStoreFeedback" style="background: none; border: none; color: #94a3b8; font-size: 1.6rem; cursor: pointer; line-height: 1;">&times;</button>
+    </div>
+    <form id="formStoreFeedback" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Issue Category *</label>
+          <select id="fbCategory" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; color: #fff; font-size: 0.85rem;">
+            <option value="SCANNER">🔍 Barcode / Scanner Issue</option>
+            <option value="INVENTORY">📦 Inventory / Pack Issue</option>
+            <option value="SHIFT">⏱️ Shift / Settlement</option>
+            <option value="SALES">💰 Sales / Accounting</option>
+            <option value="BUG">🐛 System Bug</option>
+            <option value="OTHER" selected>💡 General Feedback / Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Severity *</label>
+          <select id="fbSeverity" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; color: #fff; font-size: 0.85rem;">
+            <option value="LOW">Low (Minor issue / question)</option>
+            <option value="MEDIUM" selected>Medium (Standard issue)</option>
+            <option value="HIGH">High (Affects sales / closing)</option>
+            <option value="CRITICAL">Critical (Blocks system operation)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Subject / Summary *</label>
+        <input type="text" id="fbSubject" placeholder="Brief summary of the issue (e.g. Scanner error on game #1658)" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; color: #fff; font-size: 0.88rem; box-sizing: border-box;" />
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Detailed Description *</label>
+        <textarea id="fbMessage" rows="4" placeholder="Describe the problem, ticket pack #, error message, or what you were doing when it occurred..." required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; color: #fff; font-size: 0.88rem; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+      <div style="font-size: 0.76rem; color: #94a3b8; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 8px 12px; border-radius: 8px;">
+        ℹ️ Auto-attached: Store <strong id="fbStoreLabel" style="color: #cbd5e1;">-</strong> &middot; Cashier <strong id="fbCashierLabel" style="color: #cbd5e1;">-</strong> &middot; Shift <strong id="fbShiftLabel" style="color: #cbd5e1;">-</strong>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
+        <button type="button" class="btn btn-secondary" id="btnCancelStoreFeedback" style="padding: 9px 18px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; background: #334155; color: #cbd5e1; border: 1px solid #475569;">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="btnSubmitStoreFeedback" style="padding: 9px 22px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; background: #2563eb; color: #fff; border: none;">Send to Admin</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Self-Service Store Application Modal -->
+  <dialog id="modalStoreApplication" class="admin-modal store-app-modal">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #fff;">Apply for Store Retailer Account</h3>
+        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.82rem;">Submit your retail store details for Georgia Lottery network authorization.</p>
+      </div>
+      <button type="button" id="closeStoreAppModalBtn" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+    <form id="formSubmitStoreApp">
+      <div class="admin-form-group">
+        <label class="admin-form-label">Store / Business Name *</label>
+        <input type="text" id="appInputStoreName" class="admin-form-input" placeholder="e.g. Quick Stop Food Mart" required>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="admin-form-group">
+          <label class="admin-form-label">Applicant / Owner Name *</label>
+          <input type="text" id="appInputOwnerName" class="admin-form-input" placeholder="e.g. John Doe" required>
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label">Georgia Retailer ID / Tax ID</label>
+          <input type="text" id="appInputRetailerId" class="admin-form-input" placeholder="e.g. GA-88421">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="admin-form-group">
+          <label class="admin-form-label">Email Address *</label>
+          <input type="email" id="appInputEmail" class="admin-form-input" placeholder="owner@store.com" required>
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label">Phone Number *</label>
+          <input type="tel" id="appInputPhone" class="admin-form-input" placeholder="(478) 555-0199" required>
+        </div>
+      </div>
+      <div class="admin-form-group">
+        <label class="admin-form-label">Physical Store Street Address *</label>
+        <input type="text" id="appInputAddress" class="admin-form-input" placeholder="e.g. 104 Highway 96, Warner Robins, GA 31088" required>
+      </div>
+      <div class="admin-form-group">
+        <label class="admin-form-label">Business Registration / Documents Link or Notes</label>
+        <textarea id="appInputNotes" class="admin-form-input" rows="2" placeholder="e.g. https://docs.google.com/retail-license-file or notes"></textarea>
+      </div>
+      <div id="storeAppFeedbackAlert" style="display:none; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 0.85rem;"></div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
+        <button type="button" class="btn-action-sm" id="cancelStoreAppBtn" style="background: rgba(255,255,255,0.1); color: #fff;">Cancel</button>
+        <button type="submit" class="btn-action-sm btn-approve" id="btnSubmitStoreApp">Submit Application</button>
+      </div>
+    </form>
+  </dialog>
+
+
   <!-- Legacy Compatibility Hooks (Ensures zero JS errors in existing scripts) -->
   <div style="display:none !important;" aria-hidden="true" id="legacyCompatibilityHooks">
     <div id="shiftBadgeBox">
@@ -3855,7 +4629,7 @@
             <!-- Two Bottom Action Buttons Side-by-Side: Not In Box & Add -->
             <div class="box-action-buttons-row">
               <button type="button" class="btn-not-in-box" id="btnNotInBox" title="Keep pack in inventory safe without assigning to rack">
-                Not In Box
+                Add in Stock
               </button>
               <button type="button" class="btn-add-box" id="btnAddBox" title="Assign pack into this box slot">
                 Add
@@ -3933,7 +4707,7 @@
           <button type="button" class="tab" id="tabBoxRemove" role="tab">
             <svg class="ic ic-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg> <span id="tabBoxRemoveText">Remove book</span>
           </button>
-        </div>
+          </div>
 
         <!-- Move Tab -->
         <div id="boxMoveTabContent">
@@ -3991,14 +4765,13 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="modal-f">
+        <div class="modal-f">
         <button type="button" class="btn" id="cancelBoxAdjustBtn">Close</button>
         <button type="button" class="btn btn-primary" id="btnExecuteMoveBox" style="color: #ffffff;" disabled>Move to box —</button>
         <button type="button" class="btn btn-primary" id="btnExecuteSaveBoxEdit" style="display: none !important; color: #ffffff;">Save changes</button>
         <button type="button" class="btn btn-danger" id="btnExecuteRemoveBox" style="display: none !important;">Remove book from box</button>
-      </div>
+        </div>
 
       <!-- Hidden compatibility hooks for existing script lookups -->
       <div style="display:none !important;" aria-hidden="true">
@@ -5022,9 +5795,9 @@
             </svg>
           </div>
           <div class="set-ticket-title-block">
-            <div class="set-ticket-step-eyebrow">STEP 1 OF 2 &middot; TICKET DETAILS</div>
+            <div class="set-ticket-step-eyebrow" id="setTicketStepEyebrow">NEW TICKET &middot; ADD TO IN-STOCK</div>
             <h2 class="set-ticket-main-title" id="setTicketHeaderGameTitle">5X Money</h2>
-            <p class="set-ticket-main-subtitle" id="setTicketHeaderSubtitle">We know this game. Check the details and go to the next step.</p>
+            <p class="set-ticket-main-subtitle" id="setTicketHeaderSubtitle">Check or set ticket details to add into In-Stock inventory.</p>
           </div>
         </div>
         <button type="button" class="modal-close-btn" id="closeSetTicketDetailsModalBtn" aria-label="Close">&times;</button>
@@ -5044,7 +5817,7 @@
           <div class="set-ticket-barcode-meta" id="setTicketBarcodeMetaLine">
             <span>Game # <strong id="setTicketMetaGameNum">1417</strong></span>
             <span>Pack # <strong id="setTicketMetaPackNum">0670170</strong></span>
-            <span>First ticket # <strong id="setTicketMetaFirstTicket">000</strong></span>
+            <span>First ticket # <strong id="setTicketMetaFirstTicket" title="Click to edit bracket PIN">000</strong> <button type="button" id="btnEditTicketPin" class="btn-edit-pin" style="background:none;border:none;color:#2563eb;font-size:12px;font-weight:600;cursor:pointer;padding:0 4px;text-decoration:underline;">Edit PIN</button></span>
           </div>
         </div>
 
@@ -5144,8 +5917,9 @@
 
       <div class="set-ticket-footer">
         <button type="button" class="btn-ticket-cancel" id="btnCancelTicketDetails">Cancel</button>
+        <button type="button" class="btn-ticket-stock" id="btnTicketDetailsAddStock" style="display:none;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;">Add in Stock</button>
         <button type="button" class="btn-ticket-next" id="btnTicketDetailsNext">
-          <span>Next: Choose Box</span>
+          <span>Add to In-Stock</span>
           <span>&rarr;</span>
         </button>
       </div>
@@ -5199,7 +5973,7 @@
           </div>
 
           <div class="setbox-action-btns">
-            <button type="button" class="setbox-btn-not-in-box" id="btnSetBoxNotInBox">Not In Box</button>
+            <button type="button" class="setbox-btn-not-in-box" id="btnSetBoxNotInBox">Add in Stock</button>
             <button type="button" class="setbox-btn-add" id="btnSetBoxConfirm">Add</button>
           </div>
         </div>
@@ -5236,6 +6010,77 @@
         <span>Back</span>
       </button>
       <button type="button" class="lotto-btn-secondary" id="btnCancelSetBox">Cancel</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL: Box Occupied Conflict Resolution (Empty Box vs Return Pack) -->
+  <dialog id="boxOccupiedConflictModal" class="pos-modal-dialog" style="width: 520px; max-width: 95vw; border-radius: 14px; border: 1.5px solid var(--border-color, #cbd5e1); padding: 0; overflow: hidden; background: var(--bg-surface, #ffffff); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);">
+    <div style="background: #1e293b; color: #ffffff; padding: 14px 18px; font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: #f59e0b; color: #000; font-weight: 900; font-size: 14px;">!</span>
+        <span>Box #<span id="conflictBoxNum">61</span> Already Occupied</span>
+      </div>
+      <button type="button" class="modal-close-btn" id="closeBoxConflictBtn" style="color:#ffffff; font-size: 20px; line-height: 1; cursor: pointer; background: none; border: none;">&times;</button>
+    </div>
+
+    <div style="padding: 18px 20px;">
+      <!-- Existing pack info card -->
+      <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;">
+        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #92400e; margin-bottom: 2px;">Currently in Box #<span id="conflictCurrentBoxText">61</span>:</div>
+        <div style="font-size: 15px; font-weight: 800; color: #78350f;" id="conflictCurrentGameTitle">Game Name · Pack #000000</div>
+        <div style="font-size: 12px; color: #b45309; margin-top: 2px;" id="conflictCurrentGameDetails">Ticket #000 · $0.00 / ticket</div>
+      </div>
+
+      <!-- New ticket to activate info card -->
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #166534; margin-bottom: 2px;">New Ticket to Activate in Box #<span id="conflictTargetBoxText">61</span>:</div>
+        <div style="font-size: 15px; font-weight: 800; color: #14532d;" id="conflictNewGameTitle">New Game · Pack #000000</div>
+        <div style="font-size: 12px; color: #15803d; margin-top: 2px;" id="conflictNewGameDetails">Price: $0.00 · Pack Size: 0 tickets</div>
+      </div>
+
+      <p style="font-size: 13px; font-weight: 700; color: var(--ink-2, #334155); margin: 0 0 12px 0;">
+        Choose what to do with the current book before activating the new ticket:
+      </p>
+
+      <!-- Options container -->
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px;">
+        <!-- Option 1: Move current pack to an empty box -->
+        <button type="button" id="btnConflictMoveEmptyBox" class="conflict-choice-card" style="border: 2px solid #bbf7d0; background: #f0fdf4; color: #1e293b;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; font-weight: 900; margin-top: 2px;">
+            🔲
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="conflict-title" style="color: #15803d;">Move to Empty Box (<span id="conflictSuggestedEmptyBoxText">Box #5</span>)</div>
+            <div class="conflict-desc" style="color: #166534; opacity: 0.92;">Moves the current book to an available empty box on the rack so you can keep selling it, and immediately activates the new ticket in Box #<span class="conflictBoxInline">61</span>.</div>
+          </div>
+        </button>
+
+        <!-- Option 2: Mark current pack as Sold Out -->
+        <button type="button" id="btnConflictEmptyBox" class="conflict-choice-card" style="border: 2px solid #fecaca; background: #fffbfb; color: #1e293b;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; font-weight: 900; margin-top: 2px;">
+            ✕
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="conflict-title" style="color: #991b1b;">Mark as Sold Out (Finish Current Book)</div>
+            <div class="conflict-desc" style="color: #7f1d1d; opacity: 0.92;">Marks the current book as Sold Out in shift reports, records sales, and immediately activates the new ticket in Box #<span class="conflictBoxInline">61</span>.</div>
+          </div>
+        </button>
+
+        <!-- Option 3: Return current pack to safe inventory -->
+        <button type="button" id="btnConflictReturnPack" class="conflict-choice-card" style="border: 2px solid #bfdbfe; background: #f0f7ff; color: #1e293b;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #dbeafe; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; font-weight: 900; margin-top: 2px;">
+            ↩
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="conflict-title" style="color: #1e40af;">Return the Pack (Move to Safe Inventory)</div>
+            <div class="conflict-desc" style="color: #1e3a8a; opacity: 0.92;">Returns the remaining unsold tickets of the current book back to In-Stock / Safe Inventory, and immediately activates the new ticket in Box #<span class="conflictBoxInline">61</span>.</div>
+          </div>
+        </button>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color, #e2e8f0); padding-top: 12px;">
+        <button type="button" class="btn" id="btnConflictCancel" style="padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 13px;">Choose Different Box</button>
+      </div>
     </div>
   </dialog>
 
@@ -5284,9 +6129,10 @@
         <button type="button" class="btn btn-secondary" id="btnSoldOutNo" style="min-width: 100px; font-weight: 800;">
           No
         </button>
-        <button type="button" class="btn btn-primary" id="btnSoldOutFix" style="min-width: 100px; font-weight: 800; background: #2563eb;">
-          Fix
+        <button type="button" class="btn btn-primary" id="btnSoldOutYes" style="min-width: 100px; font-weight: 800; background: #2563eb;">
+          Yes
         </button>
+        <button type="button" id="btnSoldOutFix" style="display: none;"></button>
       </div>
     </div>
   </dialog>
@@ -6780,7 +7626,7 @@
       <div class="cr-body">
         <div class="cr-field cr-field-full">
           <label class="cr-label" for="drEmailRecipientInput">Manager email address (To)</label>
-          <input type="email" id="drEmailRecipientInput" class="cr-input" value="manager@amigofoodmart.com" placeholder="manager@amigofoodmart.com">
+          <input type="email" id="drEmailRecipientInput" class="cr-input" value="amigofoodmart2300@gmail.com" placeholder="amigofoodmart2300@gmail.com">
         </div>
 
         <div class="cr-calc-banner" id="drEmailPreviewBanner" style="background:#f8fafc; border-color:#e2e8f0; color:#334155;">
@@ -7059,7 +7905,7 @@
         <div class="modal-shift-rep-header-right">
           <div class="shift-rep-email-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-            <span id="modalShiftRepEmail">accounts@amigofoodmart.com</span>
+            <span id="modalShiftRepEmail">amigofoodmart2300@gmail.com</span>
             <span class="badge-status-sent">Sent</span>
           </div>
           <button type="button" class="btn-shift-rep-tool" id="btnModalShiftRepDownloadPdf" title="Download PDF">

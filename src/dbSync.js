@@ -108,9 +108,15 @@ export async function syncPOSStateToDB(state, immediate = false) {
 
   const doSync = async () => {
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (typeof localStorage !== 'undefined') {
+        const token = localStorage.getItem('lotto_store_token') || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_store_token') : null);
+        if (token) headers['x-store-token'] = token;
+        headers['x-store-id'] = storeId;
+      }
       await fetch(`/api/sync-pos-state?storeId=${encodeURIComponent(storeId)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ storeId, state }),
         signal: AbortSignal.timeout(4000)
       });
@@ -191,7 +197,13 @@ export async function logTicketScanToDB(scanData) {
 export async function loadPOSStateFromDB(targetStoreId = null) {
   const storeId = targetStoreId || (typeof window !== 'undefined' && window.getCurrentStoreId ? window.getCurrentStoreId() : 'store_amigo');
   try {
-    const res = await fetch(`/api/load-pos-state?storeId=${encodeURIComponent(storeId)}`, { signal: AbortSignal.timeout(3000) });
+    const headers = {};
+    if (typeof localStorage !== 'undefined') {
+      const token = localStorage.getItem('lotto_store_token') || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_store_token') : null);
+      if (token) headers['x-store-token'] = token;
+      headers['x-store-id'] = storeId;
+    }
+    const res = await fetch(`/api/load-pos-state?storeId=${encodeURIComponent(storeId)}`, { headers, signal: AbortSignal.timeout(4000) });
     if (res.ok) {
       const data = await res.json();
       if (data && data.success && data.state) {

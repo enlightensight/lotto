@@ -186,7 +186,20 @@ export function openDaySettlementModal(state, onFullReport = null, onCloseDay = 
   const emailBtn = document.getElementById('btnDsEmail');
   emailBtn?.addEventListener('click', () => {
     sfx.keypad();
-    const email = prompt('Enter manager email address to send settlement report:', 'manager@amigofoodmart.com');
+    const email = prompt('Enter manager email address to send settlement report:', 'amigofoodmart2300@gmail.com');
+    if (email) {
+      fetch('/api/reports/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: state?.storeId || 'store_amigo',
+          storeName: state?.storeName || 'AMIGO FOOD MART',
+          reportType: 'DAY_SETTLEMENT_REPORT',
+          reportDate: new Date().toISOString(),
+          targetEmail: email
+        })
+      }).catch(() => {});
+    }
     if (email) {
       sfx.success();
       alert(`✓ Day settlement report dispatched to ${email}`);

@@ -6497,3 +6497,73 @@ dialog#cashierModal {
 
 
 
+
+
+/* ==========================================================================
+   END OF SHIFT SCAN COLORS & DISPENSER RACK HIGHLIGHTS
+   ========================================================================== */
+.cs-reconcile-table tr.cs-row-scanned td {
+  background: #f0fdf4 !important;
+  border-left: 4px solid #16a34a;
+}
+.cs-reconcile-table tr.cs-row-scanned .cs-box-badge {
+  background: #16a34a !important;
+  color: #ffffff !important;
+}
+
+#viewSellCounter .box-card.shift-scan-done,
+#viewSellCounter .box-card.scanned-done,
+.box-card.active.shift-scan-done,
+.box-card.active.scanned-done {
+  border: 2.5px solid #16a34a !important;
+  background: #dcfce7 !important;
+  box-shadow: 0 0 0 1px #16a34a, 0 4px 10px rgba(22, 163, 74, 0.2) !important;
+}
+#viewSellCounter .box-card.shift-scan-done .box-main-number,
+#viewSellCounter .box-card.scanned-done .box-main-number,
+.box-card.active.shift-scan-done .box-main-number {
+  color: #14532d !important;
+}
+#viewSellCounter .box-card.shift-scan-done .ticket-sold-count,
+#viewSellCounter .box-card.scanned-done .ticket-sold-count,
+.box-card.active.shift-scan-done .ticket-sold-count {
+  color: #15803d !important;
+  font-weight: 800 !important;
+}
+
+.ribbon-cell.scanned-slot {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="dark"] .cs-reconcile-table tr.cs-row-scanned td {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-left: 4px solid #10b981;
+}
+
+[data-theme="dark"] #viewSellCounter .box-card.shift-scan-done,
+[data-theme="dark"] #viewSellCounter .box-card.scanned-done,
+[data-theme="dark"] .box-card.active.shift-scan-done,
+[data-theme="dark"] .box-card.active.scanned-done {
+  border: 2.5px solid #10b981 !important;
+  background: #064e3b !important;
+  box-shadow: 0 0 0 1px #10b981, 0 4px 10px rgba(16, 185, 129, 0.3) !important;
+}
+[data-theme="dark"] #viewSellCounter .box-card.shift-scan-done .box-main-number,
+[data-theme="dark"] #viewSellCounter .box-card.scanned-done .box-main-number,
+[data-theme="dark"] .box-card.active.shift-scan-done .box-main-number {
+  color: #ecfdf5 !important;
+}
+[data-theme="dark"] #viewSellCounter .box-card.shift-scan-done .ticket-sold-count,
+[data-theme="dark"] #viewSellCounter .box-card.scanned-done .ticket-sold-count,
+[data-theme="dark"] .box-card.active.shift-scan-done .ticket-sold-count {
+  color: #6ee7b7 !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="dark"] .ribbon-cell.scanned-slot {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}

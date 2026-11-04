@@ -38,14 +38,14 @@ async function run() {
     '--no-first-run',
     '--no-default-browser-check',
     '--window-size=1280,800',
-    'http://localhost:5173'
+    'http://127.0.0.1:5173/?bypass_login=1'
   ], { stdio: 'ignore' });
 
   try {
     let targets = null;
     for (let i = 0; i < 20; i++) {
       try {
-        const res = await fetch(`http://localhost:${PORT}/json`);
+        const res = await fetch(`http://127.0.0.1:${PORT}/json`);
         targets = await res.json();
         break;
       } catch (e) {
@@ -95,9 +95,9 @@ async function run() {
     // Reset fresh state
     await evalCode(`
       localStorage.clear();
-      window.location.reload();
+      window.location.href = 'http://127.0.0.1:5173/?bypass_login=1';
     `);
-    await sleep(2000);
+    await sleep(2500);
 
     for (let i = 0; i < 20; i++) {
       const ready = await evalCode(`typeof window.calculateSlotSoldTickets === 'function'`);
@@ -159,10 +159,12 @@ async function run() {
       window.state.shiftStatus = 'SCANNING_END_SHIFT';
       window.state.shiftNumber = 1;
 
-      // Box 2 is active: game 1418 (10X Money), pack 745508, startTicket 9, currentTicket 9
+      // Box 2 is active: game 1410 (Jr Jumbo), pack 074550, startTicket 9, currentTicket 9
       const s2 = window.state.slots.find(s => s.boxNumber === 2);
       if (s2) {
-        s2.packNumber = '745508';
+        s2.status = 'ACTIVE';
+        s2.gameId = '1410';
+        s2.packNumber = '074550';
         s2.barcodePrefix = '1410'; // Jr Jumbo
         s2.startTicket = 9;
         s2.currentTicket = 9;
@@ -174,10 +176,10 @@ async function run() {
       window.renderHeaderAndMetrics();
     `);
 
-    // Scan closing ticket 9 for Box 2 (1410 745508 009 012)
+    // Scan closing ticket 9 for Box 2 (1410 074550 009 012)
     const scanRes = await evalCode(`
       (() => {
-        window.processScannedBarcode('1410745508009012');
+        window.processScannedBarcode('1410074550009012');
         const s2 = window.state.slots.find(s => s.boxNumber === 2);
         const card2 = document.querySelector('.box-card[data-box="2"]');
         const countText = card2 ? card2.querySelector('.ticket-sold-count')?.textContent?.trim() : '';

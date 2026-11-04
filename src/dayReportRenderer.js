@@ -3,7 +3,7 @@
 // Exact Match to AMIGO FOOD MART LT System Software Specification
 // =============================================================
 
-import { getDayReportData } from './dayReportData.js';
+import { getDayReportData, generateLiveDayReport } from './dayReportData.js';
 import { saveState } from './data.js';
 import { saveDayReportToDB } from './dbSync.js';
 
@@ -434,14 +434,14 @@ window.addEventListener('afterprint', () => {
 /**
  * Helper to open the Day Report modal and initialize handlers
  */
-export function openDayReportModal(getStateOrState, sfx = null) {
+export function openDayReportModal(getStateOrState, sfx = null, options = {}) {
   const getState = typeof getStateOrState === 'function' ? getStateOrState : () => getStateOrState;
   const modal = document.getElementById('dayReportModal');
   if (!modal) return;
 
   const refreshModal = () => {
     const currentState = getState();
-    const data = getDayReportData(currentState);
+    const data = generateLiveDayReport(currentState, options);
     renderDayReportModalPreview(data, currentState, refreshModal);
     // Asynchronously save/backup day report to MySQL database
     saveDayReportToDB(data);

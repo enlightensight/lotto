@@ -143,6 +143,9 @@ async function run() {
     assert(resetResult?.activeBoxesCount === 0, 'All dispenser boxes are reset to empty');
     assert(resetResult?.dataClearedFlag, 'State dataCleared flag is true');
 
+    // Wait for the clean page reload to complete
+    await sleep(1500);
+
     // 4. Sell Counter Dashboard shows "Start Shift"
     console.log('\n--- Test Group 4: Sell Counter "Start Shift" Display ---');
     const btnLabelCheck = await evalInPage(`(() => {

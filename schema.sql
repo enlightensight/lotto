@@ -1,12 +1,9 @@
 -- =======================================================
 -- Georgia Lottery Retail POS - Clean & Simplified Schema
--- Database Name: lotto_pos
 -- Contains only essential fields with core DATE tracking
 -- Zero empty dispenser slots stored
+-- Safe for local development & managed cloud MySQL (Railway)
 -- =======================================================
-
-CREATE DATABASE IF NOT EXISTS `lotto_pos` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `lotto_pos`;
 
 -- -------------------------------------------------------
 -- 1. ACTIVE DISPENSERS (Only Loaded Active Boxes on Counter)
@@ -121,6 +118,7 @@ CREATE TABLE IF NOT EXISTS `shift_box_sales` (
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `store_inventory` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL DEFAULT 'store_amigo',
   `date_received` VARCHAR(20) NOT NULL COMMENT 'Date added (MM/DD/YYYY)',
   `pack_number` VARCHAR(50) UNIQUE NOT NULL,
   `game_name` VARCHAR(100) NOT NULL,
@@ -222,3 +220,409 @@ FROM day_box_sales
 WHERE tickets_sold > 0
 GROUP BY game_name, ticket_price
 ORDER BY SUM(sales_amount) DESC;
+
+-- -------------------------------------------------------
+-- 9. PLATFORM ADMINISTRATOR USERS (Role-Based Admin Access)
+-- Only provisioned admins can access /admin
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `admin_users` (
+  `id` VARCHAR(50) PRIMARY KEY,
+  `username` VARCHAR(60) UNIQUE NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `full_name` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(120),
+  `role` VARCHAR(50) DEFAULT 'SUPER_ADMIN',
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `last_login_at` TIMESTAMP NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed default platform admin if not exists (username: admin, pin: 1234)
+INSERT IGNORE INTO `admin_users` (`id`, `username`, `password_hash`, `full_name`, `email`, `role`, `is_active`)
+VALUES ('adm_001', 'admin', '1234', 'System Administrator', 'admin@jackpotlo.com', 'SUPER_ADMIN', 1);
+
+CREATE TABLE IF NOT EXISTS `store_pos_state` (
+  `store_id` VARCHAR(60) PRIMARY KEY,
+  `state_data` LONGTEXT NOT NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 10. STORES DIRECTORY & AUTHORIZATIONS
+-- Multi-store operational & authorization tracking
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `stores` (
+  `store_id` VARCHAR(60) PRIMARY KEY,
+  `store_name` VARCHAR(150) NOT NULL,
+  `owner_username` VARCHAR(60) NOT NULL,
+  `retailer_number` VARCHAR(50),
+  `address` VARCHAR(255),
+  `phone` VARCHAR(50),
+  `total_boxes` INT DEFAULT 65,
+  `authorization_status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED') NOT NULL DEFAULT 'PENDING',
+  `operational_status` ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_store_auth` (`authorization_status`),
+  INDEX `idx_store_owner` (`owner_username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed default authorized stores
+INSERT IGNORE INTO `stores` (`store_id`, `store_name`, `owner_username`, `retailer_number`, `address`, `phone`, `total_boxes`, `authorization_status`, `operational_status`)
+VALUES 
+  ('store_amigo', 'AMIGO FOOD MART', 'amigo', 'GA-89412', '2300 MOODY RD WARNER ROBINS, GA, 31088', '(478) 923-4567', 65, 'APPROVED', 'ACTIVE'),
+  ('store_downtown', 'DOWNTOWN QUICK MART', 'downtown_owner', 'GA-94103', '104 N COMMERCIAL BLVD, WARNER ROBINS, GA, 31088', '(478) 953-8821', 60, 'APPROVED', 'ACTIVE');
+
+-- -------------------------------------------------------
+-- 10b. STORE USERS (Retail Store Staff, Cashiers & Owners)
+-- Multi-store retail staff with role and approval tracking
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_users` (
+  `id` VARCHAR(60) PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL,
+  `username` VARCHAR(60) NOT NULL,
+  `email` VARCHAR(120) NOT NULL DEFAULT '',
+  `normalized_email` VARCHAR(120) NOT NULL DEFAULT '',
+  `password_hash` VARCHAR(255) NOT NULL,
+  `full_name` VARCHAR(100) NOT NULL,
+  `role` VARCHAR(50) NOT NULL DEFAULT 'STORE_USER',
+  `account_status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED') NOT NULL DEFAULT 'PENDING',
+  `is_active` TINYINT(1) DEFAULT 1,
+  `approval_notes` TEXT NULL,
+  `approved_by` VARCHAR(60) NULL,
+  `approved_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_store_user_email` (`store_id`, `normalized_email`),
+  INDEX `idx_store_user_norm_email` (`normalized_email`),
+  INDEX `idx_store_user_lookup` (`username`),
+  INDEX `idx_store_user_store` (`store_id`),
+  CONSTRAINT `fk_store_user_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 11. STORE APPLICATIONS (Onboarding & Retailer Licenses)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_applications` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL,
+  `store_name` VARCHAR(150) NOT NULL,
+  `applicant_name` VARCHAR(100) NOT NULL,
+  `applicant_email` VARCHAR(120),
+  `applicant_phone` VARCHAR(50),
+  `business_tax_id` VARCHAR(50),
+  `lottery_retailer_id` VARCHAR(50),
+  `address` VARCHAR(255),
+  `documents` JSON NULL COMMENT 'List of uploaded files/licenses',
+  `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'MORE_INFO_REQUIRED') DEFAULT 'PENDING',
+  `admin_notes` TEXT NULL,
+  `reviewed_by` VARCHAR(60) NULL,
+  `reviewed_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_app_status` (`status`),
+  INDEX `idx_app_store` (`store_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 12. LOTTERY TICKET CATALOG (Central State Lottery Games)
+-- Centralized catalog managed by Administrators
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `lottery_ticket_catalog` (
+  `game_id` VARCHAR(50) PRIMARY KEY,
+  `game_name` VARCHAR(120) NOT NULL,
+  `game_code` VARCHAR(20) NOT NULL,
+  `price` DECIMAL(6, 2) NOT NULL DEFAULT 1.00,
+  `pack_size` INT NOT NULL DEFAULT 100,
+  `pack_value` DECIMAL(10, 2) NOT NULL DEFAULT 300.00,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_catalog_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed default lottery catalog with standard Georgia Lottery scratch games
+INSERT IGNORE INTO `lottery_ticket_catalog` (`game_id`, `game_name`, `game_code`, `price`, `pack_size`, `pack_value`, `is_active`)
+VALUES
+  ('1650', '5X Money', '1650', 1.00, 300, 300.00, 1),
+  ('1602', 'Jr Jumbo', '1602', 1.00, 300, 300.00, 1),
+  ('1631', 'Loteria', '1631', 2.00, 150, 300.00, 1),
+  ('1644', 'Hit 100', '1644', 2.00, 150, 300.00, 1),
+  ('1590', 'Cross Word', '1590', 3.00, 100, 300.00, 1),
+  ('1611', 'Treasure Hunt', '1611', 3.00, 100, 300.00, 1),
+  ('1688', 'Lucky 7s', '1688', 5.00, 60, 300.00, 1),
+  ('1711', '50X Money', '1711', 10.00, 30, 300.00, 1),
+  ('1720', 'Hit 1000', '1720', 20.00, 30, 600.00, 1),
+  ('1770', '500X The Money', '1770', 50.00, 20, 1000.00, 1);
+
+-- -------------------------------------------------------
+-- 13. STORE TICKET REQUESTS (Stores Requesting Game Approval)
+-- Stores request authorization to sell games from catalog
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_ticket_requests` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL,
+  `store_name` VARCHAR(150) NOT NULL,
+  `game_id` VARCHAR(50) NOT NULL,
+  `game_name` VARCHAR(120) NOT NULL,
+  `price` DECIMAL(6, 2) NOT NULL,
+  `requested_by` VARCHAR(60) NOT NULL,
+  `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'MORE_INFO_REQUIRED') DEFAULT 'PENDING',
+  `admin_decision_reason` TEXT NULL,
+  `reviewed_by` VARCHAR(60) NULL,
+  `reviewed_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_req_store` (`store_id`),
+  INDEX `idx_req_status` (`status`),
+  CONSTRAINT `fk_req_game` FOREIGN KEY (`game_id`) REFERENCES `lottery_ticket_catalog` (`game_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 14. STORE APPROVED TICKETS (Authorized Store-Game Relationships)
+-- Which ticket types a store is authorized to sell
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_approved_tickets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL,
+  `game_id` VARCHAR(50) NOT NULL,
+  `approved_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `approved_by` VARCHAR(60) NOT NULL,
+  `status` ENUM('ACTIVE', 'REVOKED') DEFAULT 'ACTIVE',
+  UNIQUE KEY `uk_store_game` (`store_id`, `game_id`),
+  INDEX `idx_appr_store` (`store_id`),
+  CONSTRAINT `fk_appr_game` FOREIGN KEY (`game_id`) REFERENCES `lottery_ticket_catalog` (`game_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed approved games for Amigo Food Mart
+INSERT IGNORE INTO `store_approved_tickets` (`store_id`, `game_id`, `approved_by`, `status`)
+VALUES 
+  ('store_amigo', '1650', 'admin', 'ACTIVE'),
+  ('store_amigo', '1602', 'admin', 'ACTIVE'),
+  ('store_amigo', '1631', 'admin', 'ACTIVE'),
+  ('store_amigo', '1644', 'admin', 'ACTIVE'),
+  ('store_amigo', '1590', 'admin', 'ACTIVE'),
+  ('store_amigo', '1611', 'admin', 'ACTIVE'),
+  ('store_amigo', '1688', 'admin', 'ACTIVE'),
+  ('store_amigo', '1711', 'admin', 'ACTIVE');
+
+-- -------------------------------------------------------
+-- 14b. STORE PENDING TICKETS (Automatic Barcode Detection & Two-Step Setup)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_pending_tickets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL,
+  `barcode` VARCHAR(100) NOT NULL,
+  `pack_number` VARCHAR(50) NULL,
+  `game_number` VARCHAR(50) NULL,
+  `ticket_number` INT NULL,
+  `game_name` VARCHAR(120) NULL,
+  `ticket_price` DECIMAL(6, 2) NULL,
+  `box_number` INT NULL,
+  `status` ENUM('PENDING_SETUP', 'CONFIGURED') NOT NULL DEFAULT 'PENDING_SETUP',
+  `cashier` VARCHAR(60) NULL,
+  `session_info` VARCHAR(100) NULL,
+  `discovered_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `configured_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_store_barcode` (`store_id`, `barcode`),
+  INDEX `idx_spt_store_status` (`store_id`, `status`),
+  CONSTRAINT `fk_spt_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 15. TICKET STOCK ALLOCATIONS (Physical Pack Shipments to Stores)
+-- Admin assigns physical packs to authorized stores
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ticket_stock_allocations` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `allocation_reference` VARCHAR(60) NOT NULL,
+  `store_id` VARCHAR(60) NOT NULL,
+  `store_name` VARCHAR(150) NOT NULL,
+  `game_id` VARCHAR(50) NOT NULL,
+  `game_name` VARCHAR(120) NOT NULL,
+  `pack_number` VARCHAR(50) NOT NULL,
+  `pack_size` INT NOT NULL DEFAULT 100,
+  `ticket_price` DECIMAL(6, 2) NOT NULL DEFAULT 1.00,
+  `pack_value` DECIMAL(10, 2) NOT NULL DEFAULT 300.00,
+  `total_tickets` INT NOT NULL DEFAULT 100,
+  `allocated_by` VARCHAR(60) NOT NULL,
+  `allocation_date` VARCHAR(30) NOT NULL,
+  `status` ENUM('ALLOCATED', 'RECEIVED', 'CANCELLED') DEFAULT 'ALLOCATED',
+  `received_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_store_pack` (`store_id`, `pack_number`),
+  INDEX `idx_alloc_ref` (`allocation_reference`),
+  INDEX `idx_alloc_store` (`store_id`),
+  CONSTRAINT `fk_alloc_game` FOREIGN KEY (`game_id`) REFERENCES `lottery_ticket_catalog` (`game_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 16. ADMIN AUDIT LOGS (Security & Audit Trail)
+-- Immutable record of all administrator actions
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `admin_audit_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `admin_username` VARCHAR(60) NOT NULL,
+  `action_type` VARCHAR(80) NOT NULL,
+  `target_entity` VARCHAR(80) NOT NULL,
+  `target_id` VARCHAR(100) NOT NULL,
+  `details` JSON NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_audit_admin` (`admin_username`),
+  INDEX `idx_audit_action` (`action_type`),
+  INDEX `idx_audit_date` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 17. CENTRAL WAREHOUSE INVENTORY (Enterprise Lottery Inventory)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `central_warehouse_inventory` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `pack_id` VARCHAR(60) UNIQUE NOT NULL,
+  `game_id` VARCHAR(50) NOT NULL,
+  `game_name` VARCHAR(120) NOT NULL,
+  `pack_number` VARCHAR(50) NOT NULL,
+  `barcode` VARCHAR(100) NULL,
+  `ticket_price` DECIMAL(6, 2) NOT NULL DEFAULT 1.00,
+  `pack_size` INT NOT NULL DEFAULT 100,
+  `start_ticket` INT NOT NULL DEFAULT 0,
+  `end_ticket` INT NOT NULL DEFAULT 99,
+  `status` ENUM('AVAILABLE', 'RESERVED', 'DISPATCHED', 'RECEIVED_BY_STORE', 'RETURNED') DEFAULT 'AVAILABLE',
+  `reserved_store_id` VARCHAR(60) NULL,
+  `allocation_reference` VARCHAR(60) NULL,
+  `dispatched_at` TIMESTAMP NULL,
+  `received_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_cwi_game` (`game_id`),
+  INDEX `idx_cwi_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 18. LOTTERY PACK INVENTORY (Store Authoritative Pack Tracking)
+-- Tracks two-level inventory: Physical Pack and Individual Ticket Positions
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `lottery_pack_inventory` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `pack_id` VARCHAR(60) UNIQUE NOT NULL,
+  `store_id` VARCHAR(60) NOT NULL,
+  `game_id` VARCHAR(50) NOT NULL,
+  `game_name` VARCHAR(120) NOT NULL,
+  `pack_number` VARCHAR(50) NOT NULL,
+  `barcode` VARCHAR(100) NULL,
+  `ticket_price` DECIMAL(6, 2) NOT NULL DEFAULT 1.00,
+  `total_tickets` INT NOT NULL DEFAULT 100,
+  `start_ticket` INT NOT NULL DEFAULT 0,
+  `end_ticket` INT NOT NULL DEFAULT 99,
+  `next_ticket_to_sell` INT NOT NULL DEFAULT 0,
+  `remaining_tickets` INT NOT NULL DEFAULT 100,
+  `tickets_sold` INT NOT NULL DEFAULT 0,
+  `lifecycle_status` ENUM('UNACTIVATED', 'ACTIVE', 'DEPLETED', 'DISCONTINUED', 'LOST', 'DAMAGED') DEFAULT 'UNACTIVATED',
+  `physical_location` ENUM('CENTRAL_WAREHOUSE', 'IN_TRANSIT', 'STORE', 'RETURNED') DEFAULT 'STORE',
+  `box_number` INT NULL,
+  `activated_at` TIMESTAMP NULL,
+  `activated_by` VARCHAR(60) NULL,
+  `completed_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_physical_game_pack` (`game_id`, `pack_number`),
+  INDEX `idx_lpi_store` (`store_id`),
+  INDEX `idx_lpi_status` (`lifecycle_status`),
+  INDEX `idx_lpi_game` (`game_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 19. INVENTORY TRANSACTIONS (Append-Only Immutable Ledger)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `inventory_transactions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `transaction_id` VARCHAR(60) UNIQUE NOT NULL,
+  `pack_id` VARCHAR(60) NOT NULL,
+  `game_id` VARCHAR(50) NOT NULL,
+  `store_id` VARCHAR(60) NULL,
+  `previous_status` VARCHAR(40) NULL,
+  `new_status` VARCHAR(40) NOT NULL,
+  `previous_location` VARCHAR(40) NULL,
+  `new_location` VARCHAR(40) NOT NULL,
+  `previous_position` INT NULL,
+  `new_position` INT NULL,
+  `quantity_before` INT NOT NULL DEFAULT 0,
+  `quantity_changed` INT NOT NULL DEFAULT 0,
+  `quantity_after` INT NOT NULL DEFAULT 0,
+  `transaction_type` VARCHAR(50) NOT NULL,
+  `source_ref_id` VARCHAR(80) NULL,
+  `user_id` VARCHAR(60) DEFAULT 'system',
+  `reason` TEXT NULL,
+  `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_tx_pack` (`pack_id`),
+  INDEX `idx_tx_store` (`store_id`),
+  INDEX `idx_tx_type` (`transaction_type`),
+  INDEX `idx_tx_ref` (`source_ref_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 20. INVENTORY DISCREPANCIES (Reconciliation Flags & Audits)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `inventory_discrepancies` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `discrepancy_id` VARCHAR(60) UNIQUE NOT NULL,
+  `pack_id` VARCHAR(60) NOT NULL,
+  `store_id` VARCHAR(60) NOT NULL,
+  `shift_id` VARCHAR(60) NULL,
+  `expected_position` INT NOT NULL,
+  `scanned_position` INT NULL,
+  `difference` INT NOT NULL DEFAULT 0,
+  `discrepancy_type` VARCHAR(60) NOT NULL,
+  `reason` TEXT NULL,
+  `status` ENUM('OPEN', 'RESOLVED', 'REJECTED') DEFAULT 'OPEN',
+  `resolved_by` VARCHAR(60) NULL,
+  `resolved_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_disc_store` (`store_id`),
+  INDEX `idx_disc_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 21. STORE TRANSFERS (Store-to-Store Stock Transfers)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_transfers` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `transfer_id` VARCHAR(60) UNIQUE NOT NULL,
+  `pack_id` VARCHAR(60) NOT NULL,
+  `from_store_id` VARCHAR(60) NOT NULL,
+  `to_store_id` VARCHAR(60) NOT NULL,
+  `status` ENUM('PENDING', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+  `requested_by` VARCHAR(60) NOT NULL,
+  `authorized_by` VARCHAR(60) NULL,
+  `received_by` VARCHAR(60) NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `received_at` TIMESTAMP NULL,
+  INDEX `idx_txf_from` (`from_store_id`),
+  INDEX `idx_txf_to` (`to_store_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 22. STORE FEEDBACK (Issue Reports, Bug Reports & Operational Feedback)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `store_feedback` (
+  `id` VARCHAR(60) PRIMARY KEY,
+  `store_id` VARCHAR(60) NOT NULL,
+  `store_name` VARCHAR(120) NOT NULL,
+  `user_id` VARCHAR(60) NULL,
+  `cashier_name` VARCHAR(120) NULL,
+  `category` VARCHAR(60) NOT NULL,
+  `severity` VARCHAR(30) NOT NULL DEFAULT 'MEDIUM',
+  `subject` VARCHAR(255) NULL,
+  `message` TEXT NOT NULL,
+  `system_context` JSON NULL,
+  `status` ENUM('PENDING', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED') DEFAULT 'PENDING',
+  `admin_notes` TEXT NULL,
+  `reviewed_by` VARCHAR(60) NULL,
+  `reviewed_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_feedback_store` (`store_id`),
+  INDEX `idx_feedback_status` (`status`),
+  INDEX `idx_feedback_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+

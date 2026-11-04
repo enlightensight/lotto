@@ -1,0 +1,1520 @@
+/* ============================================================================
+   Jackpotlo Enterprise SaaS Management Platform — Admin Dashboard Styles
+   Precision-Crafted Dual-Theme System (Deep Space Dark & Pristine Enterprise Light)
+   CRITICAL REQUIREMENT: Strictly scoped to admin elements. Zero effect on Store POS.
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   1. Theme Tokens & Variables
+   ---------------------------------------------------------------------------- */
+:root,
+[data-admin-theme="dark"] {
+  --admin-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --admin-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Surfaces & Canvas */
+  --admin-bg-base: #090d16;
+  --admin-bg-sidebar: #0d121f;
+  --admin-bg-surface: #111827;
+  --admin-bg-surface-elevated: #162032;
+  --admin-topbar-bg: rgba(13, 18, 31, 0.88);
+  --admin-card-bg: #111827;
+  --admin-card-header-bg: #131c2d;
+  --admin-modal-bg: #141c2c;
+  --admin-doc-viewer-bg: #090d16;
+  --admin-payload-box-bg: #090d15;
+
+  /* Borders & Dividers */
+  --admin-border-subtle: rgba(255, 255, 255, 0.08);
+  --admin-border-medium: rgba(255, 255, 255, 0.14);
+  --admin-border-focus: #6366f1;
+  --admin-card-border: rgba(255, 255, 255, 0.08);
+  --admin-payload-box-border: rgba(255, 255, 255, 0.10);
+
+  /* Typography */
+  --admin-text-main: #f8fafc;
+  --admin-text-muted: #94a3b8;
+  --admin-text-dim: #64748b;
+  --admin-heading-color: #ffffff;
+
+  /* Core Accent Brand (Electric Indigo) */
+  --admin-primary: #6366f1;
+  --admin-primary-hover: #4f46e5;
+  --admin-primary-active: #4338ca;
+  --admin-primary-glow: rgba(99, 102, 241, 0.22);
+  --admin-primary-subtle: rgba(99, 102, 241, 0.12);
+
+  /* Status Accents (Emerald, Amber, Rose, Sky) */
+  --admin-emerald: #10b981;
+  --admin-emerald-bg: rgba(16, 185, 129, 0.12);
+  --admin-emerald-border: rgba(16, 185, 129, 0.28);
+  --admin-emerald-text: #34d399;
+
+  --admin-amber: #f59e0b;
+  --admin-amber-bg: rgba(245, 158, 11, 0.12);
+  --admin-amber-border: rgba(245, 158, 11, 0.28);
+  --admin-amber-text: #fbbf24;
+
+  --admin-rose: #f43f5e;
+  --admin-rose-bg: rgba(244, 63, 94, 0.12);
+  --admin-rose-border: rgba(244, 63, 94, 0.28);
+  --admin-rose-text: #fb7185;
+
+  --admin-sky: #0ea5e9;
+  --admin-sky-bg: rgba(14, 165, 233, 0.12);
+  --admin-sky-border: rgba(14, 165, 233, 0.28);
+  --admin-sky-text: #38bdf8;
+
+  /* Tables & Inputs */
+  --admin-table-th-bg: #0f1524;
+  --admin-table-row-hover: rgba(255, 255, 255, 0.025);
+  --admin-table-row-striped: rgba(255, 255, 255, 0.012);
+  --admin-table-td-color: #cbd5e1;
+  --admin-input-bg: #0c111d;
+  --admin-input-border: rgba(255, 255, 255, 0.12);
+  --admin-input-color: #f8fafc;
+  --admin-input-placeholder: #475569;
+
+  /* Sidebar Specifics */
+  --admin-subnav-hover-bg: rgba(255, 255, 255, 0.045);
+  --admin-subnav-active-bg: rgba(99, 102, 241, 0.14);
+  --admin-subnav-active-color: #818cf8;
+  --admin-badge-count-bg: rgba(255, 255, 255, 0.08);
+  --admin-badge-count-color: #cbd5e1;
+
+  /* Shadows */
+  --admin-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.40);
+  --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --admin-shadow-lg: 0 20px 40px -4px rgba(0, 0, 0, 0.55);
+
+  /* Buttons */
+  --admin-pill-secondary-bg: rgba(255, 255, 255, 0.06);
+  --admin-pill-secondary-hover: rgba(255, 255, 255, 0.10);
+  --admin-pill-secondary-color: #e2e8f0;
+}
+
+[data-admin-theme="light"],
+html[data-admin-theme="light"] #viewAdminDashboard,
+[data-theme="light"] #viewAdminDashboard,
+html[data-theme="light"] #viewAdminDashboard,
+html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard {
+  /* Surfaces & Canvas */
+  --admin-bg-base: #f8fafc;
+  --admin-bg-sidebar: #ffffff;
+  --admin-bg-surface: #ffffff;
+  --admin-bg-surface-elevated: #f1f5f9;
+  --admin-topbar-bg: rgba(255, 255, 255, 0.92);
+  --admin-card-bg: #ffffff;
+  --admin-card-header-bg: #f8fafc;
+  --admin-modal-bg: #ffffff;
+  --admin-doc-viewer-bg: #f8fafc;
+  --admin-payload-box-bg: #f8fafc;
+
+  /* Borders & Dividers */
+  --admin-border-subtle: #e2e8f0;
+  --admin-border-medium: #cbd5e1;
+  --admin-border-focus: #4f46e5;
+  --admin-card-border: #e2e8f0;
+  --admin-payload-box-border: #e2e8f0;
+
+  /* Typography */
+  --admin-text-main: #0f172a;
+  --admin-text-muted: #475569;
+  --admin-text-dim: #64748b;
+  --admin-heading-color: #0f172a;
+
+  /* Core Accent Brand (Deep Indigo) */
+  --admin-primary: #4f46e5;
+  --admin-primary-hover: #4338ca;
+  --admin-primary-active: #3730a3;
+  --admin-primary-glow: rgba(79, 70, 229, 0.16);
+  --admin-primary-subtle: rgba(79, 70, 229, 0.08);
+
+  /* Status Accents */
+  --admin-emerald: #059669;
+  --admin-emerald-bg: #ecfdf5;
+  --admin-emerald-border: #a7f3d0;
+  --admin-emerald-text: #065f46;
+
+  --admin-amber: #d97706;
+  --admin-amber-bg: #fffbeb;
+  --admin-amber-border: #fde68a;
+  --admin-amber-text: #92400e;
+
+  --admin-rose: #e11d48;
+  --admin-rose-bg: #fff1f2;
+  --admin-rose-border: #fecdd3;
+  --admin-rose-text: #9f1239;
+
+  --admin-sky: #0284c7;
+  --admin-sky-bg: #f0f9ff;
+  --admin-sky-border: #bae6fd;
+  --admin-sky-text: #075985;
+
+  /* Tables & Inputs */
+  --admin-table-th-bg: #f8fafc;
+  --admin-table-row-hover: #f1f5f9;
+  --admin-table-row-striped: #fafafa;
+  --admin-table-td-color: #1e293b;
+  --admin-input-bg: #ffffff;
+  --admin-input-border: #cbd5e1;
+  --admin-input-color: #0f172a;
+  --admin-input-placeholder: #94a3b8;
+
+  /* Sidebar Specifics */
+  --admin-subnav-hover-bg: #f1f5f9;
+  --admin-subnav-active-bg: rgba(79, 70, 229, 0.08);
+  --admin-subnav-active-color: #4f46e5;
+  --admin-badge-count-bg: #e2e8f0;
+  --admin-badge-count-color: #334155;
+
+  /* Shadows */
+  --admin-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --admin-shadow-lg: 0 12px 28px -4px rgba(0, 0, 0, 0.12);
+
+  /* Buttons */
+  --admin-pill-secondary-bg: #e2e8f0;
+  --admin-pill-secondary-hover: #cbd5e1;
+  --admin-pill-secondary-color: #1e293b;
+}
+
+/* ----------------------------------------------------------------------------
+   2. Main Layout Shell (260px Sidebar + Main Viewport)
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard.admin-app-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--admin-bg-base);
+  color: var(--admin-text-main);
+  font-family: var(--admin-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+#viewAdminDashboard[style*="display: none"],
+#viewAdminDashboard.hidden {
+  display: none !important;
+}
+
+/* ----------------------------------------------------------------------------
+   3. Enterprise Sidebar Navigation (260px Left Column)
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: 100%;
+  background: var(--admin-bg-sidebar);
+  border-right: 1px solid var(--admin-border-subtle);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  user-select: none;
+  z-index: 50;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Sidebar Brand Header */
+#viewAdminDashboard .admin-sidebar-header {
+  height: 64px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--admin-border-subtle);
+}
+
+#viewAdminDashboard .admin-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--admin-primary-glow);
+  flex-shrink: 0;
+}
+
+#viewAdminDashboard .admin-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+#viewAdminDashboard .admin-brand-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--admin-heading-color);
+  line-height: 1.2;
+}
+
+#viewAdminDashboard .admin-brand-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--admin-primary);
+  background: var(--admin-primary-subtle);
+  padding: 1px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+  margin-top: 1px;
+}
+
+/* Sidebar Nav Body */
+#viewAdminDashboard .admin-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--admin-border-subtle) transparent;
+}
+
+#viewAdminDashboard .admin-sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+#viewAdminDashboard .admin-sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--admin-border-subtle);
+  border-radius: 10px;
+}
+
+#viewAdminDashboard .admin-nav-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--admin-text-dim);
+  padding: 16px 10px 6px 10px;
+}
+
+#viewAdminDashboard .admin-nav-section-label:first-child {
+  padding-top: 4px;
+}
+
+/* Navigation Tab Buttons */
+#viewAdminDashboard .admin-subnav-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--admin-text-muted);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  position: relative;
+}
+
+#viewAdminDashboard .admin-subnav-tab:hover {
+  background: var(--admin-subnav-hover-bg);
+  color: var(--admin-text-main);
+}
+
+#viewAdminDashboard .admin-subnav-tab.active {
+  background: var(--admin-subnav-active-bg);
+  color: var(--admin-subnav-active-color);
+  font-weight: 600;
+}
+
+#viewAdminDashboard .admin-subnav-tab.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--admin-primary);
+  border-radius: 0 3px 3px 0;
+}
+
+#viewAdminDashboard .admin-subnav-tab .nav-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: currentColor;
+  opacity: 0.85;
+}
+
+#viewAdminDashboard .admin-subnav-tab.active .nav-icon {
+  opacity: 1;
+}
+
+#viewAdminDashboard .admin-subnav-tab .nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none !important;
+  font-size: 0.84rem;
+  letter-spacing: -0.01em;
+  padding: 0 !important;
+}
+
+/* Badge Count in Sidebar */
+#viewAdminDashboard .admin-tab-count {
+  height: 19px;
+  min-width: 19px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--admin-badge-count-bg);
+  color: var(--admin-badge-count-color);
+  font-size: 0.70rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+#viewAdminDashboard .admin-subnav-tab.active .admin-tab-count {
+  background: var(--admin-primary);
+  color: #ffffff;
+}
+
+/* Sidebar Footer Profile & Quick POS Switch */
+#viewAdminDashboard .admin-sidebar-footer {
+  padding: 14px;
+  border-top: 1px solid var(--admin-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--admin-bg-sidebar);
+}
+
+#viewAdminDashboard .btn-admin-pos-switch {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-bg-surface-elevated);
+  color: var(--admin-text-main);
+  font-family: inherit;
+  font-size: 0.80rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#viewAdminDashboard .btn-admin-pos-switch:hover {
+  border-color: var(--admin-primary);
+  color: var(--admin-primary);
+  background: var(--admin-primary-subtle);
+}
+
+#viewAdminDashboard .admin-footer-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+}
+
+#viewAdminDashboard .admin-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+#viewAdminDashboard .admin-profile-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#viewAdminDashboard .admin-user-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--admin-heading-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#viewAdminDashboard .admin-user-sub {
+  font-size: 0.70rem;
+  color: var(--admin-text-dim);
+}
+
+#viewAdminDashboard .btn-admin-icon-logout {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--admin-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+#viewAdminDashboard .btn-admin-icon-logout:hover {
+  background: var(--admin-rose-bg);
+  color: var(--admin-rose);
+  border-color: var(--admin-rose-border);
+}
+
+/* ----------------------------------------------------------------------------
+   4. Admin Main Viewport & Sticky SaaS Topbar
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-main-viewport {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--admin-bg-base);
+  overflow: hidden;
+  position: relative;
+}
+
+#viewAdminDashboard .admin-topbar {
+  height: 64px;
+  min-height: 64px;
+  padding: 0 28px;
+  background: var(--admin-topbar-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  z-index: 40;
+}
+
+#viewAdminDashboard .admin-mobile-toggle-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--admin-border-subtle);
+  color: var(--admin-text-main);
+  font-size: 1.15rem;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+#viewAdminDashboard .admin-breadcrumb-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+#viewAdminDashboard .crumb-lead {
+  color: var(--admin-text-dim);
+  font-weight: 500;
+}
+
+#viewAdminDashboard .crumb-divider {
+  color: var(--admin-border-medium);
+  font-weight: 300;
+}
+
+#viewAdminDashboard .crumb-active {
+  color: var(--admin-heading-color);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+#viewAdminDashboard .admin-topbar-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Theme Toggle Button */
+#viewAdminDashboard .admin-theme-toggle-btn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 20px;
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-bg-surface);
+  color: var(--admin-text-main);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--admin-shadow-sm);
+}
+
+#viewAdminDashboard .admin-theme-toggle-btn:hover {
+  background: var(--admin-bg-surface-elevated);
+  border-color: var(--admin-border-medium);
+}
+
+/* Central Network Status Pill */
+#viewAdminDashboard .admin-status-pill {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 20px;
+  background: var(--admin-emerald-bg);
+  border: 1px solid var(--admin-emerald-border);
+  color: var(--admin-emerald-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: 0.01em;
+}
+
+#viewAdminDashboard .status-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--admin-emerald);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: adminPulseDot 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+@keyframes adminPulseDot {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+#viewAdminDashboard .btn-admin-pill-secondary {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-pill-secondary-bg);
+  color: var(--admin-pill-secondary-color);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#viewAdminDashboard .btn-admin-pill-secondary:hover {
+  background: var(--admin-pill-secondary-hover);
+  border-color: var(--admin-border-medium);
+}
+
+/* ----------------------------------------------------------------------------
+   5. Scrollable Content Area & Panes
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 28px 28px 48px;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--admin-border-subtle) transparent;
+}
+
+#viewAdminDashboard .admin-scrollable-content::-webkit-scrollbar {
+  width: 7px;
+}
+#viewAdminDashboard .admin-scrollable-content::-webkit-scrollbar-thumb {
+  background: var(--admin-border-subtle);
+  border-radius: 10px;
+}
+
+#viewAdminDashboard .admin-tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  animation: adminFadeIn 0.18s ease-out;
+}
+
+@keyframes adminFadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------------------------------------------------------------------
+   6. Business KPI Metrics Grid (SaaS Metric Presentation)
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+#viewAdminDashboard .admin-kpi-card {
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--admin-shadow);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.18s ease;
+}
+
+#viewAdminDashboard .admin-kpi-card:hover {
+  border-color: var(--admin-border-medium);
+  transform: translateY(-1px);
+}
+
+#viewAdminDashboard .admin-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--admin-primary);
+  opacity: 0.9;
+}
+
+#viewAdminDashboard .admin-kpi-card.kpi-amber::before {
+  background: var(--admin-amber);
+}
+
+#viewAdminDashboard .admin-kpi-card.kpi-emerald::before {
+  background: var(--admin-emerald);
+}
+
+#viewAdminDashboard .admin-kpi-card.kpi-rose::before {
+  background: var(--admin-rose);
+}
+
+#viewAdminDashboard .admin-kpi-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--admin-text-dim);
+}
+
+#viewAdminDashboard .admin-kpi-value {
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--admin-heading-color);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+}
+
+#viewAdminDashboard .admin-kpi-sub {
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* ----------------------------------------------------------------------------
+   7. Card Surfaces & Data Table Wrappers
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-card-surface {
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--admin-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+#viewAdminDashboard .admin-card-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--admin-border-subtle);
+  background: var(--admin-card-header-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+#viewAdminDashboard .admin-card-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--admin-heading-color);
+  line-height: 1.25;
+}
+
+#viewAdminDashboard .admin-card-header p {
+  margin: 4px 0 0;
+  color: var(--admin-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+/* Overview Feedback List & Items */
+#viewAdminDashboard #adminOverviewFeedbackList {
+  display: flex;
+  flex-direction: column;
+}
+
+#viewAdminDashboard .overview-feedback-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--admin-border-subtle);
+  transition: background 0.15s ease;
+  gap: 16px;
+}
+
+#viewAdminDashboard .overview-feedback-item:hover {
+  background: var(--admin-table-row-hover);
+}
+
+#viewAdminDashboard .overview-feedback-item:last-child {
+  border-bottom: none;
+}
+
+#viewAdminDashboard .overview-feedback-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+#viewAdminDashboard .overview-feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#viewAdminDashboard .overview-store-title {
+  font-weight: 700;
+  font-size: 0.90rem;
+  color: var(--admin-heading-color);
+  letter-spacing: -0.01em;
+}
+
+#viewAdminDashboard .overview-sev-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  line-height: 1.2;
+}
+
+#viewAdminDashboard .overview-sev-badge.sev-critical {
+  background: var(--admin-rose-bg);
+  color: var(--admin-rose-text);
+  border: 1px solid var(--admin-rose-border);
+}
+
+#viewAdminDashboard .overview-sev-badge.sev-high {
+  background: var(--admin-amber-bg);
+  color: var(--admin-amber-text);
+  border: 1px solid var(--admin-amber-border);
+}
+
+#viewAdminDashboard .overview-sev-badge.sev-medium {
+  background: var(--admin-sky-bg);
+  color: var(--admin-sky-text);
+  border: 1px solid var(--admin-sky-border);
+}
+
+#viewAdminDashboard .overview-sev-badge.sev-low {
+  background: var(--admin-pill-secondary-bg);
+  color: var(--admin-text-muted);
+  border: 1px solid var(--admin-border-subtle);
+}
+
+#viewAdminDashboard .overview-feedback-subject {
+  font-size: 0.83rem;
+  color: var(--admin-text-muted);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#viewAdminDashboard .overview-feedback-meta {
+  font-size: 0.74rem;
+  color: var(--admin-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Audit Log List & Timeline Items */
+#viewAdminDashboard #adminOverviewRecentAuditList,
+#viewAdminDashboard #adminFullAuditTrailList {
+  display: flex;
+  flex-direction: column;
+}
+
+#viewAdminDashboard .audit-log-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--admin-border-subtle);
+  transition: background 0.15s ease;
+  gap: 16px;
+}
+
+#viewAdminDashboard .audit-log-item:hover {
+  background: var(--admin-table-row-hover);
+}
+
+#viewAdminDashboard .audit-log-item:last-child {
+  border-bottom: none;
+}
+
+#viewAdminDashboard .audit-log-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+#viewAdminDashboard .audit-action-tag {
+  font-family: var(--admin-font-mono);
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#viewAdminDashboard .audit-action-tag.action-feedback {
+  background: var(--admin-sky-bg);
+  color: var(--admin-sky-text);
+  border: 1px solid var(--admin-sky-border);
+}
+
+#viewAdminDashboard .audit-action-tag.action-login {
+  background: var(--admin-emerald-bg);
+  color: var(--admin-emerald-text);
+  border: 1px solid var(--admin-emerald-border);
+}
+
+#viewAdminDashboard .audit-action-tag.action-approve {
+  background: var(--admin-emerald-bg);
+  color: var(--admin-emerald-text);
+  border: 1px solid var(--admin-emerald-border);
+}
+
+#viewAdminDashboard .audit-action-tag.action-danger {
+  background: var(--admin-rose-bg);
+  color: var(--admin-rose-text);
+  border: 1px solid var(--admin-rose-border);
+}
+
+#viewAdminDashboard .audit-action-tag.action-default {
+  background: var(--admin-primary-subtle);
+  color: var(--admin-primary);
+  border: 1px solid var(--admin-primary-glow);
+}
+
+#viewAdminDashboard .audit-target {
+  font-family: var(--admin-font-mono);
+  font-size: 0.80rem;
+  color: var(--admin-text-main);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#viewAdminDashboard .audit-user {
+  font-size: 0.76rem;
+  color: var(--admin-text-dim);
+}
+
+#viewAdminDashboard .audit-user strong {
+  color: var(--admin-text-muted);
+}
+
+#viewAdminDashboard .audit-time {
+  font-family: var(--admin-font-mono);
+  font-size: 0.75rem;
+  color: var(--admin-text-dim);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* Table Responsive Scrolling Container */
+#viewAdminDashboard .admin-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--admin-border-subtle) transparent;
+}
+
+#viewAdminDashboard .admin-table-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+#viewAdminDashboard .admin-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--admin-border-subtle);
+  border-radius: 10px;
+}
+
+/* Data Table Precision SaaS Styling */
+#viewAdminDashboard .admin-data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+#viewAdminDashboard .admin-data-table thead th {
+  background: var(--admin-table-th-bg);
+  padding: 13px 18px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--admin-text-dim);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  white-space: nowrap;
+}
+
+#viewAdminDashboard .admin-data-table tbody td {
+  padding: 14px 18px;
+  vertical-align: middle;
+  color: var(--admin-table-td-color);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  line-height: 1.45;
+}
+
+#viewAdminDashboard .admin-data-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+#viewAdminDashboard .admin-data-table tbody tr:hover {
+  background: var(--admin-table-row-hover);
+}
+
+#viewAdminDashboard .admin-data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Monospace Values (Codes, Barcodes, Financials, Dates) */
+#viewAdminDashboard .mono,
+#viewAdminDashboard .admin-data-table td code,
+#viewAdminDashboard .admin-data-table td .mono-val {
+  font-family: var(--admin-font-mono);
+  font-size: 0.80rem;
+  font-weight: 500;
+  color: var(--admin-heading-color);
+}
+
+/* ----------------------------------------------------------------------------
+   8. Status Badges & Indicators
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+#viewAdminDashboard .badge-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+#viewAdminDashboard .badge-status.approved,
+#viewAdminDashboard .badge-status.active,
+#viewAdminDashboard .badge-status.allocated {
+  background: var(--admin-emerald-bg);
+  border: 1px solid var(--admin-emerald-border);
+  color: var(--admin-emerald-text);
+}
+
+#viewAdminDashboard .badge-status.pending,
+#viewAdminDashboard .badge-status.review {
+  background: var(--admin-amber-bg);
+  border: 1px solid var(--admin-amber-border);
+  color: var(--admin-amber-text);
+}
+
+#viewAdminDashboard .badge-status.rejected,
+#viewAdminDashboard .badge-status.suspended,
+#viewAdminDashboard .badge-status.blocked {
+  background: var(--admin-rose-bg);
+  border: 1px solid var(--admin-rose-border);
+  color: var(--admin-rose-text);
+}
+
+#viewAdminDashboard .badge-status.info,
+#viewAdminDashboard .badge-status.more_info,
+#viewAdminDashboard .badge-status.requested {
+  background: var(--admin-sky-bg);
+  border: 1px solid var(--admin-sky-border);
+  color: var(--admin-sky-text);
+}
+
+/* ----------------------------------------------------------------------------
+   9. Refined Action Buttons & Controls
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .btn-action-sm,
+.admin-modal .btn-action-sm {
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+#viewAdminDashboard .btn-action-sm:active,
+.admin-modal .btn-action-sm:active {
+  transform: translateY(1px);
+}
+
+#viewAdminDashboard .btn-approve,
+.admin-modal .btn-approve {
+  background: var(--admin-emerald);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.25);
+}
+
+#viewAdminDashboard .btn-approve:hover,
+.admin-modal .btn-approve:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+}
+
+#viewAdminDashboard .btn-reject,
+.admin-modal .btn-reject {
+  background: var(--admin-rose);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(244, 63, 94, 0.25);
+}
+
+#viewAdminDashboard .btn-reject:hover,
+.admin-modal .btn-reject:hover {
+  filter: brightness(1.1);
+}
+
+#viewAdminDashboard .btn-info,
+.admin-modal .btn-info {
+  background: var(--admin-primary);
+  color: #ffffff;
+  box-shadow: 0 1px 3px var(--admin-primary-glow);
+}
+
+#viewAdminDashboard .btn-info:hover,
+.admin-modal .btn-info:hover {
+  background: var(--admin-primary-hover);
+}
+
+#viewAdminDashboard .btn-secondary,
+.admin-modal .btn-secondary {
+  background: var(--admin-pill-secondary-bg);
+  border: 1px solid var(--admin-border-subtle);
+  color: var(--admin-pill-secondary-color);
+}
+
+#viewAdminDashboard .btn-secondary:hover,
+.admin-modal .btn-secondary:hover {
+  background: var(--admin-pill-secondary-hover);
+}
+
+/* Filter Segmented Control Tabs (Applications & Reports) */
+#viewAdminDashboard .admin-app-status-tabs,
+#viewAdminDashboard .admin-reports-subnav {
+  display: inline-flex !important;
+  background: var(--admin-bg-base);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border-subtle);
+  gap: 2px;
+}
+
+#viewAdminDashboard .admin-app-status-tabs .btn-action-sm,
+#viewAdminDashboard .admin-reports-subnav .btn-action-sm {
+  background: transparent;
+  color: var(--admin-text-muted);
+  box-shadow: none;
+  border: none;
+  font-weight: 500;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+#viewAdminDashboard .admin-app-status-tabs .btn-action-sm:hover,
+#viewAdminDashboard .admin-reports-subnav .btn-action-sm:hover {
+  color: var(--admin-text-main);
+  background: var(--admin-subnav-hover-bg);
+}
+
+#viewAdminDashboard .admin-app-status-tabs .btn-action-sm.active,
+#viewAdminDashboard .admin-reports-subnav .btn-action-sm.active {
+  background: var(--admin-primary);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: var(--admin-shadow-sm);
+}
+
+/* Modern Form Inputs & Selects */
+#viewAdminDashboard .admin-form-input,
+#viewAdminDashboard .admin-filter-input,
+#viewAdminDashboard .admin-form-select,
+.admin-modal .admin-form-input,
+.admin-modal .admin-form-select {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--admin-input-border);
+  background: var(--admin-input-bg);
+  color: var(--admin-input-color);
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+#viewAdminDashboard .admin-form-input:focus,
+#viewAdminDashboard .admin-filter-input:focus,
+#viewAdminDashboard .admin-form-select:focus,
+.admin-modal .admin-form-input:focus,
+.admin-modal .admin-form-select:focus {
+  border-color: var(--admin-border-focus);
+  box-shadow: 0 0 0 3px var(--admin-primary-subtle);
+}
+
+#viewAdminDashboard .admin-form-input::placeholder,
+.admin-modal .admin-form-input::placeholder {
+  color: var(--admin-input-placeholder);
+}
+
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.admin-form-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--admin-heading-color);
+  letter-spacing: -0.01em;
+}
+
+/* ----------------------------------------------------------------------------
+   10. Modals & Dialogs (Application Review, Allocation, Game Catalog)
+   ---------------------------------------------------------------------------- */
+.admin-modal {
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-modal-bg);
+  color: var(--admin-text-main);
+  border-radius: 14px;
+  box-shadow: var(--admin-shadow-lg);
+  font-family: var(--admin-font-sans);
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: adminModalScale 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes adminModalScale {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.admin-modal::backdrop {
+  background: rgba(0, 0, 0, 0.70);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.admin-modal-review-large {
+  width: 94vw;
+  max-width: 1100px;
+  height: 88vh;
+  max-height: 850px;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-modal-review-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--admin-border-subtle);
+  background: var(--admin-card-header-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-modal-review-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--admin-border-subtle);
+  background: var(--admin-bg-surface);
+}
+
+.admin-review-tab-btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--admin-text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.admin-review-tab-btn:hover {
+  background: var(--admin-subnav-hover-bg);
+  color: var(--admin-text-main);
+}
+
+.admin-review-tab-btn.active {
+  background: var(--admin-primary-subtle);
+  color: var(--admin-primary);
+  font-weight: 600;
+}
+
+.admin-modal-review-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.admin-modal-review-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--admin-border-subtle);
+  background: var(--admin-card-header-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Document Viewer Inside Review Modal */
+.doc-viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--admin-doc-viewer-bg);
+}
+
+.doc-viewer-toolbar {
+  height: 44px;
+  padding: 0 16px;
+  background: var(--admin-bg-surface-elevated);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-viewer-viewport {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+}
+
+/* ----------------------------------------------------------------------------
+   11. Audit Trail Expanded JSON / Payload Box
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-audit-payload-box {
+  background: var(--admin-payload-box-bg);
+  border: 1px solid var(--admin-payload-box-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: var(--admin-font-mono);
+  font-size: 0.78rem;
+  color: var(--admin-emerald-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+/* ----------------------------------------------------------------------------
+   12. Responsive SaaS Layout (Desktop, Tablet, Mobile)
+   ---------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  #viewAdminDashboard .admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  }
+
+  #viewAdminDashboard .admin-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  #viewAdminDashboard .admin-mobile-toggle-btn {
+    display: inline-flex;
+  }
+
+  #viewAdminDashboard .admin-topbar {
+    padding: 0 18px;
+  }
+
+  #viewAdminDashboard .admin-scrollable-content {
+    padding: 20px 18px 40px;
+  }
+
+  #viewAdminDashboard .admin-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #viewAdminDashboard .crumb-lead,
+  #viewAdminDashboard .crumb-divider {
+    display: none;
+  }
+
+  #viewAdminDashboard .admin-status-pill span:not(.status-pulse-dot) {
+    display: none;
+  }
+
+  #viewAdminDashboard .admin-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Legacy Compatibility Fallbacks
+   ---------------------------------------------------------------------------- */
+#viewAdminDashboard .admin-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#viewAdminDashboard .admin-kpi-icon {
+  font-size: 1.15rem;
+}
+
+#viewAdminDashboard .admin-kpi-val {
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--admin-heading-color);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  font-family: inherit;
+}
+
+.manage-tickets-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px 32px 64px;
+  box-sizing: border-box;
+  color: var(--admin-text-main);
+  background: var(--admin-bg-base);
+  animation: adminFadeIn 0.18s ease-out;
+}
+
+.store-suspended-alert-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  background: var(--admin-rose-bg);
+  border: 1px solid var(--admin-rose-border);
+  border-radius: 8px;
+  color: var(--admin-rose-text);
+}

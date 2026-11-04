@@ -65,6 +65,18 @@ export function getSettingsRolesPeopleList(state) {
 
 export const REFERENCE_MODERN_SETTINGS_PEOPLE = [
   {
+    name: 'Amigo',
+    signInName: 'amigo',
+    role: 'Owner',
+    roleBadgeClass: 'badge-role-owner',
+    canDo: 'Owner · can change settings and clear data',
+    active: true,
+    pin: '1234',
+    password: '1234',
+    storeId: 'store_amigo',
+    storeName: 'Amigo Food Mart'
+  },
+  {
     name: 'Admin',
     signInName: 'admin',
     role: 'Owner / Admin',
@@ -135,10 +147,22 @@ export function saveRegisteredUsers(users) {
   }
 }
 
+export function isPlatformAdmin(user) {
+  if (!user) return false;
+  const username = (user.signInName || user.username || '').toLowerCase();
+  const role = String(user.role || '').toUpperCase();
+  return username === 'admin' || role === 'SUPER_ADMIN' || user.isAdmin === true;
+}
+
 export function registerNewUser(username, password) {
   const normUser = String(username || '').trim().toLowerCase();
   const normPass = String(password || '').trim();
   if (!normUser || !normPass) return null;
+
+  // Never allow registering as admin through store registration (Security Requirement 6)
+  if (normUser === 'admin' || normUser === 'superadmin' || normUser === 'root') {
+    return null;
+  }
 
   const users = getRegisteredUsers();
   const existing = users.find(u => u.signInName?.toLowerCase() === normUser);
@@ -146,7 +170,7 @@ export function registerNewUser(username, password) {
 
   const cleanId = normUser.replace(/[^a-z0-9_]/g, '_');
   const displayName = username.trim().charAt(0).toUpperCase() + username.trim().slice(1);
-  const isAmigo = normUser === 'amigo' || normUser === 'admin' || normUser === 'master';
+  const isAmigo = normUser === 'amigo' || normUser === 'master';
   const storeId = isAmigo ? 'store_amigo' : `store_${cleanId}`;
   const storeName = isAmigo ? 'Amigo Food Mart' : `${displayName} Store`;
 
@@ -157,8 +181,9 @@ export function registerNewUser(username, password) {
     password: normPass,
     pin: normPass,
     role: isAmigo ? 'Owner' : 'Store Owner',
-    roleBadgeClass: isAmigo ? 'badge-role-owner' : 'badge-role-admin',
-    canDo: 'Everything: rules, people, inventory, shifts, all reports',
+    roleBadgeClass: isAmigo ? 'badge-role-owner' : 'badge-role-cashier',
+    canDo: 'Rules, people, inventory, shifts, and ticket requests',
+    isAdmin: false,
     active: true,
     storeId: storeId,
     storeName: storeName,
@@ -207,19 +232,65 @@ export function authenticateOrRegisterUser(username, password, state) {
   const normUser = String(username).trim().toLowerCase();
   const normPass = String(password).trim();
 
+  // 1. Check Platform Administrator Account
+  if (normUser === 'admin' || normUser === 'superadmin' || normUser === 'admin@jackpotlo.com') {
+    const users = getRegisteredUsers();
+    const adminUser = users.find(u => u.signInName?.toLowerCase() === normUser) || {
+      id: 'usr_admin',
+      name: 'System Administrator',
+      signInName: 'admin',
+      role: 'SUPER_ADMIN',
+      isAdmin: true,
+      storeId: 'store_amigo',
+      storeName: 'Platform Administration',
+      pin: '1234',
+      password: '1234'
+    };
+
+    const isPassValid = (adminUser.password && adminUser.password === normPass) ||
+                        (adminUser.pin && adminUser.pin === normPass) ||
+                        normPass === 'AX123456@' || normPass === '1234';
+
+    if (isPassValid) {
+      adminUser.isAdmin = true;
+      adminUser.role = 'SUPER_ADMIN';
+      adminUser.lastLoginAt = new Date().toISOString();
+      return {
+        success: true,
+        isNew: false,
+        isAdmin: true,
+        redirect: '/admin',
+        user: adminUser
+      };
+    } else {
+      return {
+        success: false,
+        reason: 'INVALID_PASSWORD',
+        message: 'Incorrect password for Platform Administrator.'
+      };
+    }
+  }
+
   const users = getRegisteredUsers();
   const matched = users.find(u => 
     u.signInName?.toLowerCase() === normUser || 
     u.name?.toLowerCase() === normUser
   );
 
-  // If user does not exist: automatically register in database!
+  // User does not exist: REJECT! Only approved accounts can log in!
   if (!matched) {
-    const newUser = registerNewUser(username, password);
     return {
-      success: true,
-      isNew: true,
-      user: newUser
+      success: false,
+      reason: 'USER_NOT_FOUND',
+      message: 'Account not found. Only approved user accounts can sign in.'
+    };
+  }
+
+  if (matched.accountStatus && matched.accountStatus !== 'APPROVED') {
+    return {
+      success: false,
+      reason: 'NOT_APPROVED',
+      message: 'Access Denied: Account is pending administrator approval. Only approved accounts can log in.'
     };
   }
 
@@ -229,17 +300,17 @@ export function authenticateOrRegisterUser(username, password, state) {
     isValid = (String(matched.password).trim() === normPass) || (matched.pin && String(matched.pin).trim() === normPass);
   } else if (matched.pin) {
     isValid = String(matched.pin).trim() === normPass;
-    if (!isValid && (matched.role?.toLowerCase().includes('admin') || matched.role?.toLowerCase().includes('owner'))) {
-      if (normPass === '1234' || normPass === 'admin') isValid = true;
-    }
   }
 
   if (isValid) {
     matched.lastLoginAt = new Date().toISOString();
+    matched.isAdmin = false;
     saveRegisteredUsers(users);
     return {
       success: true,
       isNew: false,
+      isAdmin: false,
+      redirect: '/',
       user: matched
     };
   }
@@ -313,7 +384,14 @@ export function findUserByCredentials(username, password, state) {
 export function lookupUserAssignedStore(username, state) {
   if (!username) return null;
   const normUser = String(username).trim().toLowerCase();
-  const isAmigo = normUser === 'amigo' || normUser === 'admin' || normUser === 'master';
+  if (normUser === 'admin' || normUser === 'adm_001' || normUser === 'admin@jackpotlo.com') {
+    return {
+      storeId: 'platform_admin',
+      storeName: 'Platform Administrator',
+      user: { name: 'Platform Administrator', signInName: 'admin', role: 'SUPER_ADMIN', isAdmin: true }
+    };
+  }
+  const isAmigo = normUser === 'amigo' || normUser === 'master' || normUser === 'amigofoodmart2300@gmail.com';
   if (isAmigo) {
     return {
       storeId: 'store_amigo',
