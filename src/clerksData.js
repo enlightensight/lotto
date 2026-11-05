@@ -386,8 +386,8 @@ export function lookupUserAssignedStore(username, state) {
   const normUser = String(username).trim().toLowerCase();
   if (normUser === 'admin' || normUser === 'adm_001' || normUser === 'admin@jackpotlo.com') {
     return {
-      storeId: 'platform_admin',
-      storeName: 'Platform Administrator',
+      storeId: 'store_admin',
+      storeName: 'ADMIN STORE',
       user: { name: 'Platform Administrator', signInName: 'admin', role: 'SUPER_ADMIN', isAdmin: true }
     };
   }

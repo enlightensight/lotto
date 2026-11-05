@@ -451,7 +451,7 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
   if (Array.isArray(state?.inStockInventory)) {
     inStockItems = JSON.parse(JSON.stringify(state.inStockInventory));
   } else if (!isDataCleared) {
-    inStockItems = JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+    inStockItems = (!state?.storeId || state?.storeId === 'store_amigo') ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
   }
 
   // 1b. Pending Setup / Unconfigured Items from automatic new barcode detection

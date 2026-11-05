@@ -400,14 +400,14 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
   // Switch to Store POS button (Sidebar + Topbar)
   const handleSwitchToPos = () => {
     sfx.keypad?.();
-    const targetStoreId = (typeof window.getCurrentStoreId === 'function' ? window.getCurrentStoreId() : 'store_amigo') || 'store_amigo';
+    const targetStoreId = 'store_admin';
     if (typeof window.switchStore === 'function') {
       window.switchStore(targetStoreId);
     }
     showSellCounterView();
     window.location.hash = '';
     history.replaceState(null, '', '/');
-    showToast('Switched to Store POS counter view.', 'info');
+    showToast('Switched to Admin Store POS counter view.', 'info');
   };
   document.getElementById('btnAdminSwitchToStore')?.addEventListener('click', handleSwitchToPos);
   document.getElementById('btnAdminTopSwitchPos')?.addEventListener('click', handleSwitchToPos);

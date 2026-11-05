@@ -1,6 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- POS Security: Disable Source Inspection & Developer Shortcuts -->
+  <script>
+    (function() {
+      'use strict';
+      // 1. Disable Context Menu (Right Click) outside text inputs
+      document.addEventListener('contextmenu', function(e) {
+        var t = e.target;
+        var isInput = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+        if (!isInput) {
+          e.preventDefault();
+          return false;
+        }
+      }, { capture: true, passive: false });
+
+      // 2. Block Inspect Keyboard Shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
+      document.addEventListener('keydown', function(e) {
+        var key = e.key || e.keyCode;
+        var ctrlOrMeta = e.ctrlKey || e.metaKey;
+        var shift = e.shiftKey;
+        if (key === 'F12' || key === 123) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        if (ctrlOrMeta && shift && (key === 'I' || key === 'i' || key === 'J' || key === 'j' || key === 'C' || key === 'c' || key === 73 || key === 74 || key === 67)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        if (ctrlOrMeta && !shift && (key === 'u' || key === 'U' || key === 85 || key === 's' || key === 'S' || key === 83)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }, { capture: true, passive: false });
+
+      // 3. DevTools opening detection & security warning
+      try {
+        var notifyDevTools = function() {
+          console.clear();
+          console.log('%cSECURITY WARNING: Source code inspection and developer tools are restricted on this POS system.', 'color: red; font-size: 14px; font-weight: bold;');
+        };
+        setInterval(function() {
+          if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+            notifyDevTools();
+          }
+        }, 2000);
+      } catch (_) {}
+    })();
+  </script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LottoTrack Pro - Retail Lottery POS & Shift Tracking System</title>
@@ -1307,10 +1358,14 @@
 
         <form id="signInMainForm" autocomplete="on">
           <div class="signin-field-group">
-            <label for="inputSignInUser" class="signin-label">Email Address</label>
+            <label for="inputSignInUser" class="signin-label">Email or Username</label>
             <input 
-              type="email" id="inputSignInUser" class="signin-input" placeholder="name@example.com" 
-              autocomplete="email" 
+              type="text" 
+              inputmode="email"
+              id="inputSignInUser" 
+              class="signin-input" 
+              placeholder="name@example.com or username" 
+              autocomplete="username" 
               required
             >
           </div>
@@ -3012,9 +3067,6 @@
                   <line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="16" y1="7" x2="16" y2="17"/>
                 </svg>
                 <span>Update Inventory</span>
-              </button>
-              <button type="button" class="btn-inv-action-outlined" id="invBtnRequestTickets" title="Browse Lottery Catalog & Request Games" style="margin-right: 4px;">
-                <span>🎟️ Request Games</span>
               </button>
               <button type="button" class="btn-inv-action-primary" id="invBtnAddNewBook" title="Add New Book">
                 <span class="btn-plus-icon">+</span>

@@ -1346,7 +1346,7 @@ function setupReceiveBookModernModal() {
     }
 
     if (!Array.isArray(state.inStockInventory)) {
-      state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+      state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
     }
 
     if (state.inStockInventory.some(p => isPackNumberMatch(p.packNumber, pack))) {
@@ -1592,18 +1592,68 @@ function initPOS() {
         return;
       }
 
-      const localActive = (state.slots || []).filter(s => s.status === 'ACTIVE' && s.packNumber).length;
-      const serverActive = (serverState.slots || []).filter(s => s.status === 'ACTIVE' && s.packNumber).length;
-      if (serverActive > localActive || (serverState.shiftNumber || 0) > (state.shiftNumber || 0)) {
+      const currentSid = getCurrentStoreId();
+      if (serverState.storeId && serverState.storeId !== currentSid) {
+        return;
+      }
+      const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
+      const localTime = state.lastSavedAt ? new Date(state.lastSavedAt).getTime() : 0;
+      const isServerNewer = serverTime >= localTime;
+      const isDifferent = JSON.stringify(serverState.slots) !== JSON.stringify(state.slots) ||
+                          (serverState.shiftNumber || 1) !== (state.shiftNumber || 1) ||
+                          (serverState.soldBarcodes || []).length !== (state.soldBarcodes || []).length ||
+                          (serverState.inStockInventory || []).length !== (state.inStockInventory || []).length;
+      if (isServerNewer || isDifferent) {
         Object.assign(state, serverState);
-        state.dataCleared = false;
-        saveState(state);
+        state.storeId = currentSid;
+        state.dataCleared = Boolean(serverState.dataCleared);
+        saveState(state, currentSid);
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
       }
     }
   }).catch(() => {});
+
+  // Multi-device background synchronizer: keeps open devices updated with friend's ticket sales
+  function syncWithServerIfActive() {
+    const activeSid = getCurrentStoreId();
+    if (!activeSid || state.shiftStatus === 'SCANNING_END_SHIFT' || state.isUpdatingInventory) return;
+    loadPOSStateFromDB(activeSid).then(serverState => {
+      if (serverState && Array.isArray(serverState.slots) && (!serverState.storeId || serverState.storeId === activeSid)) {
+        if (serverState.dataCleared && !state.dataCleared) {
+          state = resetToCleanState(state);
+          renderHeaderAndMetrics();
+          renderDispenserRack();
+          renderSlotsRibbon();
+          return;
+        }
+        const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
+        const localTime = state.lastSavedAt ? new Date(state.lastSavedAt).getTime() : 0;
+        const isServerNewer = serverTime > localTime;
+        const isDifferent = JSON.stringify(serverState.slots) !== JSON.stringify(state.slots) ||
+                            (serverState.shiftNumber || 1) !== (state.shiftNumber || 1) ||
+                            (serverState.soldBarcodes || []).length !== (state.soldBarcodes || []).length ||
+                            (serverState.inStockInventory || []).length !== (state.inStockInventory || []).length;
+
+        if (isServerNewer || (isDifferent && serverTime >= localTime)) {
+          Object.assign(state, serverState);
+          state.storeId = activeSid;
+          state.dataCleared = Boolean(serverState.dataCleared);
+          saveState(state, activeSid);
+          renderHeaderAndMetrics();
+          renderDispenserRack();
+          renderSlotsRibbon();
+        }
+      }
+    }).catch(() => {});
+  }
+
+  window.addEventListener('focus', syncWithServerIfActive);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) syncWithServerIfActive();
+  });
+  setInterval(syncWithServerIfActive, 15000);
 }
 
 // -------------------------------------------------------------
@@ -7485,7 +7535,7 @@ export function findInStockPack(parsed, barcode) {
   if (!parsed && !barcode) return null;
 
   if (!Array.isArray(state.inStockInventory)) {
-    state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+    state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
   }
 
   const cleanB = barcode ? String(barcode).trim() : '';
@@ -7823,6 +7873,14 @@ export function handleTicketBarcodeScan(rawBarcode, source = 'main') {
     return;
   }
 
+  // If cashier scanned retail UPC from the top of the ticket instead of inventory barcode at the bottom
+  if (parsed.isLotteryUPC) {
+    sfx.alert();
+    const gName = parsed.gameName ? ` (${parsed.gameName})` : '';
+    showToast(`ℹ️ Scanned retail UPC for Game #${parsed.gameNumber}${gName}. Please scan the bottom inventory barcode on the back of the ticket!`, 'warning');
+    return;
+  }
+
   const effectiveBarcode = (parsed && parsed.standardBarcode) ? parsed.standardBarcode : barcode;
 
   // Check if scanned barcode matches a previously sold-out pack (Recovery Flow - Section 1)
@@ -8019,6 +8077,15 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
       knownGameBadge.className = 'set-ticket-game-badge';
       knownGameBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span>Known game &mdash; filled in for you</span>`;
     }
+  } else if (parsed?.inferredDetails) {
+    initialName = parsed.inferredDetails.gameType || 'Scratch-Off Game';
+    initialPrice = parsed.inferredDetails.price || 1;
+    if (headerGameTitle) headerGameTitle.textContent = initialName;
+    if (headerSubtitle) headerSubtitle.textContent = `Auto-detected $${initialPrice} game (${parsed.inferredDetails.packSize} tickets/pack). Check details to add into In-Stock inventory.`;
+    if (knownGameBadge) {
+      knownGameBadge.className = 'set-ticket-game-badge';
+      knownGameBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span>Auto-detected $${initialPrice} game (${parsed.inferredDetails.packSize} tix)</span>`;
+    }
   } else {
     initialName = 'Scratch-Off Game';
     initialPrice = 1;
@@ -8031,14 +8098,14 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
   }
 
   const std = getStandardPackDetails(initialPrice);
-  const effectivePackSize = matchedGame?.packSize || std.packSize;
+  const effectivePackSize = matchedGame?.packSize || parsed?.inferredDetails?.packSize || std.packSize;
 
   const initialSec = (parsed && parsed.hasExplicitSecurityCode && parsed.securityCode)
     ? parsed.securityCode
     : (parsed?.securityCode || computeLotterySeriesCode(parsed?.gameNumber || (matchedGame ? matchedGame.barcodePrefix : ''), parsed?.ticketNumber, state.customGames, effectivePackSize));
   pendingSetBoxSecurityCode = initialSec;
 
-  let displayBarcode = formatLotteryBarcode(barcode, state.customGames, initialSec);
+  let displayBarcode = (parsed && parsed.displayBarcode) ? parsed.displayBarcode : formatLotteryBarcode(barcode, state.customGames, initialSec);
   pendingSetBoxDisplayBarcode = displayBarcode;
 
   const eyebrowEl = document.getElementById('setTicketStepEyebrow');
@@ -8057,8 +8124,8 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
     if (btnAddStock) btnAddStock.style.display = 'none';
   }
 
-  // Populate metadata line (Matching Image 1 & Image 2)
-  const displayPack = (parsed && parsed.packCombined) ? parsed.packCombined : (parsed?.packNumber || '—');
+  // Populate metadata line (clean 6-digit pack number, never mangling check digit)
+  const displayPack = (parsed && parsed.packNumber) ? parsed.packNumber : ((parsed && parsed.packCombined) ? parsed.packCombined : '—');
   const displayTicketNum = (parsed && parsed.ticketString)
     ? parsed.ticketString
     : (parsed && parsed.ticketNumber !== null 
@@ -8114,6 +8181,14 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
     nameInput.value = initialName;
   }
   updatePricePillsSelection(initialPrice);
+  if (effectivePackSize && effectivePackSize !== std.packSize) {
+    const tixInput = document.getElementById('setBoxPackTicketsInput');
+    const valInput = document.getElementById('setBoxPackValueInput');
+    if (tixInput) tixInput.value = effectivePackSize;
+    if (valInput) valInput.value = `$${(effectivePackSize * initialPrice).toFixed(2)}`;
+    pendingChosenPackSize = effectivePackSize;
+    pendingChosenPackValue = effectivePackSize * initialPrice;
+  }
 
   sfx.beep();
   if (setTicketDetailsModal) {
@@ -8159,8 +8234,8 @@ export function saveTicketDetailsToInStock() {
   }
 
   const parsed = parseLotteryBarcode(barcode, state.customGames);
-  const cleanPack = (parsed && (parsed.packCombined || parsed.packNumber))
-    ? (parsed.packCombined || parsed.packNumber)
+  const cleanPack = (parsed && (parsed.packNumber || parsed.packCombined))
+    ? (parsed.packNumber || parsed.packCombined)
     : (String(barcode).replace(/[^0-9]/g, '').slice(-6) || '000000');
   const gameNumber = (parsed && parsed.gameNumber)
     ? parsed.gameNumber
@@ -8174,7 +8249,7 @@ export function saveTicketDetailsToInStock() {
 
   // 1. Add to state.inStockInventory
   if (!Array.isArray(state.inStockInventory)) {
-    state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+    state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
   }
   const existingIdx = state.inStockInventory.findIndex(p => isPackNumberMatch(p.packNumber, cleanPack));
   const stockItem = {
@@ -8375,7 +8450,7 @@ function openSetBoxModal(barcode) {
   }
 
   const parsed = parseLotteryBarcode(barcode, state.customGames);
-  const cleanPack = (parsed && (parsed.packCombined || parsed.packNumber)) ? (parsed.packCombined || parsed.packNumber) : (barcode ? String(barcode).replace(/[^0-9]/g, '').slice(-7) : '---');
+  const cleanPack = (parsed && (parsed.packNumber || parsed.packCombined)) ? (parsed.packNumber || parsed.packCombined) : (barcode ? String(barcode).replace(/[^0-9]/g, '').slice(-6) : '---');
 
   // Fill Step 2 Ticket Summary
   const s2Name = document.getElementById('step2GameNameDisplay');
@@ -8385,7 +8460,7 @@ function openSetBoxModal(barcode) {
 
   if (s2Name) s2Name.textContent = cleanGameTitle(pendingChosenName);
   if (s2Price) s2Price.textContent = `$${pendingChosenPrice}`;
-  const packDisplay = (parsed && parsed.packCombined) ? parsed.packCombined : cleanPack;
+  const packDisplay = (parsed && parsed.packNumber) ? parsed.packNumber : ((parsed && parsed.packCombined) ? parsed.packCombined : cleanPack);
   if (s2Pack) s2Pack.textContent = `Pack #${packDisplay} (${pendingChosenPackSize} tickets · $${pendingChosenPackValue})`;
   const displayBarcodeText = pendingSetBoxDisplayBarcode 
     || formatLotteryBarcode(barcode, state.customGames, pendingSetBoxSecurityCode || '000');
@@ -9071,8 +9146,8 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     ? ticketNum
     : Math.max(0, packSize - 1);
 
-  const realPackNumber = (parsed && (parsed.packCombined || parsed.packNumber))
-    ? (parsed.packCombined || parsed.packNumber)
+  const realPackNumber = (parsed && (parsed.packNumber || parsed.packCombined))
+    ? (parsed.packNumber || parsed.packCombined)
     : (cleanDigits.length >= 6 ? cleanDigits.slice(-6) : barcode);
 
   const standardKey = (parsed && parsed.standardBarcode) ? parsed.standardBarcode : barcode;
@@ -9281,7 +9356,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     boxNumber: boxNum,
     gameName: cleanName,
     price: slot.price,
-    packNumber: (parsed && parsed.packCombined) ? parsed.packCombined : (slot.packNumber || '---'),
+    packNumber: (parsed && (parsed.packNumber || parsed.packCombined)) ? (parsed.packNumber || parsed.packCombined) : (slot.packNumber || '---'),
     ticketNumber: slot.currentTicket || 0,
     securityCode: effectiveSecCode,
     action: 'ASSIGNED'
@@ -9402,7 +9477,7 @@ function setupSetBoxModalLogic() {
 
     if (barcode) {
       const parsed = parseLotteryBarcode(barcode, state.customGames);
-      cleanPack = (parsed && (parsed.packCombined || parsed.packNumber)) ? (parsed.packCombined || parsed.packNumber) : String(barcode).replace(/[^0-9]/g, '').slice(-6);
+      cleanPack = (parsed && (parsed.packNumber || parsed.packCombined)) ? (parsed.packNumber || parsed.packCombined) : String(barcode).replace(/[^0-9]/g, '').slice(-6);
       gameNumber = (parsed && parsed.gameNumber) ? parsed.gameNumber : (pendingSetBoxGame ? pendingSetBoxGame.barcodePrefix : null);
       if (parsed && parsed.ticketNumber !== null && parsed.ticketNumber !== undefined) {
         ticketNum = parsed.ticketNumber;
@@ -9421,7 +9496,7 @@ function setupSetBoxModalLogic() {
 
       // 1. Add to state.inStockInventory
       if (!Array.isArray(state.inStockInventory)) {
-        state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+        state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
       }
       const alreadyInStock = state.inStockInventory.some(p => isPackNumberMatch(p.packNumber, cleanPack));
       if (!alreadyInStock) {
@@ -10113,13 +10188,26 @@ function setupHardwareScannerListener() {
 // Helper to detect if a scanned barcode represents a dispenser box
 function parseBoxBarcode(barcode) {
   if (!barcode) return null;
-  const s = String(barcode).trim();
-  // Format 1: Prefix like BOX-05, BOX05, BOX 5, BOX#5, B-05, B05, B5, SLOT-05, SLOT 5, *BOX05*, etc.
-  const prefixMatch = s.match(/^\*?(?:box|slot|b|bin|dispenser)[-_#\s]*(\d{1,3})\*?$/i);
-  if (prefixMatch) {
-    return parseInt(prefixMatch[1], 10);
+  let s = String(barcode).replace(/[\x00-\x1F\x7F]/g, '').trim();
+  // Strip AIM scanner symbology prefixes (]C1, ]I0, etc.)
+  if (s.startsWith(']')) {
+    s = s.replace(/^\][a-zA-Z][0-9]{1,2}/, '').trim();
   }
-  // Format 2: Short 1 or 2 digit slot number (1 to 99) if string is only 1-2 digits
+  // Strip Code 39 asterisks
+  s = s.replace(/^\*+|\*+$/g, '').trim();
+  // Format 1: Prefix like BOX-05, BOX05, BOX 5, BOX#5, B-05, B05, B5, SLOT-05, SLOT 5, BIN-5, DISPENSER-5, etc.
+  const prefixMatch = s.match(/^(?:box|slot|b|bin|dispenser)[-_#\s/.:]*(\d{1,3})$/i);
+  if (prefixMatch) {
+    const num = parseInt(prefixMatch[1], 10);
+    if (num >= 1 && num <= 100) return num;
+  }
+  // Format 2: Hash prefix like #05, #5
+  const hashMatch = s.match(/^#(\d{1,3})$/);
+  if (hashMatch) {
+    const num = parseInt(hashMatch[1], 10);
+    if (num >= 1 && num <= 100) return num;
+  }
+  // Format 3: Short 1 or 2 digit slot number (1 to 99) if string is only 1-2 digits
   if (/^\d{1,2}$/.test(s)) {
     const num = parseInt(s, 10);
     if (num >= 1 && num <= 100) return num;
@@ -13324,19 +13412,15 @@ function setupEventListeners() {
     // Asynchronously sync latest authoritative store state from server
     loadPOSStateFromDB(newStoreId).then(serverState => {
       if (serverState && Array.isArray(serverState.slots) && serverState.storeId === newStoreId) {
-        const localActive = (state.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
-        const serverActive = (serverState.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
-        if (serverActive > localActive || (serverState.shiftNumber || 0) > (state.shiftNumber || 0)) {
-          state = serverState;
-          state.storeId = newStoreId;
-          window.state = state;
-          window.__state = state;
-          state.dataCleared = false;
-          saveState(state, newStoreId);
-          renderHeaderAndMetrics();
-          renderDispenserRack();
-          renderSlotsRibbon();
-        }
+        state = serverState;
+        state.storeId = newStoreId;
+        window.state = state;
+        window.__state = state;
+        state.dataCleared = Boolean(serverState.dataCleared);
+        saveState(state, newStoreId);
+        renderHeaderAndMetrics();
+        renderDispenserRack();
+        renderSlotsRibbon();
       }
     }).catch(() => {});
 
@@ -13490,12 +13574,30 @@ function setupEventListeners() {
 
     let authRes = null;
     try {
-      const resp = await fetch('/api/auth/login', {
+      let resp = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username: email, password })
       });
-      const data = await resp.json().catch(() => null);
+      let data = await resp.json().catch(() => null);
+
+      // Dual-identity resolution: If email is amigofoodmart2300@gmail.com or amigo-related and initial auth failed,
+      // authenticate against Store User account ('amigo') for store POS access
+      if ((!resp.ok || !data?.success) && (email.toLowerCase().includes('amigo') || email.toLowerCase() === 'amigofoodmart2300@gmail.com')) {
+        try {
+          const storeResp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, username: 'amigo', password })
+          });
+          const storeData = await storeResp.json().catch(() => null);
+          if (storeResp.ok && storeData?.success) {
+            resp = storeResp;
+            data = storeData;
+          }
+        } catch (_) {}
+      }
+
       if (resp.ok && data?.success) {
         const isAdmin = Boolean(data.isAdmin || data.role === 'SUPER_ADMIN' || data.mode === 'ADMIN');
         authRes = {
@@ -13503,8 +13605,8 @@ function setupEventListeners() {
           mode: data.mode || (isAdmin ? 'ADMIN' : 'STORE'),
           isAdmin,
           token: data.token,
-          storeId: data.storeId || (isAdmin ? 'platform_admin' : 'store_amigo'),
-          storeName: data.storeName || (isAdmin ? 'Platform Admin' : 'Amigo Food Mart'),
+          storeId: data.storeId || (isAdmin ? 'store_admin' : 'store_amigo'),
+          storeName: data.storeName || (isAdmin ? 'ADMIN STORE' : 'Amigo Food Mart'),
           user: {
             name: data.user?.name || (isAdmin ? 'Platform Administrator' : 'Store User'),
             signInName: data.user?.username || email,
@@ -13585,6 +13687,8 @@ function setupEventListeners() {
 
     // Check if user is Platform Administrator -> route to Admin Dashboard
     if (authRes.isAdmin) {
+      setCurrentStoreId('store_admin');
+      if (typeof window.switchStore === 'function') window.switchStore('store_admin');
       showAdminDashboardView();
       showToast(`✓ Welcome Platform Administrator, ${user.name}!`, 'success');
       return;
@@ -13600,10 +13704,7 @@ function setupEventListeners() {
     } catch (_) {}
 
     const localState = loadState(targetStoreId);
-    const localActive = (localState?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
-    const serverActive = (loadedServerState?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
-
-    if (loadedServerState && Array.isArray(loadedServerState.slots) && (serverActive >= localActive || (loadedServerState.shiftNumber || 0) > (localState?.shiftNumber || 0))) {
+    if (loadedServerState && Array.isArray(loadedServerState.slots)) {
       state = loadedServerState;
     } else {
       state = localState;
@@ -15735,7 +15836,7 @@ function setupEventListeners() {
 
       // Initialize state.inStockInventory if not yet populated
       if (!state.inStockInventory || !Array.isArray(state.inStockInventory)) {
-        state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+        state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
       }
 
       // Update inStockInventory if previously in stock
@@ -15815,7 +15916,7 @@ function setupEventListeners() {
       if (!confirm(`Are you sure you want to remove pack ${origPack} from inventory?`)) return;
 
       if (!state.inStockInventory || !Array.isArray(state.inStockInventory)) {
-        state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+        state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
       }
       state.inStockInventory = state.inStockInventory.filter(p => String(p.packNumber) !== String(origPack));
 
@@ -17150,7 +17251,7 @@ function setupEventListeners() {
     const packSize = (matched && matched.packSize) || std.packSize || (price >= 50 ? 18 : 100);
 
     if (!Array.isArray(state.inStockInventory)) {
-      state.inStockInventory = state.dataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS));
+      state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
     }
 
     if (state.inStockInventory.some(p => isPackNumberMatch(p.packNumber, packNumber))) {

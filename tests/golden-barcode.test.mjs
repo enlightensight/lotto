@@ -287,12 +287,29 @@ test('SCEL URL scan: http://scel.net/b=14170670170009', () => {
   assert.equal(p?.standardBarcode, '14170670170009');
 });
 
+test('Physical Ticket 1828 (XTREME BUCKS $2) 24-digit barcode: 182800385621002774086718', () => {
+  const p = parseLotteryBarcode('182800385621002774086718');
+  assert(p, 'Must not be null');
+  assert.equal(p.isValid, true, 'Must be valid lottery ticket');
+  assert.equal(p.gameNumber, '1828');
+  assert.equal(p.packNumber, '003856');
+  assert.equal(p.packClean, '3856');
+  assert.equal(p.ticketNumber, 100);
+  assert.equal(p.ticketString, '100');
+  assert.equal(p.checkCode, '2');
+  assert.equal(p.securityCode, '049');
+  assert.equal(p.standardBarcode, '18280038562100');
+  assert.equal(p.canonicalId, '1828-003856-2-100');
+  assert.equal(p.displayBarcode, '1828-003856-2-100 (049)');
+});
+
 // ----------------------------------------------------------------------------
 // 5. GOLDEN TEST: REJECTION OF NON-LOTTERY, STORE MERCHANDISE & CORRUPT DATA
 // ----------------------------------------------------------------------------
 console.log('\n--- Group 5: Strict Rejections (Retail, Alpha, Out-of-Range) ---');
 
 const rejectionCases = [
+  { code: '2731-590419', reason: 'Scanner hardware box product barcode' },
   { code: '012345678905', reason: '12-digit UPC-A grocery product' },
   { code: '712345678901', reason: '12-digit UPC-A merchandise' },
   { code: '12345670', reason: '8-digit EAN-8 retail merchandise' },

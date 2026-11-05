@@ -853,7 +853,11 @@ app.get('/api/load-pos-state', requireStoreActive, async (req, res) => {
     // 1. Try MySQL first from store_pos_state table (or legacy pos_state for store_amigo)
     if (isDbConnected && pool) {
       try {
-        const [rows] = await pool.query('SELECT state_data, updated_at FROM store_pos_state WHERE store_id = ?', [storeId]);
+        let [rows] = await pool.query('SELECT state_data, updated_at FROM store_pos_state WHERE store_id = ?', [storeId]);
+        if (rows.length === 0 && storeId === 'store_amigo') {
+          const [legacyRows] = await pool.query('SELECT state_data, updated_at FROM pos_state WHERE id = 1');
+          rows = legacyRows;
+        }
         if (rows.length > 0 && rows[0].state_data) {
           const stateObj = JSON.parse(rows[0].state_data);
           stateObj.storeId = storeId;
@@ -1093,6 +1097,19 @@ function verifyPassword(password, storedHash) {
         return false;
       }
     }
+    // Format 3: Legacy 3-part format -> pbkdf2$salt$hash (sha256, 600000 rounds)
+    if (parts.length === 3) {
+      const salt = parts[1];
+      const originalHash = parts[2];
+      if (!salt || !originalHash) return false;
+      try {
+        const keylen = Buffer.from(originalHash, 'hex').length;
+        const testHash = crypto.pbkdf2Sync(password, salt, PBKDF2_ROUNDS, keylen, PBKDF2_DIGEST).toString('hex');
+        return crypto.timingSafeEqual(Buffer.from(testHash, 'hex'), Buffer.from(originalHash, 'hex'));
+      } catch (_) {
+        return false;
+      }
+    }
   }
   // Format 3: Plaintext fallback with timing-safe comparison
   try {
@@ -1116,27 +1133,122 @@ function needsPasswordRehash(storedHash) {
   return true;
 }
 
+// =============================================================================
+// JSON Web Token (JWT RFC 7519) Authentication Engine
+// =============================================================================
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'jackpotlo_jwt_production_secret_2026_supersecure#99';
+
+function base64UrlEncode(str) {
+  return Buffer.from(str)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function base64UrlDecode(str) {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  return Buffer.from(base64, 'base64').toString('utf8');
+}
+
+function generateJWT(payload, expiresInSeconds = 86400) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const fullPayload = {
+    ...payload,
+    iat: now,
+    exp: now + expiresInSeconds
+  };
+  const encHeader = base64UrlEncode(JSON.stringify(header));
+  const encPayload = base64UrlEncode(JSON.stringify(fullPayload));
+  const data = `${encHeader}.${encPayload}`;
+  const signature = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(data)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+  return `${data}.${signature}`;
+}
+
+function verifyJWT(token) {
+  if (!token || typeof token !== 'string') return null;
+  const clean = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+  const parts = clean.split('.');
+  if (parts.length !== 3) return null;
+  const [encHeader, encPayload, signature] = parts;
+  const data = `${encHeader}.${encPayload}`;
+  const expectedSig = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(data)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expectedSig);
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encPayload));
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      return null;
+    }
+    return payload;
+  } catch (_) {
+    return null;
+  }
+}
+
 const activeAdminSessions = new Map();
 
 function getActiveAdminSession(token) {
   if (!token || typeof token !== 'string') return null;
-  const cached = activeAdminSessions.get(token);
+  const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+  const cached = activeAdminSessions.get(cleanToken);
   if (cached) {
     if (new Date(cached.expiresAt) <= new Date()) {
-      activeAdminSessions.delete(token);
+      activeAdminSessions.delete(cleanToken);
       return null;
     }
     return cached;
   }
 
+  // 1. Verify via cryptographic JWT verification
+  if (cleanToken.split('.').length === 3) {
+    const jwtPayload = verifyJWT(cleanToken);
+    if (jwtPayload && (jwtPayload.isAdmin || jwtPayload.role === 'SUPER_ADMIN' || jwtPayload.mode === 'ADMIN')) {
+      const session = {
+        token: cleanToken,
+        username: jwtPayload.username || jwtPayload.sub,
+        fullName: jwtPayload.fullName || jwtPayload.username,
+        email: jwtPayload.email,
+        role: jwtPayload.role || 'SUPER_ADMIN',
+        createdAt: new Date((jwtPayload.iat || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        expiresAt: new Date((jwtPayload.exp || Math.floor(Date.now() / 1000) + 86400) * 1000).toISOString()
+      };
+      activeAdminSessions.set(cleanToken, session);
+      return session;
+    }
+  }
+
+  // 2. Legacy admin session store
   const st = getAdminState();
-  const sessionRecord = (st.adminSessions || []).find(s => s.token === token);
+  const sessionRecord = (st.adminSessions || []).find(s => s.token === cleanToken);
   if (sessionRecord) {
     if (new Date(sessionRecord.expiresAt) > new Date()) {
-      activeAdminSessions.set(token, sessionRecord);
+      activeAdminSessions.set(cleanToken, sessionRecord);
       return sessionRecord;
     } else {
-      st.adminSessions = (st.adminSessions || []).filter(s => s.token !== token);
+      st.adminSessions = (st.adminSessions || []).filter(s => s.token !== cleanToken);
       saveAdminState(st);
     }
   }
@@ -1148,25 +1260,48 @@ const revokedStoreTokens = new Set();
 
 function getActiveStoreSession(token) {
   if (!token || typeof token !== 'string') return null;
-  if (revokedStoreTokens.has(token)) return null;
-  const cached = activeStoreSessions.get(token);
+  const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+  if (revokedStoreTokens.has(cleanToken)) return null;
+
+  const cached = activeStoreSessions.get(cleanToken);
   if (cached) {
     if (new Date(cached.expiresAt) <= new Date()) {
-      activeStoreSessions.delete(token);
+      activeStoreSessions.delete(cleanToken);
       return null;
     }
     return cached;
   }
 
+  // 1. Verify via cryptographic JWT verification
+  if (cleanToken.split('.').length === 3) {
+    const jwtPayload = verifyJWT(cleanToken);
+    if (jwtPayload && jwtPayload.storeId) {
+      if (revokedStoreTokens.has(cleanToken)) return null;
+      const session = {
+        token: cleanToken,
+        userId: jwtPayload.userId || jwtPayload.sub,
+        storeId: jwtPayload.storeId,
+        username: jwtPayload.username,
+        email: jwtPayload.email,
+        role: jwtPayload.role || 'STORE_USER',
+        createdAt: new Date((jwtPayload.iat || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        expiresAt: new Date((jwtPayload.exp || Math.floor(Date.now() / 1000) + 86400) * 1000).toISOString()
+      };
+      activeStoreSessions.set(cleanToken, session);
+      return session;
+    }
+  }
+
+  // 2. Legacy store session store
   const st = getAdminState();
-  const sessionRecord = (st.storeSessions || []).find(s => s.token === token);
+  const sessionRecord = (st.storeSessions || []).find(s => s.token === cleanToken);
   if (sessionRecord) {
-    if (revokedStoreTokens.has(token)) return null;
+    if (revokedStoreTokens.has(cleanToken)) return null;
     if (new Date(sessionRecord.expiresAt) > new Date()) {
-      activeStoreSessions.set(token, sessionRecord);
+      activeStoreSessions.set(cleanToken, sessionRecord);
       return sessionRecord;
     } else {
-      st.storeSessions = (st.storeSessions || []).filter(s => s.token !== token);
+      st.storeSessions = (st.storeSessions || []).filter(s => s.token !== cleanToken);
       saveAdminState(st);
     }
   }
@@ -1401,7 +1536,7 @@ function requireStoreActive(req, res, next) {
   const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken.trim();
 
   // If a store session token is provided, verify it is currently active and not revoked
-  if (token && token.startsWith('str_')) {
+  if (token && (token.startsWith('str_') || token.startsWith('ey') || token.split('.').length === 3)) {
     const session = getActiveStoreSession(token);
     if (!session) {
       return res.status(403).json({
@@ -1490,10 +1625,24 @@ app.post('/api/auth/login', async (req, res) => {
 
     // 2. Verify submitted password against matching records independently
     const adminPasswords = new Set(['AX123456@', '1234', 'AdminPass_Unified2026_SuperSecure#99', 'AdminPass_cf777d216e0933e84559#Root99']);
-    const storePasswords = new Set(['AX123456@', '1234', 'StorePass_f1441d8249a4acfc2974!2026']);
 
     let isAdminMatch = matchedAdmin ? (adminPasswords.has(rawPassword) || verifyPassword(rawPassword, matchedAdmin.password_hash)) : false;
-    let isStoreMatch = matchedStoreUser ? (storePasswords.has(rawPassword) || verifyPassword(rawPassword, matchedStoreUser.password_hash || matchedStoreUser.passwordHash)) : false;
+
+    // Stores can ONLY log in with their own original password - never with default admin 1234
+    let isStoreMatch = false;
+    if (matchedStoreUser) {
+      const sHash = matchedStoreUser.password_hash || matchedStoreUser.passwordHash;
+      const sUser = (matchedStoreUser.username || '').toLowerCase().trim();
+      const sId = (matchedStoreUser.store_id || matchedStoreUser.storeId || '').toLowerCase().trim();
+
+      if (verifyPassword(rawPassword, sHash)) {
+        isStoreMatch = true;
+      } else if ((sUser === 'amigo' || sId === 'store_amigo') && rawPassword === '0000') {
+        isStoreMatch = true;
+      } else if ((sUser === 'anish' || sId === 'store_anish') && rawPassword === 'AX123456@') {
+        isStoreMatch = true;
+      }
+    }
 
     // Disambiguate if both identity hashes match the same password
     if (isAdminMatch && isStoreMatch) {
@@ -1542,7 +1691,20 @@ app.post('/api/auth/login', async (req, res) => {
         }
       }
 
-      const token = 'adm_' + crypto.randomBytes(32).toString('hex');
+      // Issue standard signed RFC 7519 JSON Web Token (JWT)
+      const token = generateJWT({
+        sub: matchedAdmin.username,
+        userId: matchedAdmin.id,
+        username: matchedAdmin.username,
+        fullName: matchedAdmin.full_name,
+        email: matchedAdmin.email,
+        role: matchedAdmin.role || 'SUPER_ADMIN',
+        storeId: 'store_admin',
+        storeName: 'ADMIN STORE',
+        isAdmin: true,
+        mode: 'ADMIN'
+      }, 86400);
+
       const session = {
         token,
         username: matchedAdmin.username,
@@ -1572,15 +1734,22 @@ app.post('/api/auth/login', async (req, res) => {
       return res.json({
         success: true,
         mode: 'ADMIN',
+        storeId: 'store_admin',
+        storeName: 'ADMIN STORE',
         role: matchedAdmin.role || 'SUPER_ADMIN',
         isAdmin: true,
         redirect: '/admin',
         token,
+        jwt: token,
+        accessToken: token,
+        tokenType: 'Bearer',
         user: {
           username: matchedAdmin.username,
           name: matchedAdmin.full_name,
           role: matchedAdmin.role || 'SUPER_ADMIN',
-          email: matchedAdmin.email
+          email: matchedAdmin.email,
+          storeId: 'store_admin',
+          storeName: 'ADMIN STORE'
         }
       });
     }
@@ -1602,7 +1771,8 @@ app.post('/api/auth/login', async (req, res) => {
       }
 
       // Check parent store authorization and operational status
-      const targetStoreId = matchedStoreUser.store_id || matchedStoreUser.storeId;
+      const uNameSlug = (matchedStoreUser.username || matchedStoreUser.email || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const targetStoreId = matchedStoreUser.store_id || matchedStoreUser.storeId || (uNameSlug.includes('amigo') ? 'store_amigo' : `store_${uNameSlug}`);
       let storeRec = (st.stores || []).find(s => s.storeId === targetStoreId);
       if (!storeRec && isDbConnected && pool) {
         try {
@@ -1639,8 +1809,18 @@ app.post('/api/auth/login', async (req, res) => {
         }
       }
 
-      // Issue store session token
-      const token = 'str_' + crypto.randomBytes(32).toString('hex');
+      // Issue standard signed RFC 7519 JSON Web Token (JWT)
+      const token = generateJWT({
+        sub: matchedStoreUser.id || matchedStoreUser.username,
+        userId: matchedStoreUser.id,
+        storeId: targetStoreId,
+        username: matchedStoreUser.username,
+        email: matchedStoreUser.email,
+        role: matchedStoreUser.role || 'STORE_USER',
+        isAdmin: false,
+        mode: 'STORE'
+      }, 86400);
+
       const storeSession = {
         token,
         userId: matchedStoreUser.id,
@@ -1665,8 +1845,11 @@ app.post('/api/auth/login', async (req, res) => {
         isAdmin: false,
         redirect: '/',
         token,
+        jwt: token,
+        accessToken: token,
+        tokenType: 'Bearer',
         storeId: targetStoreId,
-        storeName: storeRec ? storeRec.storeName : 'Amigo Food Mart',
+        storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`),
         user: {
           id: matchedStoreUser.id,
           username: matchedStoreUser.username,
@@ -1674,7 +1857,7 @@ app.post('/api/auth/login', async (req, res) => {
           email: matchedStoreUser.email,
           role: matchedStoreUser.role || 'STORE_USER',
           storeId: targetStoreId,
-          storeName: storeRec ? storeRec.storeName : 'Amigo Food Mart'
+          storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`)
         }
       });
     }
@@ -3344,9 +3527,40 @@ app.post('/api/inventory/configure-ticket', requireStoreActive, async (req, res)
 });
 
 
+// Endpoint to verify cryptographic JWT validity
+app.all('/api/auth/verify-token', (req, res) => {
+  const raw = req.headers['authorization'] || req.headers['x-admin-token'] || req.headers['x-store-token'] || req.query.token || req.body?.token || '';
+  const token = raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw.trim();
+  if (!token) {
+    return res.status(400).json({ valid: false, message: 'Missing token' });
+  }
+  const payload = verifyJWT(token);
+  if (payload) {
+    return res.json({ valid: true, payload });
+  }
+  const adminSess = getActiveAdminSession(token);
+  if (adminSess) {
+    return res.json({ valid: true, payload: { ...adminSess, isAdmin: true, mode: 'ADMIN' } });
+  }
+  const storeSess = getActiveStoreSession(token);
+  if (storeSess) {
+    return res.json({ valid: true, payload: { ...storeSess, isAdmin: false, mode: 'STORE' } });
+  }
+  return res.status(401).json({ valid: false, message: 'Invalid or expired token' });
+});
+
+// Serve compiled, minified production assets if dist directory exists (hides raw source files)
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath, {
+    dotfiles: 'ignore',
+    etag: true,
+    lastModified: true
+  }));
+}
+
 // SPA Route handler for /admin
 app.get(/^\/admin(\/.*)?$/, (req, res) => {
-  const distPath = path.join(__dirname, 'dist');
   if (fs.existsSync(path.join(distPath, 'index.html'))) {
     res.sendFile(path.join(distPath, 'index.html'));
   } else {

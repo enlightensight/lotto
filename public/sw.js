@@ -2,7 +2,7 @@
 // Jackpotlo Pro - Production Service Worker (PWA & Offline SPA Resilience)
 // ============================================================================
 
-const CACHE_NAME = 'jackpotlo-pro-v7';
+const CACHE_NAME = 'jackpotlo-pro-v9';
 const PRECACHE_SHELL = ['/', '/index.html', '/manifest.json'];
 
 // 1. Install Event: Precache the SPA app shell and activate immediately
