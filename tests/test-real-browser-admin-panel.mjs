@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { spawn, execSync } from 'child_process';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -147,6 +147,33 @@ async function run() {
     assert(Number(pendingAppsKpi) >= 0, `Pending Apps KPI shows count (got ${pendingAppsKpi})`);
     assert(Number(approvedStoresKpi) >= 1, `Approved Stores KPI shows count (got ${approvedStoresKpi})`);
     assert(Number(suspendedStoresKpi) >= 0, `Suspended Stores KPI shows count (got ${suspendedStoresKpi})`);
+
+    // Capture screenshot of updated Admin Dashboard
+    try {
+      const shot = await send('Page.captureScreenshot', { format: 'png' });
+      const imgData = shot?.result?.data || shot?.data;
+      if (imgData) {
+        const outPath = 'C:/Users/Admin/.gemini/antigravity/brain/e5d66af5-2b32-406b-b7b2-c5318eae9544/screenshot-admin-panel-updated-ui.png';
+        writeFileSync(outPath, Buffer.from(imgData, 'base64'));
+        console.log(`  ✓ Screenshot saved: ${outPath}`);
+      }
+
+      // Test Dark Mode toggle & screenshot
+      await evalCode(`document.getElementById('adminThemeToggleBtn')?.click()`);
+      await sleep(400);
+      const darkShot = await send('Page.captureScreenshot', { format: 'png' });
+      const darkData = darkShot?.result?.data || darkShot?.data;
+      if (darkData) {
+        const darkPath = 'C:/Users/Admin/.gemini/antigravity/brain/e5d66af5-2b32-406b-b7b2-c5318eae9544/screenshot-admin-panel-dark-mode.png';
+        writeFileSync(darkPath, Buffer.from(darkData, 'base64'));
+        console.log(`  ✓ Dark mode screenshot saved: ${darkPath}`);
+      }
+      // Toggle back to light mode
+      await evalCode(`document.getElementById('adminThemeToggleBtn')?.click()`);
+      await sleep(200);
+    } catch (err) {
+      console.warn('Screenshot capture warning:', err.message);
+    }
 
     // ------------------------------------------------------------------------
     // Section 2: Store Applications

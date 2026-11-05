@@ -4027,12 +4027,12 @@
           <span class="admin-tab-count" id="adminCountPendingFeedbackBadge">0</span>
         </button>
 
-        <div class="admin-nav-section-label">Analytics &amp; Audit</div>
+        <div class="admin-nav-section-label">Analytics</div>
         <button type="button" class="admin-subnav-tab" data-admin-tab="reports">
           <span class="nav-icon">📈</span>
           <span class="nav-label">Multi-Store Reports</span>
         </button>
-        <button type="button" class="admin-subnav-tab" data-admin-tab="audit">
+        <button type="button" class="admin-subnav-tab" data-admin-tab="audit" style="display: none !important;" tabindex="-1" aria-hidden="true">
           <span class="nav-icon">📜</span>
           <span class="nav-label">Audit Trail</span>
         </button>
@@ -4067,8 +4067,8 @@
         </div>
         <div class="admin-topbar-pills">
           <button type="button" class="admin-theme-toggle-btn" id="adminThemeToggleBtn" title="Switch Day/Light or Dark Mode" aria-label="Toggle Theme">
-            <span id="adminThemeIcon">☀️</span>
-            <span id="adminThemeLabel">Light Mode</span>
+            <span id="adminThemeIcon">🌙</span>
+            <span id="adminThemeLabel">Dark Mode</span>
           </button>
           <div class="admin-status-pill">
             <span class="status-pulse-dot"></span>
@@ -4084,22 +4084,34 @@
         <div class="admin-tab-pane" id="paneAdminOverview">
           <div class="admin-kpi-grid">
             <div class="admin-kpi-card">
-              <span class="admin-kpi-label">Total Stores</span>
+              <div class="admin-kpi-header">
+                <span class="admin-kpi-label">Total Stores</span>
+                <span class="admin-kpi-icon kpi-icon-indigo">🏪</span>
+              </div>
               <span class="admin-kpi-value" id="adminKpiTotalStores">0</span>
               <span class="admin-kpi-sub">Registered retailer locations</span>
             </div>
             <div class="admin-kpi-card kpi-amber">
-              <span class="admin-kpi-label">Pending Applications</span>
+              <div class="admin-kpi-header">
+                <span class="admin-kpi-label">Pending Applications</span>
+                <span class="admin-kpi-icon kpi-icon-amber">⏳</span>
+              </div>
               <span class="admin-kpi-value" id="adminKpiPendingApps">0</span>
               <span class="admin-kpi-sub">Awaiting license verification</span>
             </div>
             <div class="admin-kpi-card kpi-emerald">
-              <span class="admin-kpi-label">Approved Stores</span>
+              <div class="admin-kpi-header">
+                <span class="admin-kpi-label">Approved Stores</span>
+                <span class="admin-kpi-icon kpi-icon-emerald">🛡️</span>
+              </div>
               <span class="admin-kpi-value" id="adminKpiApprovedStores">0</span>
               <span class="admin-kpi-sub">Active &amp; authorized to sell</span>
             </div>
             <div class="admin-kpi-card kpi-rose">
-              <span class="admin-kpi-label">Suspended Stores</span>
+              <div class="admin-kpi-header">
+                <span class="admin-kpi-label">Suspended Stores</span>
+                <span class="admin-kpi-icon kpi-icon-rose">🚫</span>
+              </div>
               <span class="admin-kpi-value" id="adminKpiSuspendedStores">0</span>
               <span class="admin-kpi-sub">Sales temporarily blocked</span>
             </div>
@@ -4119,7 +4131,10 @@
             <div class="admin-card-surface">
               <div class="admin-card-header">
                 <h2>Recent Administrative Actions</h2>
-                <span style="font-size: 0.8rem; color: #64748b;">Live Audit Trail</span>
+                <span style="font-size: 0.76rem; font-weight: 600; color: var(--admin-emerald-text); background: var(--admin-emerald-bg); border: 1px solid var(--admin-emerald-border); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="status-pulse-dot" style="width: 6px; height: 6px;"></span>
+                  Live Activity Feed
+                </span>
               </div>
               <div id="adminOverviewRecentAuditList"></div>
             </div>

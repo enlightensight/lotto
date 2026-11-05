@@ -766,13 +766,20 @@ function applyTheme(theme, notify = true) {
   }
   localStorage.setItem('lotto_theme', theme);
 
+  const adminThemeIcon = document.getElementById('adminThemeIcon');
+  const adminThemeLabel = document.getElementById('adminThemeLabel');
+
   if (theme === 'dark') {
     if (themeToggleIcon) themeToggleIcon.textContent = '☀️';
     if (themeToggleText) themeToggleText.textContent = 'Light Mode';
+    if (adminThemeIcon) adminThemeIcon.textContent = '☀️';
+    if (adminThemeLabel) adminThemeLabel.textContent = 'Light Mode';
     if (notify) showToast('Switched to Dark Mode', 'info');
   } else {
     if (themeToggleIcon) themeToggleIcon.textContent = '🌙';
     if (themeToggleText) themeToggleText.textContent = 'Dark Mode';
+    if (adminThemeIcon) adminThemeIcon.textContent = '🌙';
+    if (adminThemeLabel) adminThemeLabel.textContent = 'Dark Mode';
     if (notify) showToast('Switched to Light Mode', 'info');
   }
 }
@@ -782,6 +789,7 @@ function toggleTheme() {
   const next = currentTheme === 'dark' ? 'light' : 'dark';
   applyTheme(next, true);
 }
+window.toggleTheme = toggleTheme;
 
 // Active pack being activated in modal
 let pendingActivationPack = null;

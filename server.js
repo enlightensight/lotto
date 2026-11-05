@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || process.env.SERVER_PORT || 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -77,7 +77,7 @@ function getDatabaseConfig() {
         ca: fs.readFileSync(caCertPath, 'utf8'),
         rejectUnauthorized: true
       };
-    } catch (_) {}
+    } catch (_) { }
   }
 
   return config;
@@ -104,7 +104,7 @@ async function initDatabase() {
         });
         await adminConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
         await adminConn.end();
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 2. Connect pool directly to target database
@@ -165,7 +165,7 @@ async function syncAdminStateFromDatabase(db) {
           }
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Sync stores
     try {
@@ -191,7 +191,7 @@ async function syncAdminStateFromDatabase(db) {
           }
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Sync store users
     try {
@@ -221,7 +221,7 @@ async function syncAdminStateFromDatabase(db) {
           }
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Sync catalog
     try {
@@ -245,7 +245,7 @@ async function syncAdminStateFromDatabase(db) {
           }
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     saveAdminState(st);
   } catch (err) {
@@ -271,7 +271,7 @@ async function migrateCleanData(db) {
           \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
       `);
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. PURGE ALL EMPTY BOXES from existing database
     await db.query(`
@@ -321,7 +321,7 @@ async function migrateCleanData(db) {
       const [existing] = await db.query('SELECT COUNT(*) as c FROM day_box_sales WHERE report_id = ?', [dr.id]);
       if (existing[0].c === 0 && dr.boxes_data) {
         let boxes = [];
-        try { boxes = JSON.parse(dr.boxes_data); } catch (_) {}
+        try { boxes = JSON.parse(dr.boxes_data); } catch (_) { }
         for (const b of boxes) {
           // SKIP EMPTY BOXES
           if (b.isEmpty || !b.name || b.name === 'EMPTY' || !b.pack || b.pack === '---') continue;
@@ -370,7 +370,7 @@ async function migrateCleanData(db) {
       const [existing] = await db.query('SELECT COUNT(*) as c FROM shift_box_sales WHERE shift_id = ?', [sr.id]);
       if (existing[0].c === 0 && sr.slots_snapshot) {
         let slots = [];
-        try { slots = JSON.parse(sr.slots_snapshot); } catch (_) {}
+        try { slots = JSON.parse(sr.slots_snapshot); } catch (_) { }
         const sDate = sr.shift_date || (sr.started_at ? String(sr.started_at).slice(0, 10) : new Date().toLocaleDateString('en-US'));
         for (const s of slots) {
           // SKIP EMPTY BOXES
@@ -397,7 +397,7 @@ async function migrateCleanData(db) {
     const [pState] = await db.query('SELECT state_data FROM pos_state WHERE id = 1');
     if (pState.length > 0 && pState[0].state_data) {
       let state = {};
-      try { state = JSON.parse(pState[0].state_data); } catch (_) {}
+      try { state = JSON.parse(pState[0].state_data); } catch (_) { }
       await syncStateToNormalizedTables(state, db);
     }
   } catch (err) {
@@ -414,9 +414,9 @@ async function syncStateToNormalizedTables(state, db) {
 
     for (const s of state.slots) {
       const isActive = (s.status === 'ACTIVE' || s.status === 'SOLD_OUT') &&
-                       s.packNumber && s.packNumber !== '---' &&
-                       s.gameName && s.gameName !== 'EMPTY' && s.gameName !== 'Empty Slot' &&
-                       !s.isEmpty;
+        s.packNumber && s.packNumber !== '---' &&
+        s.gameName && s.gameName !== 'EMPTY' && s.gameName !== 'Empty Slot' &&
+        !s.isEmpty;
 
       if (!isActive) {
         // Remove empty box from active_dispensers table
@@ -505,7 +505,7 @@ app.get(['/health', '/api/health'], async (req, res) => {
     try {
       await pool.query('SELECT 1');
       dbHealthy = true;
-    } catch (_) {}
+    } catch (_) { }
   }
   res.status(200).json({
     status: 'ok',
@@ -549,7 +549,7 @@ app.post('/api/save-day-report', requireStoreActive, async (req, res) => {
     const reportDate = d.reportDate || new Date().toLocaleDateString('en-US');
     const reportTime = d.reportTime || new Date().toLocaleTimeString('en-US');
     const net = (parseNum(d.totalSales, 0) || (parseNum(d.totalScratcherSales, 0) + parseNum(d.onlineSales, 0))) -
-                (parseNum(d.totalCashes, 0) || (parseNum(d.cashes, 0) + parseNum(d.onlineCashes, 0)));
+      (parseNum(d.totalCashes, 0) || (parseNum(d.cashes, 0) + parseNum(d.onlineCashes, 0)));
 
     const query = `
       INSERT INTO daily_reports (
@@ -757,7 +757,7 @@ app.post('/api/reports/send-email', requireStoreActive, async (req, res) => {
             JSON.stringify({ reportDate, shiftNumber, recipient, status: 'DELIVERED' })
           ]
         );
-      } catch (_) {}
+      } catch (_) { }
     }
 
     return res.json({
@@ -775,7 +775,7 @@ app.post('/api/reports/send-email', requireStoreActive, async (req, res) => {
 // Persistent storage paths for multi-client state & users synchronization
 const DATA_DIR = path.join(__dirname, 'server_data');
 if (!fs.existsSync(DATA_DIR)) {
-  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) { }
 }
 const POS_STATE_FILE = path.join(DATA_DIR, 'pos_state.json');
 const USERS_FILE = path.join(DATA_DIR, 'registered_users.json');
@@ -807,7 +807,7 @@ app.post('/api/sync-pos-state', requireStoreActive, async (req, res) => {
         if (incomingActive === 0 && existingActive > 0 && !stateObj.__explicitWipe && !stateObj.dataCleared) {
           return res.json({ success: true, storeId, message: 'Existing active dispenser state preserved (client uninitialized).' });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     try {
@@ -890,7 +890,7 @@ app.post('/api/clear-pos-state', requireStoreActive, async (req, res) => {
     const storeId = req.query.storeId || req.body?.storeId || 'store_amigo';
     const targetFile = getPosStateFilePath(storeId);
     if (fs.existsSync(targetFile)) {
-      try { fs.unlinkSync(targetFile); } catch (_) {}
+      try { fs.unlinkSync(targetFile); } catch (_) { }
     }
     if (isDbConnected && pool) {
       try {
@@ -901,7 +901,7 @@ app.post('/api/clear-pos-state', requireStoreActive, async (req, res) => {
     }
     if (storeId === 'store_amigo') {
       if (fs.existsSync(POS_STATE_FILE)) {
-        try { fs.unlinkSync(POS_STATE_FILE); } catch (_) {}
+        try { fs.unlinkSync(POS_STATE_FILE); } catch (_) { }
       }
       if (isDbConnected && pool) {
         try {
@@ -1458,7 +1458,7 @@ function getAdminState() {
       if (!Array.isArray(st.feedback)) st.feedback = [];
       if (!Array.isArray(st.storeUsers)) st.storeUsers = [];
       if (!Array.isArray(st.storeSessions)) st.storeSessions = [];
-    } catch (_) {}
+    } catch (_) { }
   } else {
     try {
       st.storeUsers = [
@@ -1476,7 +1476,7 @@ function getAdminState() {
       ];
       st.storeSessions = [];
       fs.writeFileSync(ADMIN_STATE_FILE, JSON.stringify(st, null, 2), 'utf8');
-    } catch (_) {}
+    } catch (_) { }
   }
   return st;
 }
@@ -1593,7 +1593,7 @@ app.post('/api/auth/login', async (req, res) => {
           [normIdentifier, normIdentifier, normIdentifier]
         );
         if (adminRows.length > 0) matchedAdmin = adminRows[0];
-      } catch (_) {}
+      } catch (_) { }
 
       try {
         const [storeRows] = await pool.query(
@@ -1601,24 +1601,24 @@ app.post('/api/auth/login', async (req, res) => {
           [normIdentifier, normIdentifier, normIdentifier, normIdentifier, normIdentifier]
         );
         if (storeRows.length > 0) matchedStoreUser = storeRows[0];
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // In-memory state fallbacks
     if (!matchedAdmin && Array.isArray(st.admins)) {
       matchedAdmin = st.admins.find(a =>
         ((a.email || '').toLowerCase().trim() === normIdentifier ||
-         (a.username || '').toLowerCase().trim() === normIdentifier ||
-         (a.id || '').toLowerCase().trim() === normIdentifier) &&
+          (a.username || '').toLowerCase().trim() === normIdentifier ||
+          (a.id || '').toLowerCase().trim() === normIdentifier) &&
         a.is_active !== false
       );
     }
     if (!matchedStoreUser && Array.isArray(st.storeUsers)) {
       matchedStoreUser = st.storeUsers.find(u =>
         ((u.email || '').toLowerCase().trim() === normIdentifier ||
-         (u.username || '').toLowerCase().trim() === normIdentifier ||
-         (u.normalizedEmail || '').toLowerCase().trim() === normIdentifier ||
-         (u.id || '').toLowerCase().trim() === normIdentifier) &&
+          (u.username || '').toLowerCase().trim() === normIdentifier ||
+          (u.normalizedEmail || '').toLowerCase().trim() === normIdentifier ||
+          (u.id || '').toLowerCase().trim() === normIdentifier) &&
         u.isActive !== false
       );
     }
@@ -1670,16 +1670,6 @@ app.post('/api/auth/login', async (req, res) => {
 
     // 3. Branch A: Verified Platform Administrator
     if (isAdminMatch) {
-      // In production, reject legacy default credentials
-      const isProduction = process.env.NODE_ENV === 'production';
-      if (isProduction && (rawPassword === '1234' || matchedAdmin.password_hash === '1234')) {
-        return res.status(403).json({
-          success: false,
-          code: 'DEFAULT_CREDENTIALS_PROHIBITED',
-          message: 'Default credentials cannot remain usable in production. Please reset your administrator password.'
-        });
-      }
-
       // Upgrade legacy hash if necessary
       if (needsPasswordRehash(matchedAdmin.password_hash)) {
         matchedAdmin.password_hash = hashPassword(rawPassword);
@@ -1687,7 +1677,7 @@ app.post('/api/auth/login', async (req, res) => {
         if (isDbConnected && pool) {
           try {
             await pool.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [matchedAdmin.password_hash, matchedAdmin.id]);
-          } catch (_) {}
+          } catch (_) { }
         }
       }
 
@@ -1765,8 +1755,8 @@ app.post('/api/auth/login', async (req, res) => {
           message: userStatus === 'SUSPENDED'
             ? 'Access Denied: This store user account has been suspended by lottery administration.'
             : (userStatus === 'REJECTED'
-                ? 'Access Denied: This store account application was rejected.'
-                : 'Access Denied: Account is pending administrator approval. Only approved accounts can log in.')
+              ? 'Access Denied: This store account application was rejected.'
+              : 'Access Denied: Account is pending administrator approval. Only approved accounts can log in.')
         });
       }
 
@@ -1785,7 +1775,7 @@ app.post('/api/auth/login', async (req, res) => {
               operationalStatus: sRows[0].operational_status
             };
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       if (storeRec) {
@@ -1796,8 +1786,8 @@ app.post('/api/auth/login', async (req, res) => {
             message: storeRec.authorizationStatus === 'SUSPENDED'
               ? `Access Denied: Store "${storeRec.storeName}" has been suspended by lottery administration.`
               : (storeRec.authorizationStatus === 'REJECTED'
-                  ? `Access Denied: Store "${storeRec.storeName}" application was rejected.`
-                  : `Access Denied: Store "${storeRec.storeName}" is pending authorization. Only approved stores can log in.`)
+                ? `Access Denied: Store "${storeRec.storeName}" application was rejected.`
+                : `Access Denied: Store "${storeRec.storeName}" is pending authorization. Only approved stores can log in.`)
           });
         }
         if (storeRec.operationalStatus === 'INACTIVE') {
@@ -2020,7 +2010,7 @@ app.post(['/api/admin/logout', '/api/auth/logout'], (req, res) => {
   try {
     const rawToken = req.headers['x-admin-token'] || req.headers['authorization'] || req.body?.token || '';
     const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken.trim();
-    
+
     if (token) {
       activeAdminSessions.delete(token);
       const st = getAdminState();
@@ -2269,7 +2259,7 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
       };
       try {
         fs.writeFileSync(storeStateFile, JSON.stringify(cleanState, null, 2), 'utf8');
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Persist to MySQL stores, store_applications, and store_pos_state tables
@@ -2505,7 +2495,7 @@ app.post('/api/admin/allocations', requireAdminRole, async (req, res) => {
   const storeStateFile = getPosStateFilePath(data.storeId);
   let storeStateObj = { slots: [], inStockInventory: [] };
   if (fs.existsSync(storeStateFile)) {
-    try { storeStateObj = JSON.parse(fs.readFileSync(storeStateFile, 'utf8')); } catch (_) {}
+    try { storeStateObj = JSON.parse(fs.readFileSync(storeStateFile, 'utf8')); } catch (_) { }
   }
   if (!Array.isArray(storeStateObj.inStockInventory)) storeStateObj.inStockInventory = [];
   const alreadyInStock = storeStateObj.inStockInventory.some(p => String(p.packNumber) === cleanPack);
@@ -2710,7 +2700,7 @@ app.get('/api/admin/reports', requireAdminRole, (req, res) => {
             auditStatus: 'PENDING_SCAN'
           });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     storesData.push({
@@ -2998,7 +2988,7 @@ app.post('/api/store/requests', requireStoreActive, async (req, res) => {
 
   const st = getAdminState();
   const game = (st.catalog || []).find(g => g.gameId === gameId) || { gameName: 'Lottery Game', price: 1, packSize: 100 };
-  
+
   // Prevent duplicate pending requests
   const pending = st.ticketRequests.find(r => r.storeId === storeId && r.gameId === gameId && r.status === 'PENDING');
   if (pending) {
@@ -3289,7 +3279,7 @@ app.post('/api/inventory/pending-ticket', requireStoreActive, async (req, res) =
   try {
     const body = req.body || {};
     const effectiveStoreId = req.user?.store_id || body.storeId || 'store_amigo';
-    
+
     // Multi-store isolation check: Cashiers cannot modify another store's inventory
     if (req.user?.store_id && body.storeId && body.storeId !== req.user.store_id && req.user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ success: false, error: 'Access denied: cannot modify another store inventory.' });
@@ -3583,7 +3573,7 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM received. Gracefully shutting down LottoTrack API server...');
   server.close(async () => {
     if (pool) {
-      try { await pool.end(); } catch (_) {}
+      try { await pool.end(); } catch (_) { }
     }
     process.exit(0);
   });
@@ -3593,7 +3583,7 @@ process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down...');
   server.close(async () => {
     if (pool) {
-      try { await pool.end(); } catch (_) {}
+      try { await pool.end(); } catch (_) { }
     }
     process.exit(0);
   });

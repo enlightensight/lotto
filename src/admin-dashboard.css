@@ -8,7 +8,10 @@
    1. Theme Tokens & Variables
    ---------------------------------------------------------------------------- */
 :root,
-[data-admin-theme="dark"] {
+[data-admin-theme="dark"],
+html[data-admin-theme="dark"] #viewAdminDashboard,
+html[data-theme="dark"] #viewAdminDashboard,
+[data-theme="dark"] #viewAdminDashboard {
   --admin-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --admin-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -83,9 +86,9 @@
   --admin-badge-count-color: #cbd5e1;
 
   /* Shadows */
-  --admin-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.40);
+  --admin-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 2px 6px -1px rgba(0, 0, 0, 0.30);
   --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --admin-shadow-lg: 0 20px 40px -4px rgba(0, 0, 0, 0.55);
+  --admin-shadow-lg: 0 20px 40px -4px rgba(0, 0, 0, 0.60);
 
   /* Buttons */
   --admin-pill-secondary-bg: rgba(255, 255, 255, 0.06);
@@ -169,9 +172,9 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   --admin-badge-count-color: #334155;
 
   /* Shadows */
-  --admin-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-  --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  --admin-shadow-lg: 0 12px 28px -4px rgba(0, 0, 0, 0.12);
+  --admin-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 4px -1px rgba(15, 23, 42, 0.03);
+  --admin-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+  --admin-shadow-lg: 0 16px 36px -4px rgba(15, 23, 42, 0.10), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
 
   /* Buttons */
   --admin-pill-secondary-bg: #e2e8f0;
@@ -313,11 +316,11 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .admin-subnav-tab {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--admin-text-muted);
@@ -326,30 +329,33 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: all 0.14s ease;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
 #viewAdminDashboard .admin-subnav-tab:hover {
   background: var(--admin-subnav-hover-bg);
   color: var(--admin-text-main);
+  transform: translateX(2px);
 }
 
 #viewAdminDashboard .admin-subnav-tab.active {
   background: var(--admin-subnav-active-bg);
   color: var(--admin-subnav-active-color);
   font-weight: 600;
+  border-color: rgba(99, 102, 241, 0.12);
 }
 
 #viewAdminDashboard .admin-subnav-tab.active::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
+  top: 8px;
+  bottom: 8px;
+  width: 3.5px;
   background: var(--admin-primary);
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px var(--admin-primary-glow);
 }
 
 #viewAdminDashboard .admin-subnav-tab .nav-icon {
@@ -380,9 +386,9 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 
 /* Badge Count in Sidebar */
 #viewAdminDashboard .admin-tab-count {
-  height: 19px;
-  min-width: 19px;
-  padding: 0 6px;
+  height: 20px;
+  min-width: 20px;
+  padding: 0 7px;
   border-radius: 10px;
   background: var(--admin-badge-count-bg);
   color: var(--admin-badge-count-color);
@@ -393,11 +399,14 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   justify-content: center;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  border: 1px solid var(--admin-border-subtle);
 }
 
 #viewAdminDashboard .admin-subnav-tab.active .admin-tab-count {
   background: var(--admin-primary);
   color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 1px 4px var(--admin-primary-glow);
 }
 
 /* Sidebar Footer Profile & Quick POS Switch */
@@ -623,25 +632,41 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 }
 
 #viewAdminDashboard .btn-admin-pill-secondary {
-  height: 34px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 16px;
   border-radius: 20px;
   border: 1px solid var(--admin-border-subtle);
   background: var(--admin-pill-secondary-bg);
   color: var(--admin-pill-secondary-color);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.80rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 #viewAdminDashboard .btn-admin-pill-secondary:hover {
   background: var(--admin-pill-secondary-hover);
   border-color: var(--admin-border-medium);
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow);
+}
+
+#viewAdminDashboard #btnAdminTopSwitchPos {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(79, 70, 229, 0.16) 100%);
+  border-color: rgba(99, 102, 241, 0.30);
+  color: var(--admin-primary);
+}
+
+#viewAdminDashboard #btnAdminTopSwitchPos:hover {
+  background: var(--admin-primary);
+  color: #ffffff;
+  border-color: var(--admin-primary);
+  box-shadow: 0 3px 12px var(--admin-primary-glow);
 }
 
 /* ----------------------------------------------------------------------------
@@ -685,26 +710,27 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .admin-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px;
+  gap: 20px;
 }
 
 #viewAdminDashboard .admin-kpi-card {
   background: var(--admin-card-bg);
   border: 1px solid var(--admin-card-border);
-  border-radius: 12px;
-  padding: 20px 22px;
+  border-radius: 14px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   box-shadow: var(--admin-shadow);
   position: relative;
   overflow: hidden;
-  transition: all 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #viewAdminDashboard .admin-kpi-card:hover {
   border-color: var(--admin-border-medium);
-  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow-lg);
+  transform: translateY(-2px);
 }
 
 #viewAdminDashboard .admin-kpi-card::before {
@@ -713,46 +739,92 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: var(--admin-primary);
-  opacity: 0.9;
+  height: 3.5px;
+  background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%);
 }
 
 #viewAdminDashboard .admin-kpi-card.kpi-amber::before {
-  background: var(--admin-amber);
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
 }
 
 #viewAdminDashboard .admin-kpi-card.kpi-emerald::before {
-  background: var(--admin-emerald);
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
 }
 
 #viewAdminDashboard .admin-kpi-card.kpi-rose::before {
-  background: var(--admin-rose);
+  background: linear-gradient(90deg, #f43f5e 0%, #fb7185 100%);
+}
+
+#viewAdminDashboard .admin-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+#viewAdminDashboard .admin-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+#viewAdminDashboard .admin-kpi-card:hover .admin-kpi-icon {
+  transform: scale(1.08);
+}
+
+#viewAdminDashboard .kpi-icon-indigo {
+  background: var(--admin-primary-subtle);
+  color: var(--admin-primary);
+  border: 1px solid var(--admin-primary-glow);
+}
+
+#viewAdminDashboard .kpi-icon-amber {
+  background: var(--admin-amber-bg);
+  color: var(--admin-amber-text);
+  border: 1px solid var(--admin-amber-border);
+}
+
+#viewAdminDashboard .kpi-icon-emerald {
+  background: var(--admin-emerald-bg);
+  color: var(--admin-emerald-text);
+  border: 1px solid var(--admin-emerald-border);
+}
+
+#viewAdminDashboard .kpi-icon-rose {
+  background: var(--admin-rose-bg);
+  color: var(--admin-rose-text);
+  border: 1px solid var(--admin-rose-border);
 }
 
 #viewAdminDashboard .admin-kpi-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--admin-text-dim);
 }
 
 #viewAdminDashboard .admin-kpi-value {
-  font-size: 2.15rem;
+  font-size: 2.35rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   color: var(--admin-heading-color);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   font-family: inherit;
+  margin: 2px 0;
 }
 
 #viewAdminDashboard .admin-kpi-sub {
   font-size: 0.78rem;
   color: var(--admin-text-muted);
   line-height: 1.4;
-  margin-top: 2px;
 }
 
 /* ----------------------------------------------------------------------------
@@ -761,11 +833,16 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .admin-card-surface {
   background: var(--admin-card-bg);
   border: 1px solid var(--admin-card-border);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--admin-shadow);
   display: flex;
   flex-direction: column;
+  transition: border-color 0.18s ease;
+}
+
+#viewAdminDashboard .admin-card-surface:hover {
+  border-color: var(--admin-border-medium);
 }
 
 #viewAdminDashboard .admin-card-header {
@@ -780,7 +857,7 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 
 #viewAdminDashboard .admin-card-header h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--admin-heading-color);
@@ -804,9 +881,9 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 22px;
+  padding: 15px 24px;
   border-bottom: 1px solid var(--admin-border-subtle);
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
   gap: 16px;
 }
 
@@ -821,7 +898,7 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .overview-feedback-main {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   flex: 1;
 }
@@ -844,9 +921,9 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: 5px;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 6px;
   line-height: 1.2;
 }
 
@@ -875,9 +952,9 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 }
 
 #viewAdminDashboard .overview-feedback-subject {
-  font-size: 0.83rem;
-  color: var(--admin-text-muted);
-  line-height: 1.4;
+  font-size: 0.84rem;
+  color: var(--admin-text-main);
+  line-height: 1.45;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -891,6 +968,25 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   gap: 6px;
 }
 
+#viewAdminDashboard .overview-feedback-item .btn-action-sm {
+  border-radius: 20px;
+  padding: 0 16px;
+  height: 30px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--admin-primary-subtle);
+  color: var(--admin-primary);
+  border: 1px solid var(--admin-primary-glow);
+  transition: all 0.16s ease;
+}
+
+#viewAdminDashboard .overview-feedback-item .btn-action-sm:hover {
+  background: var(--admin-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--admin-primary-glow);
+  transform: translateY(-1px);
+}
+
 /* Audit Log List & Timeline Items */
 #viewAdminDashboard #adminOverviewRecentAuditList,
 #viewAdminDashboard #adminFullAuditTrailList {
@@ -902,7 +998,7 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 13px 22px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--admin-border-subtle);
   transition: background 0.15s ease;
   gap: 16px;
@@ -929,7 +1025,7 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   font-family: var(--admin-font-mono);
   font-size: 0.70rem;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 6px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -969,11 +1065,15 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .audit-target {
   font-family: var(--admin-font-mono);
   font-size: 0.80rem;
-  color: var(--admin-text-main);
+  color: var(--admin-heading-color);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: var(--admin-bg-surface-elevated);
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--admin-border-subtle);
 }
 
 #viewAdminDashboard .audit-user {
@@ -1021,18 +1121,18 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 
 #viewAdminDashboard .admin-data-table thead th {
   background: var(--admin-table-th-bg);
-  padding: 13px 18px;
+  padding: 14px 20px;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--admin-text-dim);
   border-bottom: 1px solid var(--admin-border-subtle);
   white-space: nowrap;
 }
 
 #viewAdminDashboard .admin-data-table tbody td {
-  padding: 14px 18px;
+  padding: 15px 20px;
   vertical-align: middle;
   color: var(--admin-table-td-color);
   border-bottom: 1px solid var(--admin-border-subtle);
@@ -1125,8 +1225,8 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .btn-action-sm,
 .admin-modal .btn-action-sm {
   height: 32px;
-  padding: 0 13px;
-  border-radius: 6px;
+  padding: 0 14px;
+  border-radius: 8px;
   border: 1px solid transparent;
   font-family: inherit;
   font-size: 0.78rem;
@@ -1136,7 +1236,7 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   justify-content: center;
   gap: 6px;
   cursor: pointer;
-  transition: all 0.14s ease;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   user-select: none;
 }
