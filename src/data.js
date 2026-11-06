@@ -48,8 +48,14 @@ export function getStoresList() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        if (!parsed.some(s => s.id === 'store_admin')) {
-          parsed.unshift(DEFAULT_STORES[0]);
+        let changed = false;
+        DEFAULT_STORES.forEach(ds => {
+          if (!parsed.some(s => s.id === ds.id)) {
+            parsed.push(ds);
+            changed = true;
+          }
+        });
+        if (changed) {
           saveStoresList(parsed);
         }
         return parsed;
@@ -164,7 +170,8 @@ export const SAMPLE_GAMES = [
   { id: 'g1650', name: 'RUBY RED TREASURES', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1650' },
   { id: 'g1680', name: 'TENFOLD LUCKY', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1680' },
   { id: 'g1645', name: 'FROSTY FORTUNES', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1645' },
-  { id: 'g1660', name: '$100 $200 OR $300', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1660' }
+  { id: 'g1660', name: '$100 $200 OR $300', price: 10, bookValue: 300, packSize: 30, barcodePrefix: '1660' },
+  { id: 'g1692', name: 'ULTIMATE MILLIONS', price: 20, bookValue: 600, packSize: 30, barcodePrefix: '1692' }
 ];
 
 export function getStandardPackDetails(price) {
@@ -720,6 +727,8 @@ export function parseLotteryBarcode(raw, customGames = []) {
       || (customGames || []).find(g => g.barcodePrefix === gameNumber || String(g.id).replace(/[^0-9]/g, '') === gameNumber);
     const knownPackSize = matched?.packSize || (matched?.price ? getStandardPackDetails(matched.price).packSize : null);
 
+    const isSCELGame = gameNumber.startsWith('16') || (matched && matched.id && String(matched.id).startsWith('g16')) || (matched && matched.jurisdiction === 'SCEL');
+
     let isLayoutB = false;
     if (tixNumB > 299) {
       isLayoutB = false;
@@ -729,6 +738,12 @@ export function parseLotteryBarcode(raw, customGames = []) {
       isLayoutB = true;
     } else if (knownPackSize && tixNumB >= knownPackSize && tixNumA < knownPackSize) {
       isLayoutB = false;
+    } else if (isSCELGame && digits[10] === '0' && tixNumB > 0 && tixNumB <= 299) {
+      // Continuous 14-digit SCEL barcodes with leading-zero ticket index (e.g. 16700198690017 -> ticket 1, trailer 7;
+      // 16480183780290 -> ticket 29, trailer 0; 16920919050292 -> ticket 29, trailer 2)
+      isLayoutB = true;
+    } else if (!knownPackSize && tixNumA >= 150 && tixNumB <= 30) {
+      isLayoutB = true;
     }
 
     const ticketNumber = isLayoutB ? tixNumB : tixNumA;
@@ -823,13 +838,44 @@ export function parseLotteryBarcode(raw, customGames = []) {
         };
       }
       const packNumber = digits.slice(4, 10); // 6-digit pack
-      const checkCode = digits.slice(10, 11); // 1-digit check
-      const ticketNumber = parseInt(digits.slice(11, 14), 10);
-      const ticketString = digits.slice(11, 14);
+
+      const checkA = digits.slice(10, 11);
+      const tixStrA = digits.slice(11, 14);
+      const tixNumA = parseInt(tixStrA, 10);
+
+      const tixStrB = digits.slice(10, 13);
+      const tixNumB = parseInt(tixStrB, 10);
+      const trailerB = digits.slice(13, 14);
+
+      const matched = SAMPLE_GAMES.find(g => g.barcodePrefix === gameNumber || String(g.id).replace(/[^0-9]/g, '') === gameNumber)
+        || (customGames || []).find(g => g.barcodePrefix === gameNumber || String(g.id).replace(/[^0-9]/g, '') === gameNumber);
+      const knownPackSize = matched?.packSize || (matched?.price ? getStandardPackDetails(matched.price).packSize : null);
+
+      const isSCELGame = gameNumber.startsWith('16') || (matched && matched.id && String(matched.id).startsWith('g16')) || (matched && matched.jurisdiction === 'SCEL');
+
+      let isLayoutB = false;
+      if (tixNumB > 299) {
+        isLayoutB = false;
+      } else if (tixNumA > 299) {
+        isLayoutB = true;
+      } else if (knownPackSize && tixNumA >= knownPackSize && tixNumB < knownPackSize) {
+        isLayoutB = true;
+      } else if (knownPackSize && tixNumB >= knownPackSize && tixNumA < knownPackSize) {
+        isLayoutB = false;
+      } else if (isSCELGame && digits[10] === '0' && tixNumB > 0 && tixNumB <= 299) {
+        isLayoutB = true;
+      } else if (!knownPackSize && tixNumA >= 150 && tixNumB <= 30) {
+        isLayoutB = true;
+      }
+
+      const ticketNumber = isLayoutB ? tixNumB : tixNumA;
+      const ticketString = isLayoutB ? tixStrB : tixStrA;
+      const checkCode = isLayoutB ? null : checkA;
       const standardBarcode = digits.slice(0, 14); // Exactly core 14-digit lottery barcode
 
       const parenMatch = s.match(/\((\d{1,4})\)/);
       const securityCode = parenMatch ? parenMatch[1] : null;
+      const inferredDetails = securityCode ? inferPackDetailsFromCountdown(ticketNumber, securityCode) : null;
 
         if (isNaN(ticketNumber) || ticketNumber < 0 || ticketNumber > 299) {
           return {
@@ -840,7 +886,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
           };
         }
 
-        const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames);
+        const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, matched?.packSize || inferredDetails?.packSize);
         return {
           isValid: true,
           gameNumber,
@@ -850,12 +896,14 @@ export function parseLotteryBarcode(raw, customGames = []) {
           ticketNumber,
           ticketString,
           checkCode,
+          trailer: isLayoutB ? trailerB : null,
           securityCode: sec,
           hasExplicitSecurityCode: Boolean(typeof securityCode !== 'undefined' && securityCode),
           standardBarcode,
           canonicalId: checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString}` : `${gameNumber}-${packNumber}-${ticketString}`,
           fullId: `${gameNumber}-${packNumber}${checkCode ? '-' + checkCode : ''}-${ticketString}(${sec})`,
           displayBarcode: (checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString} (${sec})` : `${gameNumber}-${packNumber}-${ticketString} (${sec})`),
+          inferredDetails,
           raw
         };
       }
@@ -1311,6 +1359,13 @@ export function parseLotteryBarcode(raw, customGames = []) {
             if (!parsed.shiftStatus) parsed.shiftStatus = 'SHIFT_ENDED';
           }
 
+          if (parsed.storeId && parsed.storeId !== 'store_amigo') {
+            if (parsed.reportEmail === 'amigofoodmart2300@gmail.com') parsed.reportEmail = '';
+            if (Array.isArray(parsed.settingsReportEmails)) {
+              parsed.settingsReportEmails = parsed.settingsReportEmails.filter(e => e !== 'amigofoodmart2300@gmail.com');
+            }
+          }
+
           return parsed;
         }
       } catch (e) {
@@ -1389,7 +1444,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
         });
       }
 
-      const storeId = existingState?.storeId || 'store_amigo';
+      const storeId = (typeof existingState === 'string' ? existingState : existingState?.storeId) || 'store_amigo';
       const cleanId = String(storeId).replace(/^store_/, '').replace(/[^a-zA-Z0-9_]/g, '_');
       const dispName = cleanId.charAt(0).toUpperCase() + cleanId.slice(1);
       const storeName = existingState?.storeName || ((storeId === 'store_amigo') ? 'AMIGO FOOD MART' : `${dispName.toUpperCase()} STORE`);
@@ -1402,7 +1457,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
         voiceEnabled: true,
         autoPrint: true,
         autoEmail: false,
-        targetEmails: 'amigofoodmart2300@gmail.com',
+        targetEmails: (storeId === 'store_amigo') ? 'amigofoodmart2300@gmail.com' : '',
         operationMode: 'DAILY',
         warning1Days: 7,
         warning2Days: 12,
@@ -1418,6 +1473,8 @@ export function parseLotteryBarcode(raw, customGames = []) {
         registerName,
         shiftNumber: 1,
         cashierName,
+        reportEmail: (storeId === 'store_amigo') ? 'amigofoodmart2300@gmail.com' : '',
+        settingsReportEmails: (storeId === 'store_amigo') ? ['amigofoodmart2300@gmail.com'] : [],
         shiftStatus: 'SHIFT_ENDED',
         shiftStartedAt: null,
         totalSlots: TOTAL_SLOTS,

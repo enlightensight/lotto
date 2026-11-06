@@ -1619,6 +1619,11 @@ function initPOS() {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderInventoryView === 'function') renderInventoryView();
+        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+        if (typeof renderDayReportView === 'function') renderDayReportView();
+        if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
       }
     }
   }).catch(() => {});
@@ -1652,6 +1657,11 @@ function initPOS() {
           renderHeaderAndMetrics();
           renderDispenserRack();
           renderSlotsRibbon();
+          if (typeof renderInventoryView === 'function') renderInventoryView();
+          if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+          if (typeof renderDayReportView === 'function') renderDayReportView();
+          if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
         }
       }
     }).catch(() => {});
@@ -2487,6 +2497,11 @@ function renderSlotsRibbon() {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+        if (typeof renderDayReportView === 'function') renderDayReportView();
+        if (typeof renderInventoryView === 'function') renderInventoryView();
+        if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
       }
     });
 
@@ -4327,6 +4342,11 @@ function setupBoxAdjustModal() {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+        if (typeof renderDayReportView === 'function') renderDayReportView();
+        if (typeof renderInventoryView === 'function') renderInventoryView();
+        if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
         showToast(`📦 Box #${slotToClear.boxNumber} cleared (${approval.manager} approved: ${approval.reason}).`, 'info');
       }
     });
@@ -10071,13 +10091,36 @@ function setupHardwareScannerListener() {
   let keystrokeIntervals = [];
   let scannerActivePreValue = undefined;
   let isScanningBarcode = false;
+  let scanIdleTimer = null;
+
+  function resetScanBuffer() {
+    scanBuffer = '';
+    keystrokeIntervals = [];
+    isScanningBarcode = false;
+    scannerActivePreValue = undefined;
+    if (scanIdleTimer) {
+      clearTimeout(scanIdleTimer);
+      scanIdleTimer = null;
+    }
+  }
+
+  function handleScanDispatch(barcode) {
+    const rawToProcess = String(barcode || '').trim();
+    resetScanBuffer();
+    if (barcodeInput) barcodeInput.value = '';
+    if (rawToProcess) {
+      processScannedBarcode(rawToProcess);
+    }
+  }
 
   window.addEventListener('keydown', e => {
     const activeEl = document.activeElement;
     const isTextInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+    const isEnterKey = e.key === 'Enter' || e.key === 'NumpadEnter' || e.key === 'Return' || e.keyCode === 13 || e.which === 13;
+    const isTabKey = e.key === 'Tab' || e.keyCode === 9 || e.which === 9;
 
-    // Hardware scanners typically send Enter or NumpadEnter upon decoding
-    if (e.key === 'Enter' || e.key === 'NumpadEnter') {
+    // Hardware scanners typically send Enter, NumpadEnter, Return, or Tab upon decoding
+    if (isEnterKey || (isTabKey && scanBuffer.length >= 8)) {
       const avgInterval = keystrokeIntervals.length > 0 
         ? (keystrokeIntervals.reduce((a, b) => a + b, 0) / keystrokeIntervals.length)
         : 999;
@@ -10094,24 +10137,14 @@ function setupHardwareScannerListener() {
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        const barcodeToProcess = scanBuffer.trim();
-        scanBuffer = '';
-        keystrokeIntervals = [];
-        isScanningBarcode = false;
-
         // Restore clean input value if characters leaked in during initial keystrokes
         if (isTextInputFocused && activeEl && activeEl !== barcodeInput) {
           if (scannerActivePreValue !== undefined) {
             activeEl.value = scannerActivePreValue;
           }
         }
-        scannerActivePreValue = undefined;
 
-        if (barcodeInput) {
-          barcodeInput.value = '';
-        }
-
-        processScannedBarcode(barcodeToProcess);
+        handleScanDispatch(scanBuffer);
         return;
       }
 
@@ -10121,49 +10154,39 @@ function setupHardwareScannerListener() {
         e.stopPropagation();
         e.stopImmediatePropagation();
         const val = (scanBuffer.length >= 2 ? scanBuffer.trim() : '') || barcodeInput.value.trim();
-        scanBuffer = '';
-        keystrokeIntervals = [];
-        isScanningBarcode = false;
-        barcodeInput.value = '';
-        if (val) processScannedBarcode(val);
+        handleScanDispatch(val);
         return;
       }
 
       // Manual Enter keypresses on modal inputs
       if (activeEl === keypadBoxInput) {
-        scanBuffer = '';
-        keystrokeIntervals = [];
-        isScanningBarcode = false;
+        resetScanBuffer();
         commitBoxActivation();
         e.preventDefault();
         return;
       }
 
       if (setTicketDetailsModal && setTicketDetailsModal.open) {
-        scanBuffer = '';
-        keystrokeIntervals = [];
-        isScanningBarcode = false;
+        resetScanBuffer();
         saveTicketDetailsToInStock();
         e.preventDefault();
         return;
       }
 
       if (setBoxModal && setBoxModal.open) {
-        scanBuffer = '';
-        keystrokeIntervals = [];
-        isScanningBarcode = false;
+        resetScanBuffer();
         confirmSetBoxForTicket(true);
         e.preventDefault();
         return;
       }
 
-      scanBuffer = '';
-      keystrokeIntervals = [];
-      isScanningBarcode = false;
-    } else if (e.key.length === 1) {
+      resetScanBuffer();
+    } else if (e.key && e.key.length === 1) {
       const now = Date.now();
       const interval = now - lastKeystrokeTime;
       lastKeystrokeTime = now;
+
+      if (scanIdleTimer) clearTimeout(scanIdleTimer);
 
       if (interval > 180) {
         // Human typing or new scan sequence
@@ -10189,6 +10212,19 @@ function setupHardwareScannerListener() {
           activeEl.value = scannerActivePreValue;
         }
       }
+
+      // Idle fallback timer: for scanners configured without an Enter terminator,
+      // dispatch automatically once keystrokes stop arriving (>180ms silence)
+      scanIdleTimer = setTimeout(() => {
+        if (scanBuffer.length >= 10 && isScanningBarcode) {
+          if (isTextInputFocused && activeEl && activeEl !== barcodeInput && scannerActivePreValue !== undefined) {
+            activeEl.value = scannerActivePreValue;
+          }
+          handleScanDispatch(scanBuffer);
+        } else if (interval > 250) {
+          resetScanBuffer();
+        }
+      }, 180);
     }
   }, { capture: true });
 }
@@ -10714,6 +10750,11 @@ function processScannedBarcode(rawBarcode) {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+        if (typeof renderDayReportView === 'function') renderDayReportView();
+        if (typeof renderInventoryView === 'function') renderInventoryView();
+        if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
         return;
       }
 
@@ -11258,6 +11299,11 @@ function processScannedBarcode(rawBarcode) {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+        if (typeof renderDayReportView === 'function') renderDayReportView();
+        if (typeof renderInventoryView === 'function') renderInventoryView();
+        if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
         return;
       }
     }
@@ -11775,6 +11821,18 @@ function setupEventListeners() {
   if (_setupEventListenersDone) return;
   _setupEventListenersDone = true;
 
+  // Shared view state variables (declared at top to prevent TDZ ReferenceErrors on refresh)
+  let hasSyncedHistory = false;
+  let currentReceivePackPrice = 10;
+  let stagedDeliveryPacks = [];
+  let currentInventoryTab = 'in_stock';
+  let selectedHistoryDayId = 'day_14';
+  let selectedHandoverCashier = 'Carlos';
+  let currentSettingsTab = 'store_email';
+  let currentDailyReportDate = 'Today';
+  let currentRecordingMovement = 'Received from Lottery';
+  let selectedPersonForPinReset = null;
+
   // MySQL Database Status & Diagnostics Wiring
   const mysqlStatusBadge = document.getElementById('mysqlStatusBadge');
   const mysqlStatusText = document.getElementById('mysqlStatusText');
@@ -11819,7 +11877,7 @@ function setupEventListeners() {
     }
   }
 
-  let hasSyncedHistory = false;
+  hasSyncedHistory = false;
   initDatabaseSync((connected, info) => {
     if (mysqlStatusBadge && mysqlStatusText) {
       if (connected) {
@@ -12057,10 +12115,17 @@ function setupEventListeners() {
         if (parts[2]) ticketNumber = parseInt(parts[2], 10) || 0;
       } else {
         const digits = raw.replace(/\D/g, '');
-        if (digits.length >= 11) {
-          gameNumber = digits.slice(0, 4);
-          packNumber = digits.slice(4, 11);
-          ticketNumber = parseInt(digits.slice(11, 14), 10) || 0;
+        if (digits.length >= 10) {
+          const p = parseLotteryBarcode(digits, state.customGames);
+          if (p && p.isValid) {
+            gameNumber = p.gameNumber;
+            packNumber = p.packNumber;
+            ticketNumber = (p.ticketNumber !== null && p.ticketNumber !== undefined) ? p.ticketNumber : 0;
+          } else {
+            gameNumber = digits.slice(0, 4);
+            packNumber = digits.slice(4, 10);
+            ticketNumber = digits.length >= 13 ? (parseInt(digits.slice(10, 13), 10) || 0) : 0;
+          }
         }
       }
     }
@@ -13322,14 +13387,27 @@ function setupEventListeners() {
   function updateStoreBrandDisplay() {
     const stores = getStoresList();
     const currentSid = getCurrentStoreId();
-    const currentStore = stores.find(s => s.id === currentSid) || DEFAULT_STORES[0];
+    const cleanId = String(currentSid || '').replace(/^store_/, '').replace(/[^a-zA-Z0-9_]/g, '_');
+    const dispName = cleanId.charAt(0).toUpperCase() + cleanId.slice(1);
+    const fallbackStore = {
+      id: currentSid,
+      name: (currentSid === 'store_amigo') ? 'AMIGO FOOD MART' : `${dispName.toUpperCase()} STORE`,
+      address: (currentSid === 'store_amigo') ? '2300 MOODY RD WARNER ROBINS, GA, 31088' : `${dispName} Location`
+    };
+    const currentStore = stores.find(s => s.id === currentSid) || DEFAULT_STORES.find(s => s.id === currentSid) || fallbackStore;
 
-    const storeName = (state.storeName && state.storeName.trim() && state.storeName.trim().toLowerCase() !== 'store')
-      ? state.storeName.trim()
-      : (currentStore.name || 'Amigo Food Mart');
-    const storeAddress = (state.storeAddress && state.storeAddress.trim())
-      ? state.storeAddress.trim()
-      : (currentStore.address || '2300 MOODY RD WARNER ROBINS, GA, 31088');
+    let storeName = currentStore?.name || ((currentSid === 'store_amigo') ? 'Amigo Food Mart' : `${dispName.toUpperCase()} STORE`);
+    if (state.storeName && state.storeName.trim() && state.storeName.trim().toLowerCase() !== 'store') {
+      if (currentSid === 'store_amigo' || !state.storeName.toUpperCase().includes('AMIGO')) {
+        storeName = state.storeName.trim();
+      }
+    }
+    let storeAddress = currentStore?.address || '2300 MOODY RD WARNER ROBINS, GA, 31088';
+    if (state.storeAddress && state.storeAddress.trim()) {
+      if (currentSid === 'store_amigo' || !state.storeAddress.includes('MOODY RD')) {
+        storeAddress = state.storeAddress.trim();
+      }
+    }
 
     const sidebarStore = document.getElementById('sidebarStoreName');
     if (sidebarStore) sidebarStore.textContent = storeName;
@@ -13429,6 +13507,11 @@ function setupEventListeners() {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+        if (typeof renderDayReportView === 'function') renderDayReportView();
+        if (typeof renderInventoryView === 'function') renderInventoryView();
+        if (typeof renderHistoryView === 'function') renderHistoryView();
+        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
       }
     }).catch(() => {});
 
@@ -13444,10 +13527,6 @@ function setupEventListeners() {
     const posLayout = document.querySelector('.pos-app-layout');
     if (!viewSignIn) return;
 
-    sessionStorage.setItem('lotto_signed_out', 'true');
-    localStorage.setItem('lotto_signed_out', 'true');
-    sessionStorage.removeItem('lotto_session_user');
-    localStorage.removeItem('lotto_session_user');
     if (posLayout) posLayout.setAttribute('aria-hidden', 'true');
     const adminDash = document.getElementById('viewAdminDashboard');
     if (adminDash) adminDash.style.display = 'none';
@@ -13508,6 +13587,15 @@ function setupEventListeners() {
       posLayout.classList.remove('hidden-layout');
     }
   }
+
+  function signOutUser() {
+    sessionStorage.setItem('lotto_signed_out', 'true');
+    localStorage.setItem('lotto_signed_out', 'true');
+    sessionStorage.removeItem('lotto_session_user');
+    localStorage.removeItem('lotto_session_user');
+    showSignInScreen();
+  }
+  window.signOutUser = signOutUser;
 
   function showAdminDashboardView() {
     hideSignInScreen();
@@ -13712,13 +13800,22 @@ function setupEventListeners() {
     } catch (_) {}
 
     const localState = loadState(targetStoreId);
-    if (loadedServerState && Array.isArray(loadedServerState.slots)) {
+    const serverActive = (loadedServerState?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
+    const localActive = (localState?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
+    const serverTime = loadedServerState?.lastSavedAt ? new Date(loadedServerState.lastSavedAt).getTime() : 0;
+    const localTime = localState?.lastSavedAt ? new Date(localState.lastSavedAt).getTime() : 0;
+
+    if (loadedServerState && Array.isArray(loadedServerState.slots) && (serverTime >= localTime || serverActive >= localActive)) {
       state = loadedServerState;
     } else {
       state = localState;
     }
     state.storeId = targetStoreId;
     state.cashierName = user.name || email;
+    const storeMeta = getStoresList().find(s => s.id === targetStoreId) || DEFAULT_STORES.find(s => s.id === targetStoreId);
+    state.storeName = authRes.storeName || (storeMeta ? storeMeta.name : (targetStoreId === 'store_amigo' ? 'AMIGO FOOD MART' : 'ANISH STORE'));
+    if (storeMeta && storeMeta.address) state.storeAddress = storeMeta.address;
+    if (storeMeta && storeMeta.retailerNumber) state.retailerNumber = storeMeta.retailerNumber;
     if (serverActive > 0 || localActive > 0) {
       state.dataCleared = false;
     }
@@ -13732,6 +13829,11 @@ function setupEventListeners() {
     renderHeaderAndMetrics();
     renderDispenserRack();
     renderSlotsRibbon();
+    if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+    if (typeof renderDayReportView === 'function') renderDayReportView();
+    if (typeof renderInventoryView === 'function') renderInventoryView();
+    if (typeof renderHistoryView === 'function') renderHistoryView();
+    if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
 
     const stores = getStoresList();
     const activeStore = stores.find(s => s.id === getCurrentStoreId());
@@ -13814,6 +13916,7 @@ function setupEventListeners() {
     navigator.userAgent.includes('Headless')
   )) || (typeof window !== 'undefined' && window.location.search.includes('bypass_login'));
   
+
   if (hasActiveSession) {
     try {
       const sess = JSON.parse(rawSession);
@@ -13846,9 +13949,25 @@ function setupEventListeners() {
         renderHeaderAndMetrics();
         renderDispenserRack();
         renderSlotsRibbon();
+        if (typeof renderReceivePacksView === 'function') {
+          try { renderReceivePacksView(); } catch (err) { console.warn('renderReceivePacksView error:', err); }
+        }
+        if (typeof renderDayReportView === 'function') {
+          try { renderDayReportView(); } catch (err) { console.warn('renderDayReportView error:', err); }
+        }
+        if (typeof renderInventoryView === 'function') {
+          try { renderInventoryView(); } catch (err) { console.warn('renderInventoryView error:', err); }
+        }
+        if (typeof renderHistoryView === 'function') {
+          try { renderHistoryView(); } catch (err) { console.warn('renderHistoryView error:', err); }
+        }
+        if (typeof populateSettingsInputs === 'function') {
+          try { populateSettingsInputs(); } catch (err) { console.warn('populateSettingsInputs error:', err); }
+        }
       }
     } catch (e) {
-      showSignInScreen();
+      console.warn('[AUTH REFRESH WARNING]:', e);
+      hideSignInScreen();
     }
   } else if (!isAutomatedTest) {
     showSignInScreen();
@@ -14028,7 +14147,7 @@ function setupEventListeners() {
 
   document.getElementById('menuSignOutBtn')?.addEventListener('click', () => {
     sfx.keypad();
-    showSignInScreen();
+    signOutUser();
   });
   document.getElementById('sidebarUserPill')?.addEventListener('click', () => {
     sfx.keypad();
@@ -14037,7 +14156,7 @@ function setupEventListeners() {
   document.getElementById('btnSignOut')?.addEventListener('click', (e) => {
     e.stopPropagation();
     sfx.keypad();
-    showSignInScreen();
+    signOutUser();
   });
 
   // Worker Quick Guide Modal
@@ -14087,33 +14206,10 @@ function setupEventListeners() {
   // =============================================================
   // RECEIVE PACKS VIEW CONTROLLER (Matching Reference UI Design)
   // =============================================================
-  let currentReceivePackPrice = 10;
-  let stagedDeliveryPacks = [
-    {
-      id: 'sd_1',
-      gameName: 'Lucky 7s',
-      gameNumber: '1688',
-      packNumber: '983301',
-      price: 5,
-      tickets: 60,
-      bookValue: 300,
-      destination: 'Safe'
-    },
-    {
-      id: 'sd_2',
-      gameName: 'Jr Jumbo',
-      gameNumber: '1442',
-      packNumber: '745812',
-      price: 1,
-      tickets: 300,
-      bookValue: 300,
-      destination: 'Safe'
-    }
-  ];
-
-  let currentInventoryTab = 'in_stock';
-
-  let selectedHistoryDayId = 'day_14';
+  currentReceivePackPrice = 10;
+  stagedDeliveryPacks = [];
+  currentInventoryTab = 'in_stock';
+  selectedHistoryDayId = 'day_14';
 
   function showSellCounterView() {
     const viewSell = document.getElementById('viewSellCounter');
@@ -14767,7 +14863,7 @@ function setupEventListeners() {
   // =============================================================
   // SCREEN 05: START SHIFT HANDOVER CONTROLLER
   // =============================================================
-  let selectedHandoverCashier = 'Carlos';
+  selectedHandoverCashier = 'Carlos';
 
   function updateHandoverSelectionUI() {
     const cards = document.querySelectorAll('#sshClerksGrid .ssh-clerk-card');
@@ -15029,7 +15125,7 @@ function setupEventListeners() {
     }
   });
 
-  let currentSettingsTab = 'store_email';
+  currentSettingsTab = 'store_email';
 
   function populateSettingsInputs() {
     const setStoreName = document.getElementById('setStoreName');
@@ -15061,8 +15157,10 @@ function setupEventListeners() {
     if (setStoreID) setStoreID.value = state.storeID || 'AFM-0412';
     if (setDayEndsAt) setDayEndsAt.value = state.dayEndsAt || 'midnight';
     if (setCurrency) setCurrency.value = state.currency || 'US dollar ($) · 2 decimals';
-    if (setReportEmail) setReportEmail.value = state.reportEmail || 'amigofoodmart2300@gmail.com';
-    if (setPrintingEmail) setPrintingEmail.value = state.reportEmail || 'amigofoodmart2300@gmail.com';
+    const isAmigo = (!state.storeId || state.storeId === 'store_amigo') && !state.dataCleared;
+    const defaultEmail = isAmigo ? 'amigofoodmart2300@gmail.com' : '';
+    if (setReportEmail) setReportEmail.value = state.reportEmail || defaultEmail;
+    if (setPrintingEmail) setPrintingEmail.value = state.reportEmail || defaultEmail;
     if (inputConfirmClear) inputConfirmClear.value = '';
     if (btnClearAllData) {
       btnClearAllData.disabled = false;
@@ -15074,22 +15172,35 @@ function setupEventListeners() {
     const listEl = document.getElementById('settingsEmailRecipientsList');
     if (!listEl) return;
 
-    if (!Array.isArray(state.settingsReportEmails) || state.settingsReportEmails.length === 0) {
-      state.settingsReportEmails = ['amigofoodmart2300@gmail.com'];
+    const isAmigo = (!state.storeId || state.storeId === 'store_amigo') && !state.dataCleared;
+
+    if (!Array.isArray(state.settingsReportEmails)) {
+      state.settingsReportEmails = isAmigo ? ['amigofoodmart2300@gmail.com'] : [];
+    } else if (!isAmigo) {
+      // Filter out demo store email leakage from non-amigo stores
+      state.settingsReportEmails = state.settingsReportEmails.filter(e => e !== 'amigofoodmart2300@gmail.com');
     }
 
-    listEl.innerHTML = state.settingsReportEmails.map((email, idx) => {
-      const initial = email.charAt(0).toUpperCase();
-      return `
-        <div class="settings-email-recipient-row" data-email="${email}">
-          <div class="settings-recipient-left">
-            <span class="settings-recipient-avatar">${initial}</span>
-            <span class="settings-recipient-email">${email}</span>
-          </div>
-          <button type="button" class="btn-remove-email-recipient" data-idx="${idx}">Remove</button>
+    if (state.settingsReportEmails.length === 0) {
+      listEl.innerHTML = `
+        <div class="settings-email-empty-state" style="padding: 14px 10px; color: #94a3b8; font-size: 0.88rem; font-style: italic; text-align: center;">
+          No email recipients configured. Add an email below to receive shift reports.
         </div>
       `;
-    }).join('');
+    } else {
+      listEl.innerHTML = state.settingsReportEmails.map((email, idx) => {
+        const initial = email.charAt(0).toUpperCase();
+        return `
+          <div class="settings-email-recipient-row" data-email="${email}">
+            <div class="settings-recipient-left">
+              <span class="settings-recipient-avatar">${initial}</span>
+              <span class="settings-recipient-email">${email}</span>
+            </div>
+            <button type="button" class="btn-remove-email-recipient" data-idx="${idx}">Remove</button>
+          </div>
+        `;
+      }).join('');
+    }
 
     const settingsStoreSelect = document.getElementById('settingsStoreSelect');
     if (settingsStoreSelect) {
@@ -15278,7 +15389,7 @@ function setupEventListeners() {
     }
   }
 
-  let currentDailyReportDate = 'Today';
+  currentDailyReportDate = 'Today';
 
   function renderDailyReportTab(selectedDate = currentDailyReportDate) {
     currentDailyReportDate = selectedDate || 'Today';
@@ -16575,7 +16686,7 @@ function setupEventListeners() {
   }
 
   // Setup Receive Packs listeners
-  let currentRecordingMovement = 'Received from Lottery';
+  currentRecordingMovement = 'Received from Lottery';
   document.querySelectorAll('#rpMovementGrid .rp-movement-card').forEach(card => {
     card.addEventListener('click', () => {
       document.querySelectorAll('#rpMovementGrid .rp-movement-card').forEach(c => c.classList.remove('active'));
@@ -18102,26 +18213,37 @@ function setupEventListeners() {
   });
 
   // Email Recipient Add/Remove Actions
-  document.getElementById('btnAddReportEmail')?.addEventListener('click', () => {
+  function handleAddReportEmail() {
     const input = document.getElementById('inputNewReportEmail');
     const val = input ? input.value.trim() : '';
-    if (!val || !val.includes('@')) {
+    if (!val || !val.includes('@') || !val.includes('.')) {
       sfx.error();
       showToast('Please enter a valid email address.', 'warning');
       return;
     }
     if (!Array.isArray(state.settingsReportEmails)) {
-      state.settingsReportEmails = ['amigofoodmart2300@gmail.com'];
+      state.settingsReportEmails = [];
     }
     if (!state.settingsReportEmails.includes(val)) {
       state.settingsReportEmails.push(val);
+      state.reportEmail = state.settingsReportEmails[0] || '';
+      if (!state.settings) state.settings = {};
+      state.settings.targetEmails = state.settingsReportEmails.join(', ');
       saveState(state);
       renderSettingsStoreEmail();
-      input.value = '';
+      if (input) input.value = '';
       sfx.win();
       showToast(`✓ Added ${val} to report recipients.`, 'success');
     } else {
       showToast('This email is already in the recipient list.', 'info');
+    }
+  }
+
+  document.getElementById('btnAddReportEmail')?.addEventListener('click', handleAddReportEmail);
+  document.getElementById('inputNewReportEmail')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddReportEmail();
     }
   });
 
@@ -18129,8 +18251,11 @@ function setupEventListeners() {
     const removeBtn = e.target.closest('.btn-remove-email-recipient');
     if (removeBtn) {
       const idx = Number(removeBtn.getAttribute('data-idx'));
-      if (Array.isArray(state.settingsReportEmails) && state.settingsReportEmails[idx]) {
+      if (Array.isArray(state.settingsReportEmails) && !isNaN(idx) && state.settingsReportEmails[idx] !== undefined) {
         const removed = state.settingsReportEmails.splice(idx, 1);
+        state.reportEmail = state.settingsReportEmails[0] || '';
+        if (!state.settings) state.settings = {};
+        state.settings.targetEmails = state.settingsReportEmails.join(', ');
         saveState(state);
         renderSettingsStoreEmail();
         sfx.keypad();
@@ -18139,7 +18264,7 @@ function setupEventListeners() {
     }
   });
 
-  let selectedPersonForPinReset = null;
+  selectedPersonForPinReset = null;
 
   // People Table Active Toggle Switch handler
   document.getElementById('settingsPeopleNewTableBody')?.addEventListener('change', (e) => {

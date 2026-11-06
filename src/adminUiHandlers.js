@@ -1157,16 +1157,16 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
     const card = document.getElementById('adminReviewFeedbackDetailsCard');
     if (card) {
       card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <div>
-            <div style="font-size:1rem; font-weight:700; color:var(--admin-heading-color);">${escapeHtml(fb.subject || 'Store Issue Report')}</div>
-            <div style="font-size:0.78rem; color:#94a3b8;">Reported by <strong style="color:#cbd5e1;">${escapeHtml(fb.cashierName || 'Cashier')}</strong> at <strong>${escapeHtml(fb.storeName)}</strong> (${escapeHtml(fb.storeId)})</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:12px;">
+          <div style="min-width:0; flex:1;">
+            <div style="font-size:1.02rem; font-weight:700; color:var(--admin-heading-color); word-break:break-word;">${escapeHtml(fb.subject || 'Store Issue Report')}</div>
+            <div style="font-size:0.78rem; color:var(--admin-text-muted); margin-top:2px;">Reported by <strong style="color:var(--admin-text-main);">${escapeHtml(fb.cashierName || 'Cashier')}</strong> at <strong>${escapeHtml(fb.storeName)}</strong> (${escapeHtml(fb.storeId)})</div>
           </div>
-          <span style="font-size:0.75rem; font-weight:700; color:${sevColor}; border:1px solid ${sevColor}50; padding:2px 8px; border-radius:4px;">${escapeHtml(fb.severity)}</span>
+          <span style="font-size:0.75rem; font-weight:700; color:${sevColor}; border:1px solid ${sevColor}50; background:${sevColor}15; padding:3px 10px; border-radius:6px; flex-shrink:0;">${escapeHtml(fb.severity)}</span>
         </div>
-        <div style="margin: 8px 0; padding: 10px; background: var(--admin-payload-box-bg); border: 1px solid var(--admin-payload-box-border); border-radius: 8px; font-size: 0.85rem; color: var(--admin-text-main); white-space: pre-wrap; line-height: 1.45;">${escapeHtml(fb.message)}</div>
-        <div style="display:flex; justify-content:space-between; font-size:0.74rem; color:#64748b; margin-top:8px;">
-          <span>Category: <strong style="color:#818cf8;">${escapeHtml(fb.category)}</strong></span>
+        <div style="margin: 10px 0; padding: 12px 14px; background: var(--admin-payload-box-bg); border: 1px solid var(--admin-payload-box-border); border-radius: 8px; font-size: 0.86rem; color: var(--admin-text-main); white-space: pre-wrap; line-height: 1.5; word-break:break-word;">${escapeHtml(fb.message)}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px 16px; font-size:0.76rem; color:var(--admin-text-dim); margin-top:10px; padding:0 2px;">
+          <span>Category: <strong style="color:var(--admin-primary);">${escapeHtml(fb.category)}</strong></span>
           <span>Date: ${fb.createdAt ? new Date(fb.createdAt).toLocaleString() : 'N/A'}</span>
           <span>Status: <strong style="color:var(--admin-heading-color);">${escapeHtml(fb.status)}</strong></span>
         </div>

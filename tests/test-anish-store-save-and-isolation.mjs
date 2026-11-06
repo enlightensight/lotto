@@ -56,6 +56,12 @@ async function runTests() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      if (data.method === 'Runtime.exceptionThrown') {
+        console.error('BROWSER EXCEPTION:', JSON.stringify(data.params.exceptionDetails));
+      }
+      if (data.method === 'Runtime.consoleAPICalled') {
+        console.log('BROWSER CONSOLE:', data.params.args.map(a => a.value || a.description).join(' '));
+      }
       if (data.id && callbacks.has(data.id)) {
         callbacks.get(data.id)(data.result);
         callbacks.delete(data.id);
@@ -93,7 +99,14 @@ async function runTests() {
         const passEl = document.getElementById('inputSignInPass');
         if (userEl) userEl.value = 'anish';
         if (passEl) passEl.value = 'AX123456@';
-        document.getElementById('btnSubmitSignIn')?.click();
+        const form = document.getElementById('signInMainForm');
+        if (form && typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        } else {
+          document.getElementById('btnSubmitSignIn')?.click();
+        }
       })()
     `);
     await sleep(1500);
@@ -178,7 +191,14 @@ async function runTests() {
         const passEl = document.getElementById('inputSignInPass');
         if (userEl) userEl.value = 'anish';
         if (passEl) passEl.value = 'AX123456@';
-        document.getElementById('btnSubmitSignIn')?.click();
+        const form = document.getElementById('signInMainForm');
+        if (form && typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        } else {
+          document.getElementById('btnSubmitSignIn')?.click();
+        }
       })()
     `);
     await sleep(1500);
@@ -265,6 +285,35 @@ async function runTests() {
     console.log('  Switching back to Anish Store:', anishRecheck);
     assert(anishRecheck.currentSid === 'store_anish', 'Switched back to store_anish');
     assert(anishRecheck.box1Pack === '5678901', 'Box 1 Pack 5678901 is fully preserved in store_anish');
+
+    // --- STEP 5: Verify Inventory Screen Data for Anish Store ---
+    console.log('\n--- Step 5: Verify Inventory Screen Contains ONLY Real Store Data (Zero Mock Leakage) ---');
+    const invCheck = await evaluate(`
+      (function() {
+        const data = getInventoryScreenData(state, 'active');
+        const allData = getInventoryScreenData(state, 'all');
+        const hasMockItem = (allData.items || []).some(it => 
+          it.packNumber === '128842' || it.gameName === '5X Money' || it.packNumber === '745508'
+        );
+        return {
+          activeCount: data.counts.active,
+          completedCount: data.counts.completed,
+          removedCount: data.counts.removed,
+          allCount: data.counts.all,
+          firstItemPack: data.items[0]?.packNumber,
+          firstItemGame: data.items[0]?.gameName,
+          hasMockItem
+        };
+      })()
+    `);
+
+    console.log('  Anish Inventory Check:', invCheck);
+    assert(invCheck.activeCount === 1, 'Anish store has exactly 1 active item (Box 1)');
+    assert(invCheck.firstItemPack === '5678901', 'Active item pack is 5678901');
+    assert(invCheck.firstItemGame === 'Anish Lucky Star', 'Active item is "Anish Lucky Star"');
+    assert(invCheck.completedCount === 0, 'Zero mock completed items');
+    assert(invCheck.removedCount === 0, 'Zero mock removed items');
+    assert(invCheck.hasMockItem === false, 'Zero mock items (5X Money / 128842) in Anish inventory');
 
     console.log('\n================================================================');
     console.log(' ALL ANISH STORE PERSISTENCE & ISOLATION CHECKS PASSED PERFECTLY!');

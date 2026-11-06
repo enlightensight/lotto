@@ -45,10 +45,14 @@ const downtownData = getInventoryScreenData(downtownState, 'in_stock');
 assert.equal(downtownData.items.length, 0, 'Downtown store in-stock inventory is EMPTY (no leakage)');
 console.log('  ✓ PASS: Store Downtown inventory is clean and empty (zero cross-store leakage)');
 
-// Anish store MUST be empty
+// Anish store MUST be completely empty across all tabs when fresh
 const anishData = getInventoryScreenData(anishState, 'in_stock');
 assert.equal(anishData.items.length, 0, 'Anish store in-stock inventory is EMPTY (no leakage)');
-console.log('  ✓ PASS: Store Anish inventory is clean and empty (zero cross-store leakage)');
+assert.equal(anishData.counts.active, 0, 'Anish store active inventory is EMPTY (no reference leakage)');
+assert.equal(anishData.counts.completed, 0, 'Anish store completed inventory is EMPTY');
+assert.equal(anishData.counts.removed, 0, 'Anish store removed inventory is EMPTY');
+assert.equal(anishData.counts.all, 0, 'Anish store all inventory is EMPTY');
+console.log('  ✓ PASS: Store Anish inventory is clean and empty across all tabs (zero cross-store leakage)');
 
 // -----------------------------------------------------------------------------
 // Test 2: Multi-Device Sync - End of Day Login (Device B loads Device A sales)

@@ -136,10 +136,7 @@ export function formatReportGameName(name) {
  */
 export function parseFlexibleDate(val, refYear = new Date().getFullYear()) {
   if (!val) return null;
-  if (typeof val === 'string' && val.toLowerCase() === 'today') {
-    const n = new Date();
-    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
-  }
+  if (typeof val === 'string' && val.toLowerCase() === 'today') return new Date();
   const s = String(val).trim();
   const cleaned = s.replace(/^[A-Za-z]+,\s*/, '').trim();
   const parts = cleaned.split(/[\s,]+/);
@@ -149,17 +146,11 @@ export function parseFlexibleDate(val, refYear = new Date().getFullYear()) {
     if (mStr in months) {
       const day = parseInt(parts[1], 10);
       const year = parts[2] ? parseInt(parts[2], 10) : refYear;
-      if (!isNaN(day)) return new Date(Date.UTC(year, months[mStr], day));
+      if (!isNaN(day)) return new Date(year, months[mStr], day);
     }
   }
   const d = new Date(val);
-  if (!isNaN(d.getTime())) {
-    if (s.includes('T') && s.endsWith('Z')) {
-      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    }
-    return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  }
-  return null;
+  return isNaN(d.getTime()) ? null : d;
 }
 
 /**
@@ -168,14 +159,14 @@ export function parseFlexibleDate(val, refYear = new Date().getFullYear()) {
 export function isSameBusinessDay(valA, valB) {
   if (!valA || !valB) return false;
   const dA = parseFlexibleDate(valA);
-  const refYear = dA ? dA.getUTCFullYear() : new Date().getFullYear();
+  const refYear = dA ? dA.getFullYear() : new Date().getFullYear();
   const dB = parseFlexibleDate(valB, refYear);
   if (!dA || !dB) {
     return String(valA).toLowerCase().includes(String(valB).toLowerCase()) || String(valB).toLowerCase().includes(String(valA).toLowerCase());
   }
-  return dA.getUTCFullYear() === dB.getUTCFullYear() &&
-         dA.getUTCMonth() === dB.getUTCMonth() &&
-         dA.getUTCDate() === dB.getUTCDate();
+  return dA.getFullYear() === dB.getFullYear() &&
+    dA.getMonth() === dB.getMonth() &&
+    dA.getDate() === dB.getDate();
 }
 
 /**
@@ -186,6 +177,7 @@ export function generateLiveDayReport(state, options = {}) {
   const targetDate = options.targetDate || options.date || null;
   return getScreenDayReportData(state, { ...options, targetDate });
 }
+
 /**
  * Returns dynamic live store Georgia Lottery Day Report.
  * @param {Object} state Live application state
@@ -421,7 +413,7 @@ export const AMIGO_SCREENSHOT_DAY_REPORT = {
  * Supports toggling empty boxes visibility.
  */
 export function getScreenDayReportData(state, options = {}) {
-  const { showEmptyBoxes = false, forceSample = false } = options;
+  const { showEmptyBoxes = false, forceSample = false, date: targetDate = null } = options;
 
   if (!state || forceSample) {
     // Return sample matching user screenshot exactly
@@ -456,7 +448,7 @@ export function getScreenDayReportData(state, options = {}) {
     return ref;
   }
 
-  const targetDate = options.targetDate || options.date || null;
+  // Calculate live report data from state
   const now = new Date();
   const isTargetToday = !targetDate || isSameBusinessDay(targetDate, now);
 
@@ -649,64 +641,7 @@ export function getScreenDayReportData(state, options = {}) {
       };
     }
 
-    // Fallback for sample reference dates (e.g. Oct 17, Oct 16, etc.) when state.shiftHistory has no records for that date
-    const refShifts = REFERENCE_CLOSED_SHIFTS.filter(s => isSameBusinessDay(s.date || s.day, targetDate));
-    if (refShifts.length > 0) {
-      const totalRefSales = refShifts.reduce((acc, s) => acc + s.sales, 0);
-      const totalRefTickets = refShifts.reduce((acc, s) => acc + s.tickets, 0);
-      const dObj = parseFlexibleDate(targetDate) || new Date();
-      const dateStr = dObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-      const dayName = dObj.toLocaleDateString('en-US', { weekday: 'long' });
-      const monthName = dObj.toLocaleDateString('en-US', { month: 'short' });
-      const dayNum = dObj.getDate();
-      const yearNum = dObj.getFullYear();
-      const shifts = refShifts.map((s, idx) => ({
-        id: s.shiftNumber || (idx + 1),
-        name: `Shift #${s.shiftNumber} · ${s.salesperson}`,
-        cashier: s.salesperson,
-        time: s.openClose || `${s.started} – ${s.closed}`,
-        total: s.sales,
-        tickets: s.tickets,
-        isOpen: false
-      }));
-      return {
-        isLive: false,
-        isDailyMode: true,
-        reportHeading: 'Day Report',
-        reportTitle: 'Day Report',
-        storeName: state?.storeName || 'AMIGO FOOD MART',
-        storeAddress: state?.storeAddress || '2300 Moody Rd, Warner Robins, GA 31088',
-        subtitle: `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${shifts.length} shifts · Closed by ${refShifts[0]?.salesperson || 'master'}`,
-        date: dateStr,
-        dateRange: dateStr,
-        generatedTime: `${monthName} ${dayNum}, 10:00 PM`,
-        openedTime: refShifts[refShifts.length - 1]?.started || '7:00 AM',
-        closedTime: refShifts[0]?.closed || '10:00 PM',
-        userId: refShifts[0]?.salesperson || 'master',
-        shifts,
-        shiftsCount: `${shifts.length} shifts`,
-        shiftsSummary: shifts.map(s => `${s.name} (${s.time})`).join(' · '),
-        totalInstantSales: totalRefSales,
-        totalTickets: totalRefTickets,
-        soldOutCount: 0,
-        soldOutBox: '-',
-        returnedCount: 0,
-        priceBreakdown: [],
-        boxes: showEmptyBoxes ? Array.from({ length: 65 }, (_, i) => ({
-          box: i + 1,
-          pack: '---',
-          game: 'EMPTY',
-          open: '-',
-          close: '-',
-          sold: '-',
-          price: '-',
-          total: 0,
-          isEmpty: true
-        })) : []
-      };
-    }
-
-    // No shifts on this date
+    // No shifts on this date (zero mock reference shifts: all reports are real)
     const dObj = parseFlexibleDate(targetDate) || new Date();
     const dateStr = dObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
     return {
@@ -756,7 +691,7 @@ export function getScreenDayReportData(state, options = {}) {
   const dayNum = now.getDate();
   const yearNum = now.getFullYear();
 
-  const openTime = state?.shiftStartedAt 
+  const openTime = state?.shiftStartedAt
     ? new Date(state.shiftStartedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
     : '7:02 AM';
 
@@ -768,29 +703,39 @@ export function getScreenDayReportData(state, options = {}) {
   const priceMap = new Map();
   const boxes = [];
 
+  const isToday = (dStr) => {
+    if (!dStr) return false;
+    const d = new Date(dStr);
+    return d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+  };
+
   // Find all past shifts that completed today
-  const todayPastShifts = (Array.isArray(state?.shiftHistory) ? state.shiftHistory : [])
-    .filter(h => isSameBusinessDay(h.endedAt || h.startedAt || h.date, now))
+  const todayPastShifts = (state?.shiftHistory || [])
+    .filter(h => isToday(h.endedAt || h.startedAt))
     .sort((a, b) => new Date(a.startedAt || a.endedAt || 0) - new Date(b.startedAt || b.endedAt || 0));
 
   const earliestTodayShift = todayPastShifts.length > 0 ? todayPastShifts[0] : null;
 
-  // Day's opening ticket for this pack (from earliest shift of today or activation ticket)
+  // In Daily Mode, find the day's true opening ticket (from earliest shift of the day)
   const getDayOpenTicket = (slot) => {
-    if (earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
-      const pastSlot = earliestTodayShift.slotsSnapshot.find(s => s.boxNumber === slot.boxNumber && s.packNumber === slot.packNumber);
-      if (pastSlot && typeof pastSlot.startTicket === 'number') {
+    if (isDailyMode && earliestTodayShift && Array.isArray(earliestTodayShift.slotsSnapshot)) {
+      const pastSlot = earliestTodayShift.slotsSnapshot.find(s => s.boxNumber === slot.boxNumber);
+      if (pastSlot && pastSlot.packNumber === slot.packNumber && typeof pastSlot.startTicket === 'number') {
         return pastSlot.startTicket;
       }
     }
-    return (slot && typeof slot.packStartTicket === 'number') ? slot.packStartTicket : ((slot && typeof slot.startTicket === 'number') ? slot.startTicket : 0);
+    return (slot && typeof slot.startTicket === 'number') ? slot.startTicket : 0;
   };
 
   // Aggregate sold out packs belonging to today (both past shifts and current shift)
   const allSoldOutToday = [];
-  todayPastShifts.forEach(h => {
-    (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
-  });
+  if (isDailyMode) {
+    todayPastShifts.forEach(h => {
+      (h.soldOutSnapshot || []).forEach(so => allSoldOutToday.push(so));
+    });
+  }
   (state?.soldOutThisShift || []).forEach(so => allSoldOutToday.push(so));
 
   // Only count sold-out packs that had actual sales
@@ -840,7 +785,7 @@ export function getScreenDayReportData(state, options = {}) {
 
     // 2. Include the currently active pack in this box (if any)
     if (slot && slot.status === 'ACTIVE' && slot.packNumber) {
-      const openTix = getDayOpenTicket(slot);
+      const openTix = isDailyMode ? getDayOpenTicket(slot) : (typeof slot.startTicket === 'number' ? slot.startTicket : 0);
       const closeTix = typeof slot.currentTicket === 'number' ? slot.currentTicket : openTix;
       const sold = Math.max(0, closeTix - openTix);
       const price = Number(slot.price) || 1;
@@ -890,9 +835,9 @@ export function getScreenDayReportData(state, options = {}) {
   const shifts = [];
 
   if (Array.isArray(state?.shiftHistory)) {
-    state.shiftHistory.filter(h => isSameBusinessDay(h.endedAt || h.startedAt || h.date, now)).forEach((h, idx) => {
+    state.shiftHistory.filter(h => isToday(h.endedAt || h.startedAt)).forEach((h, idx) => {
       const sNum = h.shiftNumber || (idx + 1);
-      const cName = h.cashier || h.cashierName || 'Cashier';
+      const cName = h.cashierName || 'Cashier';
       const sStart = h.startedAt ? new Date(h.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '7:02 AM';
       const sEnd = h.endedAt ? new Date(h.endedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '3:30 PM';
       shifts.push({
@@ -909,27 +854,36 @@ export function getScreenDayReportData(state, options = {}) {
 
   // Current open shift
   const currentShiftNum = state?.shiftNumber || (shifts.length + 1);
-  const currentShiftName = isDailyMode 
+  const currentShiftName = isDailyMode
     ? `Day · ${user}`
     : `Shift #${currentShiftNum} · ${user}`;
   const currentShiftTime = `${openTime} – Present`;
   const pastShiftsSales = shifts.reduce((acc, s) => acc + (s.total || 0), 0);
   const pastShiftsTickets = shifts.reduce((acc, s) => acc + (s.tickets || 0), 0);
-  shifts.push({
-    id: currentShiftNum,
-    name: currentShiftName,
-    cashier: user,
-    time: currentShiftTime,
-    total: Math.max(0, totalInstantSales - pastShiftsSales),
-    tickets: Math.max(0, totalTickets - pastShiftsTickets),
-    isOpen: true
-  });
+  const isShiftActive = state?.shiftStatus === 'IN_PROGRESS' || Boolean(state?.shiftStartedAt) || (totalInstantSales > 0 || totalTickets > 0);
+  if (isShiftActive) {
+    shifts.push({
+      id: currentShiftNum,
+      name: currentShiftName,
+      cashier: user,
+      time: currentShiftTime,
+      total: Math.max(0, totalInstantSales - pastShiftsSales),
+      tickets: Math.max(0, totalTickets - pastShiftsTickets),
+      isOpen: true
+    });
+  }
 
-  const shiftsSummary = shifts.map(s => `${s.name.replace('Shift #', '#')} (${s.time})`).join(' · ');
-  const shiftsCount = isDailyMode ? '1 day' : `${shifts.length} shift${shifts.length === 1 ? '' : 's'}`;
-  const reportHeading = 'Day Report';
-  const reportTitle = 'Day Report';
-  const subtitle = `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${shiftsCount} · open since ${openTime} by ${user}`;
+  const shiftsSummary = shifts.length > 0
+    ? shifts.map(s => `${s.name.replace('Shift #', '#')} (${s.time})`).join(' · ')
+    : 'No shifts recorded';
+  const shiftsCount = shifts.length === 0
+    ? '0 shifts'
+    : (isDailyMode ? '1 day' : `${shifts.length} shift${shifts.length === 1 ? '' : 's'}`);
+  const reportHeading = isDailyMode ? 'Day Report' : 'Shift Report';
+  const reportTitle = isDailyMode ? 'Day Report' : `Shift #${currentShiftNum} Report`;
+  const subtitle = shifts.length > 0
+    ? `${dayName}, ${monthName} ${dayNum}, ${yearNum} · ${shiftsCount} · open since ${openTime} by ${user}`
+    : `${dayName}, ${monthName} ${dayNum}, ${yearNum} · 0 shifts`;
 
   return {
     isLive: true,
@@ -969,8 +923,8 @@ export function getTodayVsYesterdayComparison(state) {
     if (!dStr) return false;
     const d = new Date(dStr);
     return d.getFullYear() === now.getFullYear() &&
-           d.getMonth() === now.getMonth() &&
-           d.getDate() === now.getDate();
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
   };
   const isYesterday = (dStr) => {
     if (!dStr) return false;
@@ -978,8 +932,8 @@ export function getTodayVsYesterdayComparison(state) {
     const y = new Date(now);
     y.setDate(now.getDate() - 1);
     return d.getFullYear() === y.getFullYear() &&
-           d.getMonth() === y.getMonth() &&
-           d.getDate() === y.getDate();
+      d.getMonth() === y.getMonth() &&
+      d.getDate() === y.getDate();
   };
 
   const todayDateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });

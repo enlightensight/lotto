@@ -445,13 +445,12 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
   const isDataCleared = Boolean(state?.dataCleared);
   const query = (searchQuery || '').trim().toLowerCase();
   const totalSlotsCount = 65;
+  const isAmigo = (!state?.storeId || state?.storeId === 'store_amigo');
 
-  // 1. In Stock Items (default 4 from Image 1, plus any dynamically added scanned items)
+  // 1. In Stock Items (strictly from real state, zero mock leakage)
   let inStockItems = [];
   if (Array.isArray(state?.inStockInventory)) {
     inStockItems = JSON.parse(JSON.stringify(state.inStockInventory));
-  } else if (!isDataCleared) {
-    inStockItems = (!state?.storeId || state?.storeId === 'store_amigo') ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
   }
 
   // 1b. Pending Setup / Unconfigured Items from automatic new barcode detection
@@ -479,68 +478,44 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
     inStockItems.push(...pendingItems);
   }
 
-  // 2. Active Items on the Rack (19 items from state.slots or reference)
+  // 2. Active Items on the Rack (from state.slots or reference for store_amigo)
   let activeItems = [];
-  const hasLiveSlots = state && Array.isArray(state.slots) && state.slots.some(s => s && s.status === 'ACTIVE' && s.packNumber && !s.needsActivation);
-  
-  if (hasLiveSlots) {
-    state.slots.forEach(s => {
-      if (s && s.status === 'ACTIVE' && s.packNumber && !s.needsActivation) {
-        const sizeNum = s.packSize || (s.price ? (s.price >= 50 ? 18 : Math.max(1, Math.floor(300 / s.price))) : 100);
-        const cur = typeof s.currentTicket === 'number' ? s.currentTicket : (s.startTicket || 0);
-        activeItems.push({
-          id: `active_slot_${s.boxNumber}`,
-          gameName: s.gameName || 'Scratch-off',
-          gameNumber: `Game ${s.gameCode || (1400 + Number(s.boxNumber))}`,
-          packNumber: String(s.packNumber),
-          price: Number(s.price) || 1,
-          packSize: `${sizeNum} tickets`,
-          packSizeNum: sizeNum,
-          status: 'ACTIVE',
-          statusLabel: 'Active',
-          statusBadgeClass: 'badge-active',
-          boxNumber: s.boxNumber,
-          position: String(cur).padStart(3, '0'),
-          receivedDate: s.activatedDateStr || 'Oct 14',
-          currentTicket: cur,
-          ticketsLeft: Math.max(0, sizeNum - cur),
-          value: Math.max(0, sizeNum - cur) * (Number(s.price) || 1),
-          box: s.boxNumber,
-          pack: s.packNumber,
-          game: s.gameName
-        });
-      }
-    });
-  } else if (!isDataCleared) {
-    // Generate active items from REFERENCE_INVENTORY_ITEMS
-    REFERENCE_INVENTORY_ITEMS.forEach(r => {
+  const liveSlots = (state && Array.isArray(state.slots))
+    ? state.slots.filter(s => s && s.status === 'ACTIVE' && s.packNumber)
+    : [];
+
+  if (liveSlots.length > 0) {
+    liveSlots.forEach(s => {
+      const sizeNum = s.packSize || (s.price ? (s.price >= 50 ? 18 : Math.max(1, Math.floor(300 / s.price))) : 100);
+      const cur = typeof s.currentTicket === 'number' ? s.currentTicket : (s.startTicket || 0);
+      const isPending = Boolean(s.needsActivation);
       activeItems.push({
-        id: `active_box_${r.box}`,
-        gameName: r.game,
-        gameNumber: `Game ${1400 + Number(r.box)}`,
-        packNumber: String(r.pack),
-        price: r.price,
-        packSize: `${r.packSize} tickets`,
-        packSizeNum: r.packSize,
-        status: 'ACTIVE',
-        statusLabel: 'Active',
-        statusBadgeClass: 'badge-active',
-        boxNumber: r.box,
-        position: String(r.currentTicket).padStart(3, '0'),
-        receivedDate: 'Oct 14',
-        currentTicket: r.currentTicket,
-        ticketsLeft: r.ticketsLeft,
-        value: r.value,
-        box: r.box,
-        pack: r.pack,
-        game: r.game
+        id: `active_slot_${s.boxNumber}`,
+        gameName: s.gameName || 'Scratch-off',
+        gameNumber: `Game ${s.gameCode || (1400 + Number(s.boxNumber))}`,
+        packNumber: String(s.packNumber),
+        price: Number(s.price) || 1,
+        packSize: `${sizeNum} tickets`,
+        packSizeNum: sizeNum,
+        status: isPending ? 'PENDING_ACTIVATION' : 'ACTIVE',
+        statusLabel: isPending ? 'Pending Activation' : 'Active',
+        statusBadgeClass: isPending ? 'badge-pending' : 'badge-active',
+        boxNumber: s.boxNumber,
+        position: String(cur).padStart(3, '0'),
+        receivedDate: s.activatedDateStr || 'Today',
+        currentTicket: cur,
+        ticketsLeft: Math.max(0, sizeNum - cur),
+        value: Math.max(0, sizeNum - cur) * (Number(s.price) || 1),
+        box: s.boxNumber,
+        pack: s.packNumber,
+        game: s.gameName
       });
     });
   }
   activeItems.sort((a, b) => (Number(a.boxNumber) || 0) - (Number(b.boxNumber) || 0));
 
-  // 3. Completed Items (3 reference items if not cleared)
-  let completedItems = isDataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_COMPLETED_PACKS));
+  // 3. Completed Items (strictly real, zero mock leakage)
+  let completedItems = [];
   if (state?.soldOutThisShift && state.soldOutThisShift.length > 0) {
     state.soldOutThisShift.forEach((so, idx) => {
       completedItems.push({
@@ -561,8 +536,8 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
     });
   }
 
-  // 4. Removed Items (1 reference item if not cleared)
-  let removedItems = isDataCleared ? [] : JSON.parse(JSON.stringify(REFERENCE_REMOVED_PACKS));
+  // 4. Removed Items (strictly real, zero mock leakage)
+  let removedItems = [];
   if (state?.partialTakeOuts && state.partialTakeOuts.length > 0) {
     state.partialTakeOuts.forEach((pto, idx) => {
       removedItems.push({
@@ -626,8 +601,9 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
   else if (normalizedTab === 'all') currentItems = filteredAll;
 
   // Backward compatibility object structures
-  const safeItems = JSON.parse(JSON.stringify(REFERENCE_SAFE_PACKS));
-  const soldOutItems = JSON.parse(JSON.stringify(REFERENCE_SOLD_OUT_PACKS));
+  const isDemoAmigo = isAmigo && !isDataCleared && liveSlots.length === 0;
+  const safeItems = isDemoAmigo ? JSON.parse(JSON.stringify(REFERENCE_SAFE_PACKS)) : inStockItems;
+  const soldOutItems = isDemoAmigo ? JSON.parse(JSON.stringify(REFERENCE_SOLD_OUT_PACKS)) : completedItems;
   let emptyBoxes = [];
   const activeBoxSet = new Set(activeItems.map(r => r.boxNumber));
   for (let b = 1; b <= totalSlotsCount; b++) {
@@ -636,17 +612,26 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
     }
   }
 
+  const ticketsOnRack = activeItems.reduce((acc, it) => acc + (Number(it.ticketsLeft) || 0), 0);
+  const rackVal = activeItems.reduce((acc, it) => acc + (Number(it.value) || 0), 0);
+  const safeVal = inStockItems.reduce((acc, it) => {
+    const p = Number(it.price) || 0;
+    const sz = Number(it.packSizeNum) || 100;
+    return acc + (p * sz);
+  }, 0);
+  const rackCap = activeItems.reduce((acc, it) => acc + (Number(it.packSizeNum) || 100), 0);
+
   return {
     kpis: {
       packsOnRackCount: activeItems.length,
       emptyBoxesCount: emptyBoxes.length,
-      ticketsOnRackCount: isDataCleared ? 0 : 1882,
-      totalRackCapacity: isDataCleared ? 0 : 2240,
-      rackValue: isDataCleared ? 0.00 : 6383.00,
-      safeValue: isDataCleared ? 0.00 : 1200.00,
+      ticketsOnRackCount: isDemoAmigo ? 1882 : ticketsOnRack,
+      totalRackCapacity: isDemoAmigo ? 2240 : (rackCap || (totalSlotsCount * 100)),
+      rackValue: isDemoAmigo ? 6383.00 : rackVal,
+      safeValue: isDemoAmigo ? 1200.00 : safeVal,
       safePacksCount: inStockItems.length,
-      soldTodaySales: isDataCleared ? 0.00 : 1237.00,
-      soldTodayTickets: isDataCleared ? 0 : 248
+      soldTodaySales: isDemoAmigo ? 1237.00 : (Number(state?.todaySales) || 0),
+      soldTodayTickets: isDemoAmigo ? 248 : (Number(state?.todayTickets) || 0)
     },
     counts: {
       inStock: inStockItems.length,

@@ -343,27 +343,25 @@ export function getHistoryScreenData(state) {
   const rawHistory = Array.isArray(state?.shiftHistory) ? state.shiftHistory : [];
 
   if (rawHistory.length === 0) {
-    const totalRefSales = REFERENCE_CLOSED_SHIFTS.reduce((acc, s) => acc + (Number(s.sales) || 0), 0);
-    const totalRefTickets = REFERENCE_CLOSED_SHIFTS.reduce((acc, s) => acc + (Number(s.tickets) || 0), 0);
     return {
       kpis: {
-        totalSales: totalRefSales,
-        daysCount: REFERENCE_HISTORY_DAYS.length,
-        ticketsSold: totalRefTickets,
-        dailyAverage: Math.round(totalRefSales / (REFERENCE_HISTORY_DAYS.length || 1)),
-        bestDayAmount: 2011.00,
-        bestDayDate: 'Sun, Sep 27',
-        closedShiftsCount: REFERENCE_CLOSED_SHIFTS.length,
-        closedShiftsDays: `${REFERENCE_HISTORY_DAYS.length} days`,
+        totalSales: 0,
+        daysCount: 0,
+        ticketsSold: 0,
+        dailyAverage: 0,
+        bestDayAmount: 0,
+        bestDayDate: '—',
+        closedShiftsCount: 0,
+        closedShiftsDays: '0 days',
         correctedReportsCount: 0,
         correctedReportsSub: 'none'
       },
       chart: {
-        days: REFERENCE_HISTORY_DAYS,
-        maxSales: 2011.00
+        days: [],
+        maxSales: 0
       },
-      days: REFERENCE_HISTORY_DAYS,
-      shifts: REFERENCE_CLOSED_SHIFTS
+      days: [],
+      shifts: []
     };
   }
 

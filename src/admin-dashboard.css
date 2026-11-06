@@ -11,7 +11,9 @@
 [data-admin-theme="dark"],
 html[data-admin-theme="dark"] #viewAdminDashboard,
 html[data-theme="dark"] #viewAdminDashboard,
-[data-theme="dark"] #viewAdminDashboard {
+[data-theme="dark"] #viewAdminDashboard,
+[data-theme="dark"] .admin-modal,
+[data-admin-theme="dark"] .admin-modal {
   --admin-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --admin-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -100,7 +102,10 @@ html[data-theme="dark"] #viewAdminDashboard,
 html[data-admin-theme="light"] #viewAdminDashboard,
 [data-theme="light"] #viewAdminDashboard,
 html[data-theme="light"] #viewAdminDashboard,
-html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard {
+html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard,
+html:not([data-theme="dark"]):not([data-admin-theme="dark"]) .admin-modal,
+[data-theme="light"] .admin-modal,
+[data-admin-theme="light"] .admin-modal {
   /* Surfaces & Canvas */
   --admin-bg-base: #f8fafc;
   --admin-bg-sidebar: #ffffff;
@@ -1338,17 +1343,26 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
 #viewAdminDashboard .admin-form-select,
 .admin-modal .admin-form-input,
 .admin-modal .admin-form-select {
-  height: 34px;
+  height: 38px;
   padding: 0 12px;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid var(--admin-input-border);
   background: var(--admin-input-bg);
   color: var(--admin-input-color);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   outline: none;
   transition: all 0.15s ease;
   box-sizing: border-box;
+}
+
+.admin-modal textarea.admin-form-input,
+.admin-modal textarea {
+  height: auto !important;
+  min-height: 84px !important;
+  padding: 10px 12px !important;
+  line-height: 1.45;
+  resize: vertical;
 }
 
 #viewAdminDashboard .admin-form-input:focus,
@@ -1372,6 +1386,10 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   margin-bottom: 14px;
 }
 
+.admin-modal .admin-form-group {
+  margin-bottom: 16px;
+}
+
 .admin-form-label {
   font-size: 0.78rem;
   font-weight: 600;
@@ -1379,20 +1397,74 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) #viewAdminDashboard
   letter-spacing: -0.01em;
 }
 
+.admin-modal .admin-form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--admin-heading-color);
+  margin-bottom: 2px;
+}
+
 /* ----------------------------------------------------------------------------
    10. Modals & Dialogs (Application Review, Allocation, Game Catalog)
    ---------------------------------------------------------------------------- */
 .admin-modal {
-  border: 1px solid var(--admin-border-subtle);
-  background: var(--admin-modal-bg);
-  color: var(--admin-text-main);
-  border-radius: 14px;
-  box-shadow: var(--admin-shadow-lg);
+  border: 1px solid var(--admin-border-subtle) !important;
+  background: var(--admin-modal-bg) !important;
+  color: var(--admin-text-main) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--admin-border-subtle) !important;
   font-family: var(--admin-font-sans);
-  padding: 0;
-  overflow: hidden;
-  box-sizing: border-box;
+  padding: 24px 28px !important;
+  max-width: 580px !important;
+  width: calc(100vw - 32px) !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
   animation: adminModalScale 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-modal.admin-modal-review-large {
+  padding: 0 !important;
+  max-width: 1100px !important;
+  width: 94vw !important;
+  height: 88vh !important;
+  max-height: 850px !important;
+  overflow: hidden !important;
+}
+
+.admin-modal button[id^="close"],
+.admin-modal .modal-close-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: var(--admin-text-muted, #94a3b8) !important;
+  font-size: 1.35rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.admin-modal button[id^="close"]:focus,
+.admin-modal .modal-close-btn:focus,
+.admin-modal button[id^="close"]:focus-visible,
+.admin-modal .modal-close-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.admin-modal button[id^="close"]:hover,
+.admin-modal .modal-close-btn:hover {
+  background: var(--admin-pill-secondary-hover, rgba(148, 163, 184, 0.15)) !important;
+  color: var(--admin-heading-color, #0f172a) !important;
 }
 
 @keyframes adminModalScale {
