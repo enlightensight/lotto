@@ -30,7 +30,7 @@ function sanitizeStatePacks(appState) {
   let changed = false;
   appState.slots.forEach(s => {
     if (s.packNumber) {
-      const clean = String(s.packNumber).replace(/[^0-9]/g, '');
+      const clean = String(s.packNumber).replace(/[^0-9-]/g, '');
       if (clean.length === 0) {
         s.packNumber = String(Math.floor(100000 + Math.random() * 900000));
         changed = true;
@@ -43,7 +43,7 @@ function sanitizeStatePacks(appState) {
   if (Array.isArray(appState.inventory)) {
     appState.inventory.forEach(p => {
       if (p.packNumber) {
-        const clean = String(p.packNumber).replace(/[^0-9]/g, '');
+        const clean = String(p.packNumber).replace(/[^0-9-]/g, '');
         if (clean.length === 0) {
           p.packNumber = String(Math.floor(100000 + Math.random() * 900000));
           changed = true;
@@ -1131,7 +1131,7 @@ function renderReceiveBookModal() {
   let err = '';
   if (rbState.gid && !/^\d{4}$/.test(rbState.gid)) {
     err = 'Game ID is 4 digits.';
-  } else if (rbState.pack && !/^\d{6,7}$/.test(rbState.pack)) {
+  } else if (rbState.pack && !/^\d{6,7}(-\d)?$/.test(rbState.pack)) {
     err = 'Pack # is 6 or 7 digits.';
   } else if (rbState.gid && rbState.pack) {
     const isDup = (state.inStockInventory || []).some(p => isPackNumberMatch(p.packNumber, rbState.pack));
@@ -1152,7 +1152,7 @@ function renderReceiveBookModal() {
     }
   }
 
-  const isReady = /^\d{4}$/.test(rbState.gid) && /^\d{6,7}$/.test(rbState.pack) && !err && (known || (rbState.name.trim() && priceN > 0));
+  const isReady = /^\d{4}$/.test(rbState.gid) && /^\d{6,7}(-\d)?$/.test(rbState.pack) && !err && (known || (rbState.name.trim() && priceN > 0));
   if (saveBtn) saveBtn.disabled = !isReady;
 }
 
@@ -8455,8 +8455,8 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
     if (btnAddStock) btnAddStock.style.display = 'none';
   }
 
-  // Populate metadata line (clean 6-digit pack number, never mangling check digit)
-  const displayPack = (parsed && parsed.packNumber) ? parsed.packNumber : ((parsed && parsed.packCombined) ? parsed.packCombined : '—');
+  // Populate metadata line (clean 6-digit pack number for display, check digit shown separately)
+  const displayPack = (parsed && (parsed.basePackNumber || parsed.packNumber)) ? (parsed.basePackNumber || parsed.packNumber) : ((parsed && parsed.packCombined) ? parsed.packCombined : '—');
   const displayTicketNum = (parsed && parsed.ticketString)
     ? parsed.ticketString
     : (parsed && parsed.ticketNumber !== null
@@ -8883,7 +8883,7 @@ export function showSetBoxSuccessState(boxNum, mode, chosenName, chosenPrice, ol
     textNew.textContent = `$${gPrice} ${gName} is now in box ${boxNum}, starting at ticket 000.`;
   }
 
-  const oldSlot = oldSlotInfo || pendingConflictResolution?.existingSlot;
+  const oldSlot = oldSlotInfo || (mode !== 'new' ? pendingConflictResolution?.existingSlot : null);
   if (oldSlot && lineOld) {
     lineOld.style.display = 'flex';
     const oldTitle = cleanGameTitle(oldSlot.gameName || 'Lucky 7s');
@@ -9526,9 +9526,11 @@ export function resolveBoxConflict(action) {
   );
 
   if (success) {
-    showSetBoxSuccessState(boxNum, action, newTicketData.chosenName, newTicketData.chosenPrice, slot);
-    showSetBoxSuccessState(boxNum, action, newTicketData.chosenName, newTicketData.chosenPrice, oldSlotSnapshot);
-    if (false && setBoxModal && setBoxModal.open) {
+    const actionDesc = (action === 'move')
+      ? 'moved to empty box'
+      : (action === 'return' ? 'returned to safe inventory' : 'marked sold out');
+    showToast(`✓ Previous book ${actionDesc}. Box #${boxNum} activated with ${cleanGameTitle(newTicketData.chosenName)}!`, 'success');
+    if (setBoxModal && setBoxModal.open) {
       setBoxModal.close();
     }
     pendingSetBoxBarcode = null;
@@ -9547,10 +9549,6 @@ export function resolveBoxConflict(action) {
     if (setTicketDetailsModal) {
       delete setTicketDetailsModal.dataset.barcode;
     }
-    const actionDesc = (action === 'move')
-      ? 'moved to empty box'
-      : (action === 'return' ? 'returned to safe inventory' : 'marked sold out');
-    showToast(`✓ Previous book ${actionDesc}. Box #${boxNum} activated with ${cleanGameTitle(newTicketData.chosenName)}!`, 'success');
   }
 
   pendingConflictResolution = null;
@@ -9687,33 +9685,32 @@ function confirmSetBoxForTicket(isFromEnterKey = false) {
 
     const success = handleSetBoxForTicket(boxNum, barcode, pendingSetBoxGame, restorePack, chosenName, chosenPrice, chosenPackSize, securityCode);
     if (success) {
-      showSetBoxSuccessState(boxNum, 'new', chosenName, chosenPrice, null);
-      if (false && setBoxModal && setBoxModal.open) {
-        if (setBoxModal && setBoxModal.open) {
-          setBoxModal.close();
-        }
-        pendingSetBoxBarcode = null;
-        pendingSetBoxGame = null;
-        pendingSetBoxSecurityCode = null;
-        pendingSetBoxDisplayBarcode = null;
-        pendingRestorePack = null;
-        pendingNewTicketBarcode = null;
-        if (setBoxModal) {
-          delete setBoxModal.dataset.barcode;
-          delete setBoxModal.dataset.securityCode;
-          delete setBoxModal.dataset.gameName;
-          delete setBoxModal.dataset.gamePrice;
-          delete setBoxModal.dataset.packSize;
-        }
-        if (setTicketDetailsModal) {
-          delete setTicketDetailsModal.dataset.barcode;
-        }
-        showToast(`✓ Box #${boxNum} activated with ${cleanGameTitle(chosenName)}!`, 'success');
+      showToast(`✓ Box #${boxNum} activated with ${cleanGameTitle(chosenName)}!`, 'success');
+      if (setBoxModal && setBoxModal.open) {
+        setBoxModal.close();
       }
+      pendingSetBoxBarcode = null;
+      pendingSetBoxGame = null;
+      pendingSetBoxSecurityCode = null;
+      pendingSetBoxDisplayBarcode = null;
+      pendingRestorePack = null;
+      pendingNewTicketBarcode = null;
+      pendingConflictResolution = null;
+      if (setBoxModal) {
+        delete setBoxModal.dataset.barcode;
+        delete setBoxModal.dataset.securityCode;
+        delete setBoxModal.dataset.gameName;
+        delete setBoxModal.dataset.gamePrice;
+        delete setBoxModal.dataset.packSize;
+      }
+      if (setTicketDetailsModal) {
+        delete setTicketDetailsModal.dataset.barcode;
+      }
+    }
     } finally {
-      setTimeout(() => {
-        isConfirmingSetBox = false;
-      }, 400);
+    setTimeout(() => {
+      isConfirmingSetBox = false;
+    }, 400);
     }
 
     if (lastScanReadoutContainer) {
@@ -15374,7 +15371,6 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         const isAttention = pack.status === 'check-position' || pack.category === 'attention';
         const rowClass = isAttention ? 'cs-row-attention' : '';
       
-...[truncated for diff preview]
       let closingHtml = `<span class="cs-ticket-num">${pack.closing}</span>`;
       if (pack.closingSub) {
         closingHtml += ` <span class="cs-status-sub ${pack.status === 'check-position' ? 'error' : ''}">${pack.closingSub}</span>`;

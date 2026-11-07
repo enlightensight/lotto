@@ -24331,7 +24331,7 @@ dialog#modalShiftReportViewer[open] {
 .setbox-conflict-game-title {
   font-weight: 800 !important;
   font-size: 15px !important;
-  ... [truncated for diff preview] color: #0f172a !important;
+  color: #0f172a !important;
 }
 
 [data-theme="dark"] .setbox-conflict-game-title {
