@@ -1340,11 +1340,37 @@ export function parseLotteryBarcode(raw, customGames = []) {
             });
           }
           if (parsed.partialTakeOuts && Array.isArray(parsed.partialTakeOuts)) {
+            const stillRemoved = [];
+            if (!Array.isArray(parsed.inStockInventory)) parsed.inStockInventory = [];
             parsed.partialTakeOuts.forEach(pto => {
               if (pto.packNumber) {
                 pto.packNumber = String(pto.packNumber).trim();
               }
+              if (pto.reason === 'Returned' || pto.status === 'RETURNED') {
+                if (!parsed.inStockInventory.some(p => String(p.packNumber) === String(pto.packNumber))) {
+                  parsed.inStockInventory.unshift({
+                    id: pto.id || ('stock_' + Date.now()),
+                    packNumber: String(pto.packNumber),
+                    gameName: pto.gameName || 'Scratch Game',
+                    gameNumber: pto.gameCode || pto.gameId ? `Game ${pto.gameCode || pto.gameId}` : 'Game 1401',
+                    price: pto.price || 1,
+                    packSize: `${pto.packSize || 100} tickets`,
+                    packSizeNum: pto.packSize || 100,
+                    currentTicket: pto.currentTicket || 0,
+                    position: String(pto.currentTicket || 0).padStart(3, '0'),
+                    boxNumber: null,
+                    box: null,
+                    status: 'IN_STOCK',
+                    statusLabel: 'In stock',
+                    statusBadgeClass: 'badge-in-stock',
+                    receivedDate: 'Today'
+                  });
+                }
+              } else {
+                stillRemoved.push(pto);
+              }
             });
+            parsed.partialTakeOuts = stillRemoved;
           }
           if (parsed.soldOutThisShift && Array.isArray(parsed.soldOutThisShift)) {
             parsed.soldOutThisShift.forEach(so => {

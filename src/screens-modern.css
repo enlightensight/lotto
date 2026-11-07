@@ -614,6 +614,15 @@ dialog::backdrop {
   background: #b91c1c !important;
   border-color: #b91c1c !important;
 }
+#btnExecuteRemoveBox.btn-primary {
+  background: var(--brand, #2563eb) !important;
+  border-color: var(--brand, #2563eb) !important;
+  color: #ffffff !important;
+}
+#btnExecuteRemoveBox.btn-primary:hover {
+  background: var(--brand-hover, #1d4ed8) !important;
+  border-color: var(--brand-hover, #1d4ed8) !important;
+}
 .btn-danger {
   background: var(--surface, #FFFFFF) !important;
   border-color: var(--danger, #C0261B) !important;

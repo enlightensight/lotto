@@ -539,23 +539,25 @@ export function getInventoryScreenData(state, activeTab = 'in_stock', searchQuer
   // 4. Removed Items (strictly real, zero mock leakage)
   let removedItems = [];
   if (state?.partialTakeOuts && state.partialTakeOuts.length > 0) {
-    state.partialTakeOuts.forEach((pto, idx) => {
-      removedItems.push({
-        id: `rem_live_${idx}`,
-        gameName: pto.gameName || 'Scratch-off',
-        gameNumber: `Game ${pto.gameCode || 1500}`,
-        packNumber: String(pto.packNumber),
-        price: pto.price || 5,
-        packSize: '60 tickets',
-        packSizeNum: 60,
-        status: 'REMOVED',
-        statusLabel: 'Removed',
-        statusBadgeClass: 'badge-removed',
-        boxNumber: pto.boxNumber || null,
-        position: String(pto.ticket || 0).padStart(3, '0'),
-        receivedDate: 'Today'
+    state.partialTakeOuts
+      .filter(pto => pto && pto.reason !== 'Returned' && pto.status !== 'RETURNED')
+      .forEach((pto, idx) => {
+        removedItems.push({
+          id: `rem_live_${idx}`,
+          gameName: pto.gameName || 'Scratch-off',
+          gameNumber: `Game ${pto.gameCode || 1500}`,
+          packNumber: String(pto.packNumber),
+          price: pto.price || 5,
+          packSize: '60 tickets',
+          packSizeNum: 60,
+          status: 'REMOVED',
+          statusLabel: 'Removed',
+          statusBadgeClass: 'badge-removed',
+          boxNumber: pto.boxNumber || null,
+          position: String(pto.ticket || 0).padStart(3, '0'),
+          receivedDate: 'Today'
+        });
       });
-    });
   }
 
   // 5. All Items (Sum of inStock + active + completed + removed = 27)
