@@ -59,7 +59,7 @@ export function getLocalAdminState() {
         return parsed;
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const initial = {
     stores: DEFAULT_INITIAL_STORES,
@@ -151,7 +151,7 @@ export async function fetchStoreCatalog(storeId) {
         return data.catalog;
       }
     }
-  } catch (err) {}
+  } catch (err) { }
 
   // Fallback to local admin state
   const adminState = getLocalAdminState();
@@ -180,7 +180,7 @@ export async function fetchStoreTicketRequests(storeId) {
         return data.requests;
       }
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const adminState = getLocalAdminState();
   return (adminState.ticketRequests || []).filter(r => r.storeId === storeId);
@@ -199,12 +199,12 @@ export async function submitStoreTicketRequest(storeId, storeName, gameId, reque
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   // Fallback local update
   const adminState = getLocalAdminState();
   const game = (adminState.catalog || []).find(g => g.gameId === gameId) || { gameName: 'Lottery Game', price: 1, packSize: 100 };
-  
+
   // Check if pending request exists
   const existing = (adminState.ticketRequests || []).find(r => r.storeId === storeId && r.gameId === gameId && r.status === 'PENDING');
   if (existing) {
@@ -241,7 +241,7 @@ export async function fetchStoreApprovedTickets(storeId) {
         return data.approved;
       }
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const adminState = getLocalAdminState();
   const approvedIds = (adminState.approvedTickets || []).filter(a => a.storeId === storeId && a.status !== 'REVOKED').map(a => a.gameId);
@@ -257,7 +257,7 @@ export async function fetchStoreAllocations(storeId) {
         return data.allocations;
       }
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const adminState = getLocalAdminState();
   return (adminState.allocations || []).filter(a => a.storeId === storeId);
@@ -274,7 +274,7 @@ export async function receiveStoreAllocation(allocationId, storeId, receivedBy) 
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const adminState = getLocalAdminState();
   const alloc = (adminState.allocations || []).find(a => (a.id === allocationId || String(a.id) === String(allocationId)) && a.storeId === storeId);
@@ -303,14 +303,14 @@ export function getAdminHeaders() {
         try {
           const parsed = JSON.parse(sess);
           if (parsed?.adminToken) token = parsed.adminToken;
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     if (token) {
       headers['x-admin-token'] = token;
       headers['Authorization'] = `Bearer ${token}`;
     }
-  } catch (_) {}
+  } catch (_) { }
   return headers;
 }
 
@@ -321,7 +321,7 @@ export async function fetchAdminOverview() {
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const totalStores = st.stores.length;
@@ -361,7 +361,7 @@ export async function updateStoreStatus(storeId, authorizationStatus, operationa
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const store = st.stores.find(s => s.storeId === storeId);
@@ -396,7 +396,7 @@ export async function reviewStoreApplication(appId, decision, adminUsername, not
     const data = await res.json().catch(() => null);
     if (res.ok && data?.success) return data;
     if (data && data.message) return { success: false, message: data.message };
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const app = st.applications.find(a => a.id === appId || String(a.id) === String(appId));
@@ -454,7 +454,7 @@ export async function addOrUpdateCatalogGame(gameObj, adminUsername) {
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const existingIdx = st.catalog.findIndex(g => g.gameId === gameObj.gameId);
@@ -489,7 +489,7 @@ export async function reviewStoreTicketRequest(requestId, decision, adminUsernam
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const req = st.ticketRequests.find(r => r.id === requestId || String(r.id) === String(requestId));
@@ -544,7 +544,7 @@ export async function createTicketAllocation(allocationData, adminUsername) {
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const cleanPack = String(allocationData.packNumber || '').trim();
@@ -636,7 +636,7 @@ export async function syncAdminStateFromServer() {
       if (d.success && Array.isArray(d.feedback)) st.feedback = d.feedback;
     }
     saveLocalAdminState(st);
-  } catch (_) {}
+  } catch (_) { }
   return st;
 }
 
@@ -668,7 +668,7 @@ export async function fetchAdminFeedback() {
       saveLocalAdminState(st);
       return data.feedback;
     }
-  } catch (e) {}
+  } catch (e) { }
   const st = getLocalAdminState();
   return st.feedback || [];
 }
@@ -703,7 +703,7 @@ export async function fetchAdminReports() {
       const data = await res.json();
       if (data.success) return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   const st = getLocalAdminState();
   const storesSummary = (st.stores || []).map(s => ({
@@ -768,7 +768,7 @@ export async function adminLogout() {
       method: 'POST',
       headers: getAdminHeaders()
     });
-  } catch (_) {}
+  } catch (_) { }
   sessionStorage.removeItem('lotto_admin_token');
   localStorage.removeItem('lotto_admin_token');
   sessionStorage.removeItem('lotto_session_user');
@@ -785,122 +785,127 @@ export async function fetchPaymentGatewayConfig() {
   return res.json();
 }
 
-export async function createPaymentCheckoutSession(planId, billingCycle = 'monthly') {
-  const res = await fetch('/api/payments/create-checkout-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ planId, billingCycle, returnOrigin: window.location.origin })
-  });
-  return res.json();
-}
-
-export async function checkoutSubscriptionAndRegister(payload) {
-  const res = await fetch('/api/subscriptions/checkout-and-register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  return res.json();
-}
-
-export async function resubmitStoreDocuments(payload) {
-  const headers = { 'Content-Type': 'application/json' };
-  const storeToken = sessionStorage.getItem('lotto_store_token') || localStorage.getItem('lotto_store_token');
-  if (storeToken) {
-    headers['x-store-token'] = storeToken;
-    headers['Authorization'] = `Bearer ${storeToken}`;
-  }
-  const res = await fetch('/api/store/resubmit-documents', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload)
-  });
-  return res.json();
-}
-
-export async function fetchStoreAdminDetails(storeId) {
-  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/details`, {
-    headers: getAdminHeaders()
-  });
-  return res.json();
-}
-
-export async function verifyStoreDocumentsAndRetailer(storeId, payload) {
-  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/verify-documents`, {
-    method: 'POST',
-    headers: getAdminHeaders(),
-    body: JSON.stringify(payload)
-  });
-  return res.json();
-}
-
-export async function suspendStoreWithReason(storeId, reason, adminUsername = 'admin') {
-  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/suspend`, {
-    method: 'POST',
-    headers: getAdminHeaders(),
-    body: JSON.stringify({ reason, adminUsername })
-  });
-  return res.json();
-}
-
-export async function reapproveSuspendedStore(storeId, payload = {}) {
-  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/reapprove`, {
-    method: 'POST',
-    headers: getAdminHeaders(),
-    body: JSON.stringify(payload)
-  });
-  return res.json();
-}
-
-export function checkStoreCanSell(storeId, gameId = null) {
-  const st = getLocalAdminState();
-  const store = st.stores.find(s => s.storeId === storeId);
-  let sessionUser = null;
-  try {
-    sessionUser = JSON.parse(sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user') || 'null');
-  } catch (_) {}
-
-  const effectiveAccess = store?.softwareAccessStatus || (sessionUser?.storeId === storeId ? sessionUser?.softwareAccessStatus : null);
-  const effectiveAuth = store?.authorizationStatus;
-  if (effectiveAccess === 'SUSPENDED' || effectiveAuth === 'SUSPENDED') {
-    const rsn = store?.suspensionReason || sessionUser?.suspensionReason || '';
-    return {
-      allowed: false,
-      reason: 'STORE_SUSPENDED',
-      message: `Store "${store?.storeName || storeId}" is SUSPENDED.${rsn ? ' Reason: ' + rsn : ' Ticket sales are disabled.'}`
-    };
+  export async function createPaymentCheckoutSession(planId, billingCycle = 'monthly', options = {}) {
+    const res = await fetch('/api/payments/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        planId,
+        billingCycle,
+        returnOrigin: window.location.origin,
+        returnPath: options.returnPath || window.location.pathname || '/pos'
+      })
+    });
+    return res.json();
   }
 
-  const subStatus = store?.subscriptionStatus || (sessionUser?.storeId === storeId ? sessionUser?.subscriptionStatus : null);
-  if (subStatus && subStatus !== 'ACTIVE') {
-    return {
-      allowed: false,
-      reason: 'SUBSCRIPTION_INACTIVE',
-      message: `Store subscription is ${subStatus}. Ticket selling is disabled.`
-    };
+  export async function checkoutSubscriptionAndRegister(payload) {
+    const res = await fetch('/api/subscriptions/checkout-and-register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
   }
 
-  const retailerStatus = store?.retailerAuthStatus || (sessionUser?.storeId === storeId ? sessionUser?.retailerAuthStatus : null);
-  if (retailerStatus && retailerStatus !== 'VALID') {
-    return {
-      allowed: false,
-      reason: 'RETAILER_AUTH_REQUIRED',
-      message: `Lottery ticket sales are locked: Official lottery retailer authorization is "${retailerStatus}" for this business location. Software access is ACTIVE while official retailer verification is completed.`
-    };
+  export async function resubmitStoreDocuments(payload) {
+    const headers = { 'Content-Type': 'application/json' };
+    const storeToken = sessionStorage.getItem('lotto_store_token') || localStorage.getItem('lotto_store_token');
+    if (storeToken) {
+      headers['x-store-token'] = storeToken;
+      headers['Authorization'] = `Bearer ${storeToken}`;
+    }
+    const res = await fetch('/api/store/resubmit-documents', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+    return res.json();
   }
 
-  if (gameId) {
-    const isApproved = (st.approvedTickets || []).some(a => a.storeId === storeId && a.gameId === String(gameId) && a.status !== 'REVOKED');
-    if (!isApproved) {
-      const game = (st.catalog || []).find(g => g.gameId === String(gameId));
-      const gameTitle = game ? game.gameName : `Game #${gameId}`;
+  export async function fetchStoreAdminDetails(storeId) {
+    const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/details`, {
+      headers: getAdminHeaders()
+    });
+    return res.json();
+  }
+
+  export async function verifyStoreDocumentsAndRetailer(storeId, payload) {
+    const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/verify-documents`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  export async function suspendStoreWithReason(storeId, reason, adminUsername = 'admin') {
+    const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/suspend`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify({ reason, adminUsername })
+    });
+    return res.json();
+  }
+
+  export async function reapproveSuspendedStore(storeId, payload = {}) {
+    const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/reapprove`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  export function checkStoreCanSell(storeId, gameId = null) {
+    const st = getLocalAdminState();
+    const store = st.stores.find(s => s.storeId === storeId);
+    let sessionUser = null;
+    try {
+      sessionUser = JSON.parse(sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user') || 'null');
+    } catch (_) { }
+
+    const effectiveAccess = store?.softwareAccessStatus || (sessionUser?.storeId === storeId ? sessionUser?.softwareAccessStatus : null);
+    const effectiveAuth = store?.authorizationStatus;
+    if (effectiveAccess === 'SUSPENDED' || effectiveAuth === 'SUSPENDED') {
+      const rsn = store?.suspensionReason || sessionUser?.suspensionReason || '';
       return {
         allowed: false,
-        reason: 'GAME_NOT_APPROVED',
-        message: `Ticket type "${gameTitle}" is not yet approved by the administrator for this store. Please submit an approval request under "Manage Lottery Tickets".`
+        reason: 'STORE_SUSPENDED',
+        message: `Store "${store?.storeName || storeId}" is SUSPENDED.${rsn ? ' Reason: ' + rsn : ' Ticket sales are disabled.'}`
       };
     }
-  }
 
-  return { allowed: true };
-}
+    const subStatus = store?.subscriptionStatus || (sessionUser?.storeId === storeId ? sessionUser?.subscriptionStatus : null);
+    if (subStatus && subStatus !== 'ACTIVE') {
+      return {
+        allowed: false,
+        reason: 'SUBSCRIPTION_INACTIVE',
+        message: `Store subscription is ${subStatus}. Ticket selling is disabled.`
+      };
+    }
+
+    const retailerStatus = store?.retailerAuthStatus || (sessionUser?.storeId === storeId ? sessionUser?.retailerAuthStatus : null);
+    if (retailerStatus && retailerStatus !== 'VALID') {
+      return {
+        allowed: false,
+        reason: 'RETAILER_AUTH_REQUIRED',
+        message: `Lottery ticket sales are locked: Official lottery retailer authorization is "${retailerStatus}" for this business location. Software access is ACTIVE while official retailer verification is completed.`
+      };
+    }
+
+    if (gameId) {
+      const isApproved = (st.approvedTickets || []).some(a => a.storeId === storeId && a.gameId === String(gameId) && a.status !== 'REVOKED');
+      if (!isApproved) {
+        const game = (st.catalog || []).find(g => g.gameId === String(gameId));
+        const gameTitle = game ? game.gameName : `Game #${gameId}`;
+        return {
+          allowed: false,
+          reason: 'GAME_NOT_APPROVED',
+          message: `Ticket type "${gameTitle}" is not yet approved by the administrator for this store. Please submit an approval request under "Manage Lottery Tickets".`
+        };
+      }
+    }
+
+    return { allowed: true };
+  }

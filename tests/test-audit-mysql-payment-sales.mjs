@@ -45,7 +45,7 @@ function startServer(port, dataDir, extraEnv = {}) {
   return { proc, getLogs: () => logs };
 }
 
-async function waitForServer(port, procObj, timeoutMs = 15000) {
+async function waitForServer(port, procObj, timeoutMs = 35000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {

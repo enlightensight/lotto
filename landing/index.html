@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <!-- Keyboard accessibility skip link -->
@@ -32,12 +32,14 @@
         <ul class="nav-links">
           <li><a href="#how" class="nav-link">How It Works</a></li>
           <li><a href="#benefits" class="nav-link">Benefits</a></li>
+          <li><a href="#plans" class="nav-link">Plans</a></li>
           <li><a href="#faq" class="nav-link">FAQ</a></li>
         </ul>
       </nav>
 
       <div class="nav-actions">
-        <a href="#demo" class="btn btn-primary">Request a Demo</a>
+        <a href="/pos" class="btn btn-secondary js-open-pos-signin">Sign In</a>
+        <a href="#plans" class="btn btn-primary js-open-subscribe-modal" data-plan-id="pro">Subscribe &amp; Start</a>
         <button type="button" class="mobile-nav-toggle" aria-expanded="false" aria-label="Toggle navigation menu">
           Menu
         </button>
@@ -60,7 +62,8 @@
               LottoTrack Pro tracks every scratch-off pack, keeps your inventory and sales up to date, and helps balance your cash drawer at the end of the shift.
             </p>
             <div class="hero-cta-group">
-              <a href="#demo" class="btn btn-primary">Request a Demo</a>
+              <button type="button" class="btn btn-primary js-open-subscribe-modal" data-plan-id="pro">Subscribe &amp; Create Account</button>
+              <a href="/pos" class="btn btn-secondary js-open-pos-signin">Sign In to POS</a>
               <a href="#how" class="btn btn-secondary">See How It Works</a>
             </div>
             <div class="hero-small-line">
@@ -533,6 +536,72 @@
     </section>
 
     <!-- ==================================================================
+         10B. SUBSCRIPTION PLANS & IMMEDIATE POS ACCOUNT CREATION (id="plans")
+         ================================================================== -->
+    <section id="plans" class="section" aria-labelledby="plans-heading">
+      <div class="container">
+        <div class="plans-header-row">
+          <div>
+            <span class="eyebrow">Subscription &amp; POS Access</span>
+            <h2 id="plans-heading" class="section-h2">Subscribe to create your POS store account.</h2>
+            <p class="section-lead" style="margin-bottom: 0;">
+              A paid subscription is required to create your store account and log in to the POS. Software access activates immediately after payment; live ticket sales unlock once your official lottery retailer authorization is verified.
+            </p>
+          </div>
+          <div class="billing-toggle" role="group" aria-label="Billing cycle">
+            <button type="button" class="billing-toggle-btn is-active" data-billing-cycle="monthly">Monthly</button>
+            <button type="button" class="billing-toggle-btn" data-billing-cycle="annual">Annual (Save ~17%)</button>
+          </div>
+        </div>
+
+        <div id="landing-plans-grid" class="plans-grid">
+          <article class="plan-card" data-plan-id="starter">
+            <div class="plan-card-header">
+              <h3 class="plan-name">Starter</h3>
+              <p class="plan-desc">Single-counter store tracking &amp; daily reconciliation</p>
+            </div>
+            <div class="plan-price" data-monthly="49" data-annual="490">$49<span>/mo</span></div>
+            <ul class="plan-features">
+              <li>1 retail store counter</li>
+              <li>Scratch-off box &amp; shift tracking</li>
+              <li>Automated settlement &amp; audit log</li>
+            </ul>
+            <button type="button" class="btn btn-secondary js-select-plan-btn" data-plan-id="starter">Subscribe &amp; Create Account</button>
+          </article>
+
+          <article class="plan-card is-popular" data-plan-id="pro">
+            <div class="plan-card-header">
+              <span class="plan-badge">Most Popular</span>
+              <h3 class="plan-name">Pro</h3>
+              <p class="plan-desc">Full POS scanner workflow, shift audits &amp; cloud sync</p>
+            </div>
+            <div class="plan-price" data-monthly="99" data-annual="990">$99<span>/mo</span></div>
+            <ul class="plan-features">
+              <li>Unlimited scratch-off boxes &amp; packs</li>
+              <li>Honeywell barcode scanner + voice count</li>
+              <li>Multi-user cashiers &amp; shift reports</li>
+            </ul>
+            <button type="button" class="btn btn-primary js-select-plan-btn" data-plan-id="pro">Subscribe &amp; Create Account</button>
+          </article>
+
+          <article class="plan-card" data-plan-id="enterprise">
+            <div class="plan-card-header">
+              <h3 class="plan-name">Enterprise</h3>
+              <p class="plan-desc">High-volume counters, priority support &amp; custom onboarding</p>
+            </div>
+            <div class="plan-price" data-monthly="179" data-annual="1790">$179<span>/mo</span></div>
+            <ul class="plan-features">
+              <li>Priority compliance &amp; license review</li>
+              <li>Extended audit log retention</li>
+              <li>Dedicated store setup assistance</li>
+            </ul>
+            <button type="button" class="btn btn-secondary js-select-plan-btn" data-plan-id="enterprise">Subscribe &amp; Create Account</button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
          11. FINAL CTA AND DEMO FORM (id="demo")
          Lead Conversion • Client-side Validation • Config-bound Fallback
          ================================================================== -->
@@ -658,12 +727,167 @@
         <ul class="footer-links">
           <li><a href="#how" class="footer-link">How It Works</a></li>
           <li><a href="#benefits" class="footer-link">Benefits</a></li>
+          <li><a href="#plans" class="footer-link">Plans</a></li>
           <li><a href="#faq" class="footer-link">FAQ</a></li>
+          <li><a href="/pos" class="footer-link js-open-pos-signin">Sign In to POS</a></li>
         </ul>
       </div>
     </div>
   </footer>
 
-  <script src="script.js?v=3" defer></script>
+  <!-- Subscribe & Create POS Store Account Modal -->
+  <dialog id="subscribe-modal" class="subscribe-modal" aria-labelledby="subscribe-modal-title">
+    <div class="subscribe-modal-card">
+      <div class="subscribe-modal-header">
+        <div>
+          <span class="eyebrow" style="margin-bottom: 0.25rem;">Paid Subscription Required</span>
+          <h2 id="subscribe-modal-title" class="subscribe-modal-title">Subscribe &amp; Create POS Account</h2>
+        </div>
+        <button type="button" id="subscribe-modal-close" class="subscribe-modal-close" aria-label="Close signup modal">&times;</button>
+      </div>
+
+      <form id="subscribe-account-form" class="subscribe-form-shell" novalidate>
+        <div class="subscribe-modal-body" id="subscribe-modal-body">
+          <div class="subscribe-notice-box">
+            Subscription activates immediately upon verified payment so you can open the POS right away. Live lottery ticket sales unlock after official lottery retailer authorization is verified.
+          </div>
+
+          <div class="subscribe-plan-summary">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sub-plan" class="form-label">Subscription Plan <span class="required-star">*</span></label>
+                <select id="sub-plan" name="planId" class="form-select" required>
+                  <option value="starter">Starter ($49/mo)</option>
+                  <option value="pro" selected>Pro ($99/mo)</option>
+                  <option value="enterprise">Enterprise ($179/mo)</option>
+                </select>
+                <span class="field-error-msg"></span>
+              </div>
+              <div class="form-group">
+                <label for="sub-billing-cycle" class="form-label">Billing Cycle <span class="required-star">*</span></label>
+                <select id="sub-billing-cycle" name="billingCycle" class="form-select" required>
+                  <option value="monthly" selected>Monthly Billing</option>
+                  <option value="annual">Annual Billing</option>
+                </select>
+                <span class="field-error-msg"></span>
+              </div>
+            </div>
+            <div id="sub-selected-total" class="subscribe-total-line">Selected total: <strong>$99.00 / month</strong></div>
+            <div id="sub-gateway-warning" class="subscribe-gateway-warning" hidden></div>
+          </div>
+
+          <div class="sub-section-card">
+            <div class="sub-section-title">1. Store &amp; Owner Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sub-store-name" class="form-label">Store / Business Name <span class="required-star">*</span></label>
+                <input type="text" id="sub-store-name" name="storeName" class="form-input" placeholder="e.g. Amigo Food Mart" required>
+                <span class="field-error-msg"></span>
+              </div>
+              <div class="form-group">
+                <label for="sub-owner-name" class="form-label">Owner / Applicant Name <span class="required-star">*</span></label>
+                <input type="text" id="sub-owner-name" name="applicantName" class="form-input" placeholder="Full legal name" required>
+                <span class="field-error-msg"></span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sub-email" class="form-label">Business Email <span class="required-star">*</span></label>
+                <input type="email" id="sub-email" name="applicantEmail" class="form-input" placeholder="owner@store.com" required autocomplete="email">
+                <span class="field-error-msg"></span>
+              </div>
+              <div class="form-group">
+                <label for="sub-phone" class="form-label">Phone Number <span class="required-star">*</span></label>
+                <input type="tel" id="sub-phone" name="applicantPhone" class="form-input" placeholder="(555) 123-4567" required autocomplete="tel">
+                <span class="field-error-msg"></span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="sub-address" class="form-label">Physical Store Street Address <span class="required-star">*</span></label>
+              <input type="text" id="sub-address" name="address" class="form-input" placeholder="Street, City, State, ZIP" required autocomplete="street-address">
+              <span class="field-error-msg"></span>
+            </div>
+          </div>
+
+          <div class="sub-section-card">
+            <div class="sub-section-title">2. POS Sign-In Credentials</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sub-username" class="form-label">POS Login ID / Username <span class="required-star">*</span></label>
+                <input type="text" id="sub-username" name="username" class="form-input" minlength="3" placeholder="e.g. storemanager01" required autocomplete="username">
+                <span class="field-error-msg"></span>
+              </div>
+              <div class="form-group">
+                <label for="sub-password" class="form-label">POS Login Password <span class="required-star">*</span></label>
+                <div class="sub-password-wrap">
+                  <input type="password" id="sub-password" name="password" class="form-input" minlength="4" placeholder="Minimum 4 characters" required autocomplete="new-password">
+                  <button type="button" id="sub-toggle-password" class="sub-password-toggle" aria-label="Show password">Show</button>
+                </div>
+                <span class="field-error-msg"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-section-card">
+            <div class="sub-section-title">3. Lottery Retailer &amp; Compliance Documents <span class="sub-optional-tag">(Optional now; required for live ticket sales)</span></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sub-retailer-id" class="form-label">Official Lottery Retailer ID <span class="sub-optional-tag">(Optional)</span></label>
+                <input type="text" id="sub-retailer-id" name="lotteryRetailerId" class="form-input" placeholder="State retailer license ID">
+              </div>
+              <div class="form-group">
+                <label for="sub-tax-id" class="form-label">Business Tax ID / FEIN <span class="sub-optional-tag">(Optional)</span></label>
+                <input type="text" id="sub-tax-id" name="businessTaxId" class="form-input" placeholder="XX-XXXXXXX">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sub-license-expiry" class="form-label">Retailer License Expiration <span class="sub-optional-tag">(Optional)</span></label>
+                <input type="date" id="sub-license-expiry" name="licenseExpiry" class="form-input">
+              </div>
+              <div class="form-group">
+                <label for="sub-license-files" class="form-label">Business / Lottery Documents <span class="sub-optional-tag">(Optional)</span></label>
+                <div class="sub-file-picker">
+                  <input type="file" id="sub-license-files" name="licenseFiles" class="sub-file-input-hidden" accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.zip" multiple>
+                  <button type="button" id="sub-pick-files-btn" class="btn btn-secondary sub-file-btn">Upload Files</button>
+                  <span id="sub-license-files-list" class="sub-file-name-list">No files attached</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subscribe-modal-footer">
+          <div id="sub-form-feedback" class="form-feedback-box" role="alert" aria-live="assertive"></div>
+          <div class="subscribe-footer-row">
+            <a href="/pos" class="subscribe-signin-hint js-open-pos-signin">Already subscribed? Sign In to POS</a>
+            <div class="subscribe-modal-actions">
+              <button type="button" id="sub-cancel-btn" class="btn btn-secondary">Cancel</button>
+              <button type="submit" id="sub-submit-btn" class="btn btn-primary">Subscribe &amp; Create Account</button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div id="sub-success-panel" class="subscribe-success-panel" hidden>
+        <h3 class="form-header-title">Subscription Active &amp; Store Account Ready</h3>
+        <p class="form-header-line" id="sub-success-summary">Your subscription is active and your POS session is ready.</p>
+        <div class="subscribe-status-grid">
+          <div class="subscribe-status-item"><span>Subscription</span><strong id="sub-status-sub">ACTIVE</strong></div>
+          <div class="subscribe-status-item"><span>Software Access</span><strong id="sub-status-access">ACTIVE</strong></div>
+          <div class="subscribe-status-item"><span>Documents</span><strong id="sub-status-docs">PENDING_REVIEW</strong></div>
+          <div class="subscribe-status-item"><span>Retailer Auth</span><strong id="sub-status-retailer">PENDING_VERIFICATION</strong></div>
+        </div>
+        <div class="subscribe-modal-actions" style="margin-top: 1.25rem;">
+          <a href="/pos" id="sub-launch-pos-btn" class="btn btn-primary">Open POS System Now</a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="script.js?v=7" defer></script>
 </body>
 </html>
