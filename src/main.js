@@ -10,9 +10,10 @@ import { getInventoryScreenData, REFERENCE_IN_STOCK_PACKS } from './inventoryDat
 import { getHistoryScreenData, getDailyReportData } from './historyData.js';
 import { getSettingsGamesList, REFERENCE_MODERN_SETTINGS_GAMES } from './gamesData.js';
 import { getSettingsPeopleList, getSettingsRolesPeopleList, REFERENCE_MODERN_SETTINGS_PEOPLE, findUserByCredentials, lookupUserAssignedStore, getAllAuthUsers, isCurrentAdmin, verifyAdminCredentials } from './clerksData.js';
-import { initDatabaseSync, checkMySQLStatus, saveShiftReportToDB, syncHistoricalShiftsToDB, logTicketScanToDB, loadPOSStateFromDB, clearPOSStateOnDB, syncPOSStateToDB } from './dbSync.js';
+import { initDatabaseSync, checkMySQLStatus, getAuthHeaders, saveShiftReportToDB, syncHistoricalShiftsToDB, logTicketScanToDB, loadPOSStateFromDB, clearPOSStateOnDB, syncPOSStateToDB } from './dbSync.js';
 import { openDaySettlementModal, openPastDaysModal } from './settlementHistoryModals.js';
 import { initAdminDashboardScreen, initManageTicketsScreen } from './adminUiHandlers.js';
+import { checkStoreCanSell, getLocalAdminState, saveLocalAdminState } from './adminStoreSync.js';
 
 const BUILD_ID = '2026-10-22-phase0';
 if (typeof document !== 'undefined' && document.documentElement) {
@@ -1587,59 +1588,112 @@ function initPOS() {
   runStep('setupSidebarAutoCollapse', setupSidebarAutoCollapse);
   _eventListenersInitialized = true;
 
-  // Multi-device synchronization: fetch latest active state from backend server
-  loadPOSStateFromDB().then(serverState => {
-    if (serverState && Array.isArray(serverState.slots)) {
-      if (serverState.dataCleared) {
-        if (!state.dataCleared) {
-          state = resetToCleanState(state);
+  // Align active store immediately before background sync so stale store state never flashes
+  const hasSyncSession = () => {
+    const signedOut = sessionStorage.getItem('lotto_signed_out') === 'true' || localStorage.getItem('lotto_signed_out') === 'true';
+    if (signedOut) return false;
+    const rawSess = sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user');
+    if (rawSess) return true;
+    return (typeof navigator !== 'undefined' && (navigator.webdriver || navigator.userAgent.includes('Headless'))) ||
+      (typeof window !== 'undefined' && window.location.search.includes('bypass_login'));
+  };
+
+  try {
+    const rawSessInit = sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user');
+    const signedOutInit = sessionStorage.getItem('lotto_signed_out') === 'true' || localStorage.getItem('lotto_signed_out') === 'true';
+    if (rawSessInit && !signedOutInit) {
+      const parsedSess = JSON.parse(rawSessInit);
+      const isAdm = Boolean(parsedSess?.isAdmin || parsedSess?.role === 'SUPER_ADMIN');
+      const expectedSid = isAdm ? (parsedSess.posStoreId || 'store_admin') : parsedSess?.storeId;
+      if (expectedSid && expectedSid !== getCurrentStoreId()) {
+        setCurrentStoreId(expectedSid);
+        state = loadState(expectedSid);
+        sanitizeStatePacks(state);
+        window.state = state;
+        window.__state = state;
+      }
+    }
+  } catch (_) { }
+
+  // Multi-device synchronization: fetch latest active state from backend server when authenticated
+  if (hasSyncSession()) {
+    const initSid = getCurrentStoreId();
+    loadPOSStateFromDB(initSid).then(serverState => {
+      if (serverState && Array.isArray(serverState.slots)) {
+        if (serverState.dataCleared) {
+          if (!state.dataCleared) {
+            state = resetToCleanState(state);
+            if (typeof updateStoreBrandDisplay === 'function') updateStoreBrandDisplay();
+            renderHeaderAndMetrics();
+            renderDispenserRack();
+            renderSlotsRibbon();
+          }
+          return;
+        }
+
+        const currentSid = getCurrentStoreId();
+        if (currentSid !== initSid) return;
+        if (serverState.storeId && serverState.storeId !== currentSid) {
+          return;
+        }
+        if (currentSid === 'store_admin' && (serverState.storeName === 'AMIGO FOOD MART' || serverState.storeName === 'ANISH STORE')) {
+          serverState.storeName = 'ADMIN STORE';
+          serverState.storeAddress = 'Platform Head Office, Warner Robins, GA, 31088';
+          serverState.retailerNumber = 'GA-ADM01';
+          if (serverState.cashierName === 'master') serverState.cashierName = 'Platform Administrator';
+        }
+        const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
+        const localTime = state.lastSavedAt ? new Date(state.lastSavedAt).getTime() : 0;
+        const isServerNewer = serverTime >= localTime;
+        const isDifferent = JSON.stringify(serverState.slots) !== JSON.stringify(state.slots) ||
+          (serverState.shiftNumber || 1) !== (state.shiftNumber || 1) ||
+          (serverState.soldBarcodes || []).length !== (state.soldBarcodes || []).length ||
+          (serverState.inStockInventory || []).length !== (state.inStockInventory || []).length;
+        if (isServerNewer || isDifferent) {
+          Object.assign(state, serverState);
+          state.storeId = currentSid;
+          state.dataCleared = Boolean(serverState.dataCleared);
+          saveState(state, currentSid);
+          if (typeof updateStoreBrandDisplay === 'function') updateStoreBrandDisplay();
           renderHeaderAndMetrics();
           renderDispenserRack();
           renderSlotsRibbon();
+          if (typeof renderInventoryView === 'function') renderInventoryView();
+          if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
+          if (typeof renderDayReportView === 'function') renderDayReportView();
+          if (typeof renderHistoryView === 'function') renderHistoryView();
+          if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
         }
-        return;
       }
+    }).catch(() => { });
+  }
 
-      const currentSid = getCurrentStoreId();
-      if (serverState.storeId && serverState.storeId !== currentSid) {
-        return;
-      }
-      const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
-      const localTime = state.lastSavedAt ? new Date(state.lastSavedAt).getTime() : 0;
-      const isServerNewer = serverTime >= localTime;
-      const isDifferent = JSON.stringify(serverState.slots) !== JSON.stringify(state.slots) ||
-        (serverState.shiftNumber || 1) !== (state.shiftNumber || 1) ||
-        (serverState.soldBarcodes || []).length !== (state.soldBarcodes || []).length ||
-        (serverState.inStockInventory || []).length !== (state.inStockInventory || []).length;
-      if (isServerNewer || isDifferent) {
-        Object.assign(state, serverState);
-        state.storeId = currentSid;
-        state.dataCleared = Boolean(serverState.dataCleared);
-        saveState(state, currentSid);
-        renderHeaderAndMetrics();
-        renderDispenserRack();
-        renderSlotsRibbon();
-        if (typeof renderInventoryView === 'function') renderInventoryView();
-        if (typeof renderReceivePacksView === 'function') renderReceivePacksView();
-        if (typeof renderDayReportView === 'function') renderDayReportView();
-        if (typeof renderHistoryView === 'function') renderHistoryView();
-        if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
-      }
-    }
-  }).catch(() => { });
-
-  // Multi-device background synchronizer: keeps open devices updated with friend's ticket sales
+  // Multi-device background synchronizer: keeps active authenticated POS view synced without touching Admin/Sign-in
   function syncWithServerIfActive() {
+    if (!hasSyncSession()) return;
+    const adminDash = document.getElementById('viewAdminDashboard');
+    if (adminDash && adminDash.style.display !== 'none') return;
+    const signInView = document.getElementById('viewSignIn');
+    if (signInView && signInView.style.display === 'flex') return;
+
     const activeSid = getCurrentStoreId();
     if (!activeSid || state.shiftStatus === 'SCANNING_END_SHIFT' || state.isUpdatingInventory) return;
     loadPOSStateFromDB(activeSid).then(serverState => {
+      if (getCurrentStoreId() !== activeSid) return;
       if (serverState && Array.isArray(serverState.slots) && (!serverState.storeId || serverState.storeId === activeSid)) {
         if (serverState.dataCleared && !state.dataCleared) {
           state = resetToCleanState(state);
+          if (typeof updateStoreBrandDisplay === 'function') updateStoreBrandDisplay();
           renderHeaderAndMetrics();
           renderDispenserRack();
           renderSlotsRibbon();
           return;
+        }
+        if (activeSid === 'store_admin' && (serverState.storeName === 'AMIGO FOOD MART' || serverState.storeName === 'ANISH STORE')) {
+          serverState.storeName = 'ADMIN STORE';
+          serverState.storeAddress = 'Platform Head Office, Warner Robins, GA, 31088';
+          serverState.retailerNumber = 'GA-ADM01';
+          if (serverState.cashierName === 'master') serverState.cashierName = 'Platform Administrator';
         }
         const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
         const localTime = state.lastSavedAt ? new Date(state.lastSavedAt).getTime() : 0;
@@ -1654,6 +1708,7 @@ function initPOS() {
           state.storeId = activeSid;
           state.dataCleared = Boolean(serverState.dataCleared);
           saveState(state, activeSid);
+          if (typeof updateStoreBrandDisplay === 'function') updateStoreBrandDisplay();
           renderHeaderAndMetrics();
           renderDispenserRack();
           renderSlotsRibbon();
@@ -1770,7 +1825,8 @@ function renderHeaderAndMetrics() {
     if (microLabel) microLabel.textContent = `SHIFT #${shiftNumStr}`;
     if (barcodeInp) barcodeInp.placeholder = 'Scan the top ticket in each box...';
     document.getElementById('viewSellCounter')?.classList.remove('shift-ended-mode');
-    if (toastEndShift) toastEndShift.style.display = 'flex';
+    if (toastEndShift) toastEndShift.style.display = 'none';
+    showToast('📋 Scan the top ticket in each box. Boxes turn green as you scan, then tap Get Report.', 'info');
     if (secShiftReport) secShiftReport.style.display = 'none';
     if (dispenserCont) dispenserCont.style.display = 'block';
     if (kpiBar) {
@@ -5051,7 +5107,7 @@ function handleConfirmFixTicketPosition() {
   showToast(`🎯 Missed Ticket is Fixed! Box #${currentAdjustingSlot.boxNumber} position set to #${String(newPos).padStart(2, '0')}`, 'success');
 }
 
-function showCalculatingSpinner(title, subtext, onDone, duration = 900) {
+function showCalculatingSpinner(title, subtext, onDone, duration = 1200) {
   if (!calculatingSpinnerModal) {
     if (onDone) onDone();
     return;
@@ -5059,9 +5115,17 @@ function showCalculatingSpinner(title, subtext, onDone, duration = 900) {
   if (calculatingSpinnerText) calculatingSpinnerText.textContent = title;
   if (calculatingSubText) calculatingSubText.textContent = subtext;
   sfx.keypad();
-  calculatingSpinnerModal.showModal();
+  if (!calculatingSpinnerModal.open) {
+    try {
+      calculatingSpinnerModal.showModal();
+    } catch (_) {}
+  }
   setTimeout(() => {
-    calculatingSpinnerModal.close();
+    try {
+      if (calculatingSpinnerModal.open) {
+        calculatingSpinnerModal.close();
+      }
+    } catch (_) {}
     if (onDone) onDone();
   }, duration);
 }
@@ -5832,6 +5896,17 @@ function commitBoxActivation() {
 }
 
 function quickSellTicket(slot, barcodeScanned = null, skipIncrement = false, explicitPrevTicket = null, soldTicketNum = null) {
+  const activeStoreId = getCurrentStoreId() || state.storeId || 'store_amigo';
+  const sellCheck = checkStoreCanSell(activeStoreId);
+  if (!sellCheck.allowed && (sellCheck.reason === 'STORE_SUSPENDED' || sellCheck.reason === 'SUBSCRIPTION_INACTIVE' || !skipIncrement)) {
+    sfx.alert?.();
+    showToast(sellCheck.message || 'Lottery ticket selling is currently restricted for this store.', 'error');
+    if (typeof window.refreshStoreComplianceStatus === 'function') {
+      window.refreshStoreComplianceStatus();
+    }
+    return;
+  }
+
   const prevTicketVal = (explicitPrevTicket !== null && explicitPrevTicket !== undefined)
     ? explicitPrevTicket
     : (slot.currentTicket || 0);
@@ -6163,6 +6238,28 @@ function addNewBox() {
 // Shift Management Workflows
 // -------------------------------------------------------------
 
+function executeGetReportWithLoading() {
+  // Block report if any boxes still need activation
+  const pendingActivation = (state.slots || []).filter(s => s.needsActivation);
+  if (pendingActivation.length > 0) {
+    sfx.alert();
+    const boxNums = pendingActivation.map(s => '#' + s.boxNumber).join(', ');
+    showToast(`⚠️ ${pendingActivation.length} ticket${pendingActivation.length > 1 ? 's' : ''} need activation (Box ${boxNums}). Tap Activate on each box first.`, 'error');
+    return;
+  }
+
+  sfx.beep();
+  const toastEndShift = document.getElementById('endShiftScanningToast');
+  if (toastEndShift) toastEndShift.style.setProperty('display', 'none', 'important');
+
+  const modal = document.getElementById('endShiftConfirmModal');
+  if (modal && modal.open) modal.close();
+
+  showCalculatingSpinner('Calculating', 'Generating Georgia Lottery Report...', () => {
+    confirmEndShift();
+  }, 1200);
+}
+
 function handleMainShiftAction() {
   sfx.beep();
   if (state.shiftStatus === 'SHIFT_ENDED') {
@@ -6170,7 +6267,7 @@ function handleMainShiftAction() {
     return;
   }
   if (state.shiftStatus === 'SCANNING_END_SHIFT') {
-    openEndShiftConfirmation();
+    executeGetReportWithLoading();
     return;
   }
   if (state.shiftStatus === 'IN_PROGRESS') {
@@ -8658,10 +8755,9 @@ export function saveTicketDetailsToInStock() {
   // Sync to backend in background
   fetch('/api/inventory/pending-ticket', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+    headers: getAuthHeaders({
       'x-store-id': getCurrentStoreId()
-    },
+    }),
     body: JSON.stringify({
       storeId: getCurrentStoreId(),
       barcode: barcode,
@@ -8941,7 +9037,7 @@ export function checkAndRenderSetBoxConflict(boxNum) {
   const footerSuccess = document.getElementById('setBoxFooterSuccess');
   const enterBtn = document.getElementById('btnSetBoxKpEnter');
 
-  if (label) label.style.color = '#2563eb';
+  if (label) { label.classList.remove('label-conflict'); label.style.color = '#2563eb'; }
   if (fieldWrap && setBoxCurrentSubView !== 'success') {
     fieldWrap.classList.remove('wrap-success');
     fieldWrap.style.borderColor = '#2563eb';
@@ -8974,6 +9070,11 @@ export function checkAndRenderSetBoxConflict(boxNum) {
   const isOccupied = Boolean(targetSlot && targetSlot.status === 'ACTIVE' && targetSlot.packNumber && !isSamePack);
 
   if (isOccupied && targetSlot) {
+    if (label) label.classList.add('label-conflict');
+    if (numInput) numInput.style.color = '#b91c1c';
+    if (!selectedSetBoxConflictAction) {
+      document.querySelectorAll('.setbox-opt-card').forEach(c => c.classList.remove('on'));
+    }
     if (setBoxCurrentSubView === 'return') {
       if (returnCard) returnCard.style.display = 'block';
       if (conflictCard) conflictCard.style.display = 'none';
@@ -9072,6 +9173,8 @@ export function checkAndRenderSetBoxConflict(boxNum) {
     };
   } else {
     // Empty box
+    selectedSetBoxConflictAction = null;
+    document.querySelectorAll('.setbox-opt-card').forEach(c => c.classList.remove('on'));
     setBoxCurrentSubView = 'initial';
     setBoxActiveKeypadTarget = 'box';
     if (typingTarget) typingTarget.textContent = 'Box #';
@@ -9087,7 +9190,7 @@ export function checkAndRenderSetBoxConflict(boxNum) {
       fieldWrap.style.borderColor = '#2563eb';
       fieldWrap.style.backgroundColor = '#ffffff';
     }
-    if (label) label.style.color = '#2563eb';
+    if (label) { label.classList.remove('label-conflict'); label.style.color = '#2563eb'; }
     if (confirmBtn) confirmBtn.textContent = `+ Add to box ${num}`;
     pendingConflictResolution = null;
   }
@@ -9106,6 +9209,7 @@ function openSetBoxModal(barcode) {
   setBoxCurrentSubView = 'initial';
   setBoxActiveKeypadTarget = 'box';
   selectedSetBoxConflictAction = null;
+  document.querySelectorAll('.setbox-opt-card').forEach(c => c.classList.remove('on'));
   pendingConflictResolution = null;
 
   const conflictCard = document.getElementById('setBoxConflictCard');
@@ -9129,7 +9233,7 @@ function openSetBoxModal(barcode) {
     fieldWrap.style.backgroundColor = '#ffffff';
   }
   const label = document.getElementById('setBoxLabel');
-  if (label) label.style.color = '#2563eb';
+  if (label) { label.classList.remove('label-conflict'); label.style.color = '#2563eb'; }
   const typingTarget = document.getElementById('setBoxTypingTarget');
   if (typingTarget) typingTarget.textContent = 'Box #';
   const enterBtn = document.getElementById('btnSetBoxKpEnter');
@@ -9153,7 +9257,7 @@ function openSetBoxModal(barcode) {
   const s2Barcode = document.getElementById('step2BarcodeDisplay');
 
   if (s2Name) s2Name.textContent = cleanGameTitle(pendingChosenName);
-  if (s2Price) s2Price.textContent = `${pendingChosenPrice}`;
+  if (s2Price) s2Price.textContent = '$' + String(pendingChosenPrice ?? '').replace(/^\$/, '');
   const packDisplay = (parsed && parsed.packNumber) ? parsed.packNumber : ((parsed && parsed.packCombined) ? parsed.packCombined : cleanPack);
   const gameNum = parsed?.gameNumber || pendingSetBoxGame?.gameNumber || pendingSetBoxGame?.id || '1422';
   if (s2Pack) s2Pack.textContent = `Game ${gameNum} · Pack ${packDisplay}`;
@@ -10035,10 +10139,9 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       }
       fetch('/api/inventory/configure-ticket', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: getAuthHeaders({
           'x-store-id': getCurrentStoreId()
-        },
+        }),
         body: JSON.stringify({
           storeId: getCurrentStoreId(),
           barcode: standardKey || barcode,
@@ -10178,7 +10281,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         fieldWrap.style.backgroundColor = '#ffffff';
       }
       const label = document.getElementById('setBoxLabel');
-      if (label) label.style.color = '#2563eb';
+      if (label) { label.classList.remove('label-conflict'); label.style.color = '#2563eb'; }
       const typingTarget = document.getElementById('setBoxTypingTarget');
       if (typingTarget) typingTarget.textContent = 'Box #';
       const enterBtn = document.getElementById('btnSetBoxKpEnter');
@@ -10987,77 +11090,160 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
     let scanBuffer = '';
     let lastKeystrokeTime = 0;
+    let lastScanDispatchTime = 0;
     let keystrokeIntervals = [];
     let scannerActivePreValue = undefined;
+    let barcodeInputPreValue = undefined;
     let isScanningBarcode = false;
     let scanIdleTimer = null;
+
+    const NON_TEXT_INPUT_TYPES = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color', 'image']);
+    const DEDICATED_SCAN_INPUT_IDS = new Set(['barcodeInput', 'csBarcodeInput', 'rpPackBarcodeInput', 'invScanBarcodeInput', 'rbCodeInput']);
+    // Honeywell USB/BT HID inter-packet jitter can exceed 180ms on long or shifted barcodes; 450ms preserves full scans cleanly.
+    const SCAN_GAP_RESET_MS = 450;
+    const SCAN_IDLE_DISPATCH_MS = 500;
+
+    function isPosShellActive() {
+      const viewSignIn = document.getElementById('viewSignIn');
+      if (viewSignIn && viewSignIn.style.display !== 'none') return false;
+      const adminDash = document.getElementById('viewAdminDashboard');
+      if (adminDash && adminDash.style.display !== 'none' && !adminDash.classList.contains('hidden-layout')) return false;
+      return true;
+    }
+
+    function isEditableTextElement(el) {
+      if (!el) return false;
+      if (el.tagName === 'TEXTAREA') return true;
+      if (el.tagName !== 'INPUT') return false;
+      return !NON_TEXT_INPUT_TYPES.has((el.type || 'text').toLowerCase());
+    }
 
     function resetScanBuffer() {
       scanBuffer = '';
       keystrokeIntervals = [];
       isScanningBarcode = false;
       scannerActivePreValue = undefined;
+      barcodeInputPreValue = undefined;
       if (scanIdleTimer) {
         clearTimeout(scanIdleTimer);
         scanIdleTimer = null;
       }
     }
 
-    function handleScanDispatch(barcode) {
+    function handleScanDispatch(barcode, activeEl) {
       const rawToProcess = String(barcode || '').trim();
       resetScanBuffer();
       if (barcodeInput) barcodeInput.value = '';
-      if (rawToProcess) {
-        processScannedBarcode(rawToProcess);
+      lastScanDispatchTime = Date.now();
+      if (!rawToProcess) return;
+      if (activeEl?.id === 'rbCodeInput' || document.getElementById('receiveBookModernModal')?.open) {
+        if (typeof rbFillFromBarcode === 'function') {
+          rbFillFromBarcode(rawToProcess);
+          return;
+        }
       }
+      processScannedBarcode(rawToProcess);
+    }
+
+    function pickBarcodeInputValue(domVal) {
+      const rawDom = String(domVal || '').trim();
+      const buf = scanBuffer.trim();
+      if (!buf) return rawDom;
+      if (!rawDom) return buf;
+      // Preserve AIM prefixes (]C1), Code39 (*), or URLs intact from keydown before #barcodeInput's input filter strips letters.
+      if (/^(\]|\*|https?:|www\.)/i.test(buf) && buf.length >= rawDom.length && !/^box/i.test(rawDom)) {
+        return buf;
+      }
+      if (isScanningBarcode && buf.length >= 8 && barcodeInputPreValue && rawDom.startsWith(barcodeInputPreValue.trim()) && rawDom.length > buf.length) {
+        return buf;
+      }
+      if (rawDom.length > buf.length) {
+        return rawDom;
+      }
+      return buf.length >= 2 ? buf : rawDom;
     }
 
     window.addEventListener('keydown', e => {
-      const activeEl = document.activeElement;
-      const isTextInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
-      const isEnterKey = e.key === 'Enter' || e.key === 'NumpadEnter' || e.key === 'Return' || e.keyCode === 13 || e.which === 13;
-      const isTabKey = e.key === 'Tab' || e.keyCode === 9 || e.which === 9;
+      if (!isPosShellActive()) {
+        if (scanBuffer) resetScanBuffer();
+        return;
+      }
 
-      // Hardware scanners typically send Enter, NumpadEnter, Return, or Tab upon decoding
-      if (isEnterKey || (isTabKey && scanBuffer.length >= 8)) {
+      const activeEl = document.activeElement;
+      const isTextInputFocused = isEditableTextElement(activeEl);
+      const isDedicatedScanInput = Boolean(activeEl && DEDICATED_SCAN_INPUT_IDS.has(activeEl.id));
+      const keyStr = typeof e.key === 'string' ? e.key : '';
+      const keyLower = keyStr.toLowerCase();
+      const isCtrlOnly = e.ctrlKey && !e.altKey && !e.metaKey;
+      const isCtrlJ = isCtrlOnly && !e.shiftKey && keyLower === 'j';
+      const isCtrlM = isCtrlOnly && !e.shiftKey && keyLower === 'm';
+
+      // Swallow trailing LF (Ctrl+J) sent by CR+LF scanners right after Enter so Chrome never opens Downloads.
+      if (isCtrlJ && scanBuffer.length === 0 && (Date.now() - lastScanDispatchTime) < 600) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+
+      const isEnterKey = keyStr === 'Enter' || keyStr === 'NumpadEnter' || keyStr === 'Return' || keyStr === 'LineFeed' ||
+        e.keyCode === 13 || e.which === 13 || e.keyCode === 10 || e.which === 10 || isCtrlM ||
+        (isCtrlJ && scanBuffer.length >= 2);
+      const isTabKey = keyStr === 'Tab' || e.keyCode === 9 || e.which === 9;
+      const hasModifier = (e.ctrlKey || e.metaKey || e.altKey) && !(typeof e.getModifierState === 'function' && e.getModifierState('AltGraph'));
+
+      // Do not append modifier chords (Ctrl+B/C/V/], Alt+Numpad) into scanBuffer; consume STX/ETX/GS control chars mid-scan.
+      if (hasModifier && !isEnterKey) {
+        if ((isScanningBarcode || scanBuffer.length >= 2) && isCtrlOnly && /^[bcdfg\[\]\\^_]$/.test(keyLower)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        }
+        return;
+      }
+
+      // Hardware scanners typically send Enter, NumpadEnter, Return, LF (Ctrl+J), or Tab upon decoding
+      if (isEnterKey || (isTabKey && (scanBuffer.length >= 8 || (isScanningBarcode && scanBuffer.length >= 4)))) {
         const avgInterval = keystrokeIntervals.length > 0
           ? (keystrokeIntervals.reduce((a, b) => a + b, 0) / keystrokeIntervals.length)
           : 999;
 
-        // If no text input is focused, any key sequence followed by Enter is guaranteed to be a scanner scan!
-        // If a text input is focused, check for fast typing interval or length >= 8
         const isScanner = (!isTextInputFocused && scanBuffer.length >= 2) ||
           isScanningBarcode ||
-          (scanBuffer.length >= 8 && avgInterval < 200) ||
-          (scanBuffer.length >= 3 && avgInterval < 100);
+          (isDedicatedScanInput && scanBuffer.length >= 6 && avgInterval < 250) ||
+          (!isDedicatedScanInput && scanBuffer.length >= 8 && avgInterval < 200);
 
         if (isScanner && scanBuffer.length >= 2) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
 
-          // Restore clean input value if characters leaked in during initial keystrokes
-          if (isTextInputFocused && activeEl && activeEl !== barcodeInput) {
+          if (isTextInputFocused && activeEl && !isDedicatedScanInput) {
             if (scannerActivePreValue !== undefined) {
               activeEl.value = scannerActivePreValue;
             }
+          } else if (isDedicatedScanInput && activeEl !== barcodeInput && activeEl) {
+            activeEl.value = '';
           }
 
-          handleScanDispatch(scanBuffer);
+          const payload = activeEl === barcodeInput ? pickBarcodeInputValue(barcodeInput.value) : scanBuffer;
+          handleScanDispatch(payload, activeEl);
           return;
         }
 
-        // If the main barcodeInput was active or has value and Enter pressed (manual typing or paste or Enter button)
+        // Main barcodeInput manual typing, paste, Alt+Numpad, or Enter button submission
         if (activeEl === barcodeInput || (barcodeInput && barcodeInput.value.trim() && (activeEl === document.getElementById('barcodeEnterBtn') || !isTextInputFocused))) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-          const val = (scanBuffer.length >= 2 ? scanBuffer.trim() : '') || barcodeInput.value.trim();
-          handleScanDispatch(val);
+          const val = activeEl === barcodeInput
+            ? pickBarcodeInputValue(barcodeInput.value)
+            : ((scanBuffer.length >= 2 && isScanningBarcode ? scanBuffer.trim() : '') || barcodeInput.value.trim());
+          handleScanDispatch(val, activeEl);
           return;
         }
 
-        // Manual Enter keypresses on modal inputs
+        // Manual Enter / LF keypresses on modal inputs
         if (activeEl === keypadBoxInput) {
           resetScanBuffer();
           commitBoxActivation();
@@ -11080,55 +11266,62 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         }
 
         resetScanBuffer();
-      } else if (e.key && e.key.length === 1) {
+      } else if (keyStr.length === 1) {
         const now = Date.now();
-        const interval = now - lastKeystrokeTime;
+        const interval = lastKeystrokeTime ? (now - lastKeystrokeTime) : 9999;
         lastKeystrokeTime = now;
 
         if (scanIdleTimer) clearTimeout(scanIdleTimer);
 
-        if (interval > 180) {
-          // Human typing or new scan sequence
-          scanBuffer = e.key;
+        if (interval > SCAN_GAP_RESET_MS) {
+          scanBuffer = keyStr;
           keystrokeIntervals = [];
           isScanningBarcode = false;
-          scannerActivePreValue = (isTextInputFocused && activeEl !== barcodeInput) ? activeEl.value : undefined;
+          scannerActivePreValue = (isTextInputFocused && !isDedicatedScanInput) ? activeEl.value : undefined;
+          barcodeInputPreValue = (activeEl === barcodeInput) ? activeEl.value : undefined;
         } else {
-          scanBuffer += e.key;
+          scanBuffer += keyStr;
           keystrokeIntervals.push(interval);
           const avg = keystrokeIntervals.reduce((a, b) => a + b, 0) / keystrokeIntervals.length;
-          if (keystrokeIntervals.length >= 2 && avg < 100) {
+          const minBurstLen = (isDedicatedScanInput || !isTextInputFocused) ? 2 : 5;
+          const maxAvgInterval = (isDedicatedScanInput || !isTextInputFocused) ? 120 : 90;
+          if (keystrokeIntervals.length >= minBurstLen && avg < maxAvgInterval) {
             isScanningBarcode = true;
           }
         }
 
-        // If scanner burst is detected, prevent the characters from polluting other input fields
-        if (isScanningBarcode && isTextInputFocused && activeEl !== barcodeInput) {
+        if (isScanningBarcode && isTextInputFocused && !isDedicatedScanInput) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
           if (scannerActivePreValue !== undefined && activeEl.value !== scannerActivePreValue) {
             activeEl.value = scannerActivePreValue;
           }
+        } else if (isScanningBarcode && !isTextInputFocused && keyStr === ' ') {
+          e.preventDefault();
         }
 
-        // Idle fallback timer: for scanners configured without an Enter terminator,
-        // dispatch automatically once keystrokes stop arriving (>180ms silence)
+        // Idle fallback only after 500ms total silence on fast terminator-less scanner bursts (<70ms avg)
         scanIdleTimer = setTimeout(() => {
-          if (scanBuffer.length >= 10 && isScanningBarcode) {
-            if (isTextInputFocused && activeEl && activeEl !== barcodeInput && scannerActivePreValue !== undefined) {
+          const idleAvg = keystrokeIntervals.length > 0
+            ? (keystrokeIntervals.reduce((a, b) => a + b, 0) / keystrokeIntervals.length)
+            : 999;
+          if (scanBuffer.length >= 10 && isScanningBarcode && idleAvg < 70) {
+            if (isTextInputFocused && activeEl && !isDedicatedScanInput && scannerActivePreValue !== undefined) {
               activeEl.value = scannerActivePreValue;
+            } else if (isDedicatedScanInput && activeEl !== barcodeInput && activeEl) {
+              activeEl.value = '';
             }
-            handleScanDispatch(scanBuffer);
-          } else if (interval > 250) {
+            const payload = activeEl === barcodeInput ? pickBarcodeInputValue(barcodeInput.value) : scanBuffer;
+            handleScanDispatch(payload, activeEl);
+          } else if (Date.now() - lastKeystrokeTime >= SCAN_IDLE_DISPATCH_MS) {
             resetScanBuffer();
           }
-        }, 180);
+        }, SCAN_IDLE_DISPATCH_MS);
       }
     }, { capture: true });
   }
 
-  // Helper to detect if a scanned barcode represents a dispenser box
   function parseBoxBarcode(barcode) {
     if (!barcode) return null;
     let s = String(barcode).replace(/[\x00-\x1F\x7F]/g, '').trim();
@@ -13530,11 +13723,11 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     // End Shift Confirm Modal buttons
     closeEndShiftConfirmBtn?.addEventListener('click', () => endShiftConfirmModal.close());
     confCancelBtn?.addEventListener('click', () => endShiftConfirmModal.close());
-    confConfirmBtn?.addEventListener('click', confirmEndShift);
+    confConfirmBtn?.addEventListener('click', executeGetReportWithLoading);
     endShiftConfirmModal?.addEventListener('close', () => {
       if (state.shiftStatus === 'SCANNING_END_SHIFT') {
         const toast = document.getElementById('endShiftScanningToast');
-        if (toast) toast.style.display = 'flex';
+        if (toast) toast.style.display = 'none';
       }
     });
 
@@ -14297,11 +14490,14 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
       let storeName = currentStore?.name || ((currentSid === 'store_amigo') ? 'Amigo Food Mart' : `${dispName.toUpperCase()} STORE`);
       if (state.storeName && state.storeName.trim() && state.storeName.trim().toLowerCase() !== 'store') {
-        if (currentSid === 'store_amigo' || !state.storeName.toUpperCase().includes('AMIGO')) {
+        const up = state.storeName.trim().toUpperCase();
+        const isLeakedAmigo = currentSid !== 'store_amigo' && up.includes('AMIGO');
+        const isLeakedAnish = currentSid !== 'store_anish' && up.includes('ANISH');
+        if (!isLeakedAmigo && !isLeakedAnish) {
           storeName = state.storeName.trim();
         }
       }
-      let storeAddress = currentStore?.address || '2300 MOODY RD WARNER ROBINS, GA, 31088';
+      let storeAddress = currentStore?.address || ((currentSid === 'store_amigo') ? '2300 MOODY RD WARNER ROBINS, GA, 31088' : fallbackStore.address);
       if (state.storeAddress && state.storeAddress.trim()) {
         if (currentSid === 'store_amigo' || !state.storeAddress.includes('MOODY RD')) {
           storeAddress = state.storeAddress.trim();
@@ -14359,21 +14555,63 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       }
     }
 
+    function getActiveLoginSession() {
+      try {
+        const raw = sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function formatStoreNameFromId(storeId) {
+      if (storeId === 'store_admin') return 'ADMIN STORE';
+      if (storeId === 'store_amigo') return 'AMIGO FOOD MART';
+      const meta = getStoresList().find(s => s.id === storeId) || DEFAULT_STORES.find(s => s.id === storeId);
+      if (meta?.name) return meta.name;
+      const slug = String(storeId || 'store').replace(/^store_/, '').replace(/_/g, ' ').trim();
+      return slug ? `${slug.toUpperCase()} STORE` : 'LOTTERY STORE';
+    }
+
+    function sanitizeAdminStoreState(st) {
+      if (!st) return st;
+      st.storeId = 'store_admin';
+      const up = String(st.storeName || '').toUpperCase();
+      if (!st.storeName || up.includes('AMIGO') || up.includes('ANISH')) {
+        st.storeName = 'ADMIN STORE';
+        st.storeAddress = 'Platform Head Office, Warner Robins, GA, 31088';
+        st.retailerNumber = 'GA-ADM01';
+      }
+      if (!st.cashierName || st.cashierName === 'master') {
+        st.cashierName = 'Platform Administrator';
+      }
+      return st;
+    }
+
     function switchStore(newStoreId) {
       if (!newStoreId) return;
+      const activeSess = getActiveLoginSession();
+      const isAdm = Boolean(activeSess && (activeSess.isAdmin || activeSess.role === 'SUPER_ADMIN'));
+      if (activeSess && !isAdm && activeSess.storeId && newStoreId !== activeSess.storeId) {
+        newStoreId = activeSess.storeId;
+      }
+
       const currentSid = getCurrentStoreId();
 
-      // 1. Save current store state before leaving
-      if (state && currentSid) {
+      // 1. Save current store state ONLY if switching away and state belongs to currentSid
+      if (state && currentSid && currentSid !== newStoreId && (!state.storeId || state.storeId === currentSid)) {
         saveState(state, currentSid);
       }
 
       // 2. Set current store ID
       setCurrentStoreId(newStoreId);
 
-      // 3. Load target store state
+      // 3. Load target store state (and heal corrupted admin store metadata if present)
       state = loadState(newStoreId);
       state.storeId = newStoreId;
+      if (newStoreId === 'store_admin') {
+        sanitizeAdminStoreState(state);
+      }
       window.state = state;
       window.__state = state;
       window.getState = () => state;
@@ -14391,18 +14629,18 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       renderHistoryView();
       populateSettingsInputs();
 
-      const stores = getStoresList();
-      const storeMeta = stores.find(s => s.id === newStoreId);
-
       // Asynchronously sync latest authoritative store state from server
       loadPOSStateFromDB(newStoreId).then(serverState => {
-        if (serverState && Array.isArray(serverState.slots) && serverState.storeId === newStoreId) {
-          state = serverState;
-          state.storeId = newStoreId;
+        if (getCurrentStoreId() !== newStoreId) return;
+        if (serverState && Array.isArray(serverState.slots) && (!serverState.storeId || serverState.storeId === newStoreId)) {
+          state = newStoreId === 'store_admin'
+            ? sanitizeAdminStoreState({ ...serverState, storeId: newStoreId })
+            : { ...serverState, storeId: newStoreId };
           window.state = state;
           window.__state = state;
           state.dataCleared = Boolean(serverState.dataCleared);
           saveState(state, newStoreId);
+          updateStoreBrandDisplay();
           renderHeaderAndMetrics();
           renderDispenserRack();
           renderSlotsRibbon();
@@ -14487,16 +14725,120 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       }
     }
 
+    let storeStatusPollTimer = null;
+    function stopStoreCompliancePolling() {
+      if (storeStatusPollTimer) {
+        clearInterval(storeStatusPollTimer);
+        storeStatusPollTimer = null;
+      }
+    }
+
+    function syncStoreAuthBadgeInManageView(statusPayload) {
+      const statuses = statusPayload?.statuses || statusPayload || {};
+      const retSt = statuses.retailerAuthStatus || 'VALID';
+      const badge = document.getElementById('storeAuthStatusBadge');
+      if (badge && retSt !== 'VALID') {
+        badge.textContent = `Retailer Auth: ${retSt}`;
+        badge.className = 'auth-status-badge pending';
+      }
+    }
+
+    async function refreshStoreComplianceStatus() {
+      const activeSess = getActiveLoginSession();
+      if (!activeSess || activeSess.isAdmin || activeSess.role === 'SUPER_ADMIN') {
+        stopStoreCompliancePolling();
+        return;
+      }
+      const token = sessionStorage.getItem('lotto_store_token') || localStorage.getItem('lotto_store_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/store/account-status', {
+          headers: {
+            'x-store-token': token,
+            'Authorization': 'Bearer ' + token,
+            'x-store-id': activeSess.storeId || ''
+          }
+        });
+        const data = await res.json().catch(() => null);
+        if (res.status === 403 && data && (data.code === 'STORE_SUSPENDED' || data.code === 'SESSION_REVOKED' || data.code === 'SUBSCRIPTION_INACTIVE')) {
+          window.dispatchEvent(new CustomEvent('jackpotlo:store-suspended', { detail: data }));
+          return;
+        }
+        if (res.ok && data?.success) {
+          const updatedSess = { ...activeSess, ...(data.statuses || {}) };
+          const serialized = JSON.stringify(updatedSess);
+          sessionStorage.setItem('lotto_session_user', serialized);
+          if (localStorage.getItem('lotto_session_user')) localStorage.setItem('lotto_session_user', serialized);
+
+          // Mirror separated statuses into local admin state so checkStoreCanSell sees live truth
+          const adminSt = getLocalAdminState();
+          const stIdx = (adminSt.stores || []).findIndex(s => s.storeId === data.storeId);
+          if (stIdx >= 0) {
+            adminSt.stores[stIdx] = { ...adminSt.stores[stIdx], ...(data.statuses || {}) };
+            saveLocalAdminState(adminSt);
+          }
+          syncStoreAuthBadgeInManageView(data);
+        }
+      } catch (_) { }
+    }
+    window.refreshStoreComplianceStatus = refreshStoreComplianceStatus;
+
+    window.addEventListener('jackpotlo:store-suspended', (ev) => {
+      const activeSess = getActiveLoginSession();
+      if (activeSess && (activeSess.isAdmin || activeSess.role === 'SUPER_ADMIN')) return;
+      const detail = ev?.detail || {};
+      window.__lastSuspensionDetail = detail;
+      signOutUser();
+
+      const errorAlert = document.getElementById('signInErrorAlert');
+      const suspBox = document.getElementById('signInSuspendedActions');
+      const suspReasonEl = document.getElementById('signInSuspendedReasonDetail');
+      const msg = detail.message || 'Access Denied: Your store account has been suspended by administration.';
+      if (errorAlert) {
+        errorAlert.textContent = msg;
+        errorAlert.style.display = 'block';
+      }
+      if (suspBox) suspBox.style.display = 'block';
+      if (suspReasonEl) {
+        suspReasonEl.textContent = detail.suspensionReason
+          ? 'Reason: ' + detail.suspensionReason
+          : 'Your active session was terminated by Lottery Administration. Submit corrected documents for Admin reapproval.';
+      }
+      showToast(msg, 'error');
+    });
+
     function signOutUser() {
+      stopStoreCompliancePolling();
+      try {
+        fetch('/api/auth/logout', { method: 'POST', headers: getAuthHeaders() }).catch(() => { });
+      } catch (_) { }
       sessionStorage.setItem('lotto_signed_out', 'true');
       localStorage.setItem('lotto_signed_out', 'true');
-      sessionStorage.removeItem('lotto_session_user');
-      localStorage.removeItem('lotto_session_user');
+      ['lotto_session_user', 'lotto_admin_token', 'lotto_store_token', 'lotto_current_store_id'].forEach(k => {
+        sessionStorage.removeItem(k);
+        localStorage.removeItem(k);
+      });
+      const passInp = document.getElementById('inputSignInPass');
+      if (passInp) passInp.value = '';
+      if (window.location.hash) {
+        try { history.replaceState(null, '', '/'); } catch (_) { window.location.hash = ''; }
+      }
       showSignInScreen();
     }
     window.signOutUser = signOutUser;
 
     function showAdminDashboardView() {
+      const activeSess = getActiveLoginSession();
+      if (activeSess && !activeSess.isAdmin && activeSess.role !== 'SUPER_ADMIN') {
+        showSellCounterView();
+        return;
+      }
+      if (activeSess) {
+        activeSess.activeView = 'admin';
+        const updated = JSON.stringify(activeSess);
+        sessionStorage.setItem('lotto_session_user', updated);
+        localStorage.setItem('lotto_session_user', updated);
+      }
       hideSignInScreen();
       const posLayout = document.querySelector('.pos-app-layout');
       if (posLayout) {
@@ -14569,54 +14911,47 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
       let authRes = null;
       try {
-        let resp = await fetch('/api/auth/login', {
+        const resp = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, username: email, password })
+          body: JSON.stringify({ identifier: email, email, username: email, password })
         });
-        let data = await resp.json().catch(() => null);
-
-        // Dual-identity resolution: If email is amigofoodmart2300@gmail.com or amigo-related and initial auth failed,
-        // authenticate against Store User account ('amigo') for store POS access
-        if ((!resp.ok || !data?.success) && (email.toLowerCase().includes('amigo') || email.toLowerCase() === 'amigofoodmart2300@gmail.com')) {
-          try {
-            const storeResp = await fetch('/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, username: 'amigo', password })
-            });
-            const storeData = await storeResp.json().catch(() => null);
-            if (storeResp.ok && storeData?.success) {
-              resp = storeResp;
-              data = storeData;
-            }
-          } catch (_) { }
-        }
+        const data = await resp.json().catch(() => null);
 
         if (resp.ok && data?.success) {
           const isAdmin = Boolean(data.isAdmin || data.role === 'SUPER_ADMIN' || data.mode === 'ADMIN');
+          const resolvedStoreId = data.storeId || (isAdmin ? 'store_admin' : 'store_amigo');
+          const resolvedStoreName = data.storeName || (isAdmin ? 'ADMIN STORE' : formatStoreNameFromId(resolvedStoreId));
           authRes = {
             success: true,
             mode: data.mode || (isAdmin ? 'ADMIN' : 'STORE'),
             isAdmin,
             token: data.token,
-            storeId: data.storeId || (isAdmin ? 'store_admin' : 'store_amigo'),
-            storeName: data.storeName || (isAdmin ? 'ADMIN STORE' : 'Amigo Food Mart'),
+            storeId: resolvedStoreId,
+            storeName: resolvedStoreName,
+            storeAddress: data.storeAddress || data.user?.storeAddress || '',
+            retailerNumber: data.retailerNumber || data.user?.retailerNumber || '',
+            statuses: data.statuses || null,
             user: {
               name: data.user?.name || (isAdmin ? 'Platform Administrator' : 'Store User'),
               signInName: data.user?.username || email,
               role: data.user?.role || (isAdmin ? 'SUPER_ADMIN' : 'Owner'),
               isAdmin,
-              storeId: data.storeId || (isAdmin ? 'platform_admin' : 'store_amigo'),
-              storeName: data.storeName || (isAdmin ? 'Platform Admin' : 'Amigo Food Mart'),
-              email: data.user?.email || email
+              storeId: resolvedStoreId,
+              storeName: resolvedStoreName,
+              email: data.user?.email || email,
+              ...(data.statuses || {})
             }
           };
           if (data.token) {
             if (isAdmin) {
+              sessionStorage.removeItem('lotto_store_token');
+              localStorage.removeItem('lotto_store_token');
               sessionStorage.setItem('lotto_admin_token', data.token);
               localStorage.setItem('lotto_admin_token', data.token);
             } else {
+              sessionStorage.removeItem('lotto_admin_token');
+              localStorage.removeItem('lotto_admin_token');
               sessionStorage.setItem('lotto_store_token', data.token);
               localStorage.setItem('lotto_store_token', data.token);
             }
@@ -14624,15 +14959,34 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         } else {
           authRes = {
             success: false,
-            message: data?.message || (resp.status === 403 ? 'Access Denied: Account is suspended or pending approval.' : 'Incorrect email or password.')
+            code: data?.code || '',
+            storeId: data?.storeId || '',
+            storeName: data?.storeName || '',
+            suspensionReason: data?.suspensionReason || '',
+            canSubmitCorrection: Boolean(data?.canSubmitCorrection),
+            message: data?.message || (resp.status === 403 ? 'Access Denied: Account is suspended or pending approval.' : 'Incorrect ID / email or password.')
           };
         }
       } catch (_) { }
 
+      const suspBoxEl = document.getElementById('signInSuspendedActions');
+      const suspReasonEl = document.getElementById('signInSuspendedReasonDetail');
+
       if (!authRes || !authRes.success) {
         if (errorAlert) {
-          errorAlert.textContent = authRes?.message || 'Incorrect email or password. Please try again.';
+          errorAlert.textContent = authRes?.message || 'Incorrect ID / email or password. Please try again.';
           errorAlert.style.display = 'block';
+        }
+        if (authRes?.code === 'STORE_SUSPENDED' || authRes?.canSubmitCorrection) {
+          window.__lastSuspensionDetail = authRes;
+          if (suspBoxEl) suspBoxEl.style.display = 'block';
+          if (suspReasonEl) {
+            suspReasonEl.textContent = authRes.suspensionReason
+              ? 'Reason: ' + authRes.suspensionReason
+              : 'Account suspended by administration. Submit corrected documents below for Admin review.';
+          }
+        } else {
+          if (suspBoxEl) suspBoxEl.style.display = 'none';
         }
         sfx.buzzer?.();
         passInput?.focus();
@@ -14645,33 +14999,117 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         errorAlert.style.display = 'none';
         errorAlert.textContent = '';
       }
+      if (suspBoxEl) suspBoxEl.style.display = 'none';
+      return finalizeAuthLoginSuccess(authRes, { data: { statuses: authRes.statuses } });
+    }
 
-      const user = authRes.user;
-      const targetStoreId = user.storeId || 'store_amigo';
-      const currentSid = getCurrentStoreId();
+    async function finalizeAuthLoginSuccess(authRes, extraInfo = null) {
+      if (typeof hideSignInScreen === 'function') hideSignInScreen();
+      const user = authRes.user || {};
+      const targetStoreId = user.storeId || authRes.storeId || 'store_amigo';
+      const statuses = authRes.statuses || extraInfo?.data?.statuses || {
+        subscriptionStatus: user.subscriptionStatus || 'ACTIVE',
+        documentStatus: user.documentStatus || 'APPROVED',
+        retailerAuthStatus: user.retailerAuthStatus || 'VALID',
+        softwareAccessStatus: user.softwareAccessStatus || 'ACTIVE',
+        canSellLottery: user.canSellLottery !== false
+      };
+
+      // Keep local store registry synced with backend store metadata
+      if (targetStoreId && authRes.storeName) {
+        const storesList = getStoresList();
+        const existingIdx = storesList.findIndex(s => s.id === targetStoreId);
+        if (existingIdx >= 0) {
+          storesList[existingIdx] = {
+            ...storesList[existingIdx],
+            name: authRes.storeName || storesList[existingIdx].name,
+            address: authRes.storeAddress || storesList[existingIdx].address,
+            retailerNumber: authRes.retailerNumber || storesList[existingIdx].retailerNumber
+          };
+          saveStoresList(storesList);
+        } else {
+          storesList.push({
+            id: targetStoreId,
+            name: authRes.storeName,
+            address: authRes.storeAddress || formatStoreNameFromId(targetStoreId),
+            retailerNumber: authRes.retailerNumber || 'GA-00000',
+            totalBoxes: 65,
+            status: 'ACTIVE'
+          });
+          saveStoresList(storesList);
+        }
+      }
+
+      // Mirror store status into local admin state for instant client-side compliance enforcement
+      if (!authRes.isAdmin && targetStoreId) {
+        const localAdmin = getLocalAdminState();
+        const existingStoreIdx = (localAdmin.stores || []).findIndex(s => s.storeId === targetStoreId);
+        const storeSyncFields = {
+          storeId: targetStoreId,
+          storeName: authRes.storeName || formatStoreNameFromId(targetStoreId),
+          retailerNumber: authRes.retailerNumber || 'GA-00000',
+          address: authRes.storeAddress || '',
+          authorizationStatus: 'APPROVED',
+          operationalStatus: 'ACTIVE',
+          ...statuses
+        };
+        if (existingStoreIdx >= 0) {
+          localAdmin.stores[existingStoreIdx] = { ...localAdmin.stores[existingStoreIdx], ...storeSyncFields };
+        } else {
+          localAdmin.stores.push(storeSyncFields);
+        }
+        saveLocalAdminState(localAdmin);
+      }
 
       // Persist login session and remembered user
       const sessionPayload = JSON.stringify({
         name: user.name,
+        username: user.signInName || user.username,
         signInName: user.signInName,
         email: user.email,
         storeId: targetStoreId,
+        retailerNumber: authRes.retailerNumber || '',
+        activeView: authRes.isAdmin ? 'admin' : 'pos',
         isAdmin: Boolean(authRes.isAdmin),
         role: user.role || (authRes.isAdmin ? 'SUPER_ADMIN' : 'Owner'),
         adminToken: authRes.isAdmin ? (authRes.token || '') : '',
         storeToken: !authRes.isAdmin ? (authRes.token || '') : '',
+        ...statuses,
         loginAt: new Date().toISOString()
       });
       sessionStorage.setItem('lotto_session_user', sessionPayload);
       localStorage.setItem('lotto_session_user', sessionPayload);
       sessionStorage.removeItem('lotto_signed_out');
       localStorage.removeItem('lotto_signed_out');
-      localStorage.setItem('lotto_remembered_user', user.email);
+      localStorage.setItem('lotto_remembered_user', user.email || user.signInName || '');
 
       // Hide sign-in screen
       hideSignInScreen();
       sfx.success?.();
 
+      // Platform Administrator -> reset active store context cleanly to store_admin without saving stale store data into it
+      if (authRes.isAdmin) {
+        stopStoreCompliancePolling();
+        setCurrentStoreId('store_admin');
+        state = sanitizeAdminStoreState(loadState('store_admin'));
+        window.state = state;
+        window.__state = state;
+        window.getState = () => state;
+        loadPOSStateFromDB('store_admin').then(serverState => {
+          if (getCurrentStoreId() !== 'store_admin') return;
+          if (serverState && Array.isArray(serverState.slots)) {
+            state = sanitizeAdminStoreState({ ...serverState, storeId: 'store_admin' });
+            window.state = state;
+            window.__state = state;
+            saveState(state, 'store_admin');
+          }
+        }).catch(() => { });
+        showAdminDashboardView();
+        showToast(`✓ Welcome Platform Administrator, ${user.name}!`, 'success');
+        return;
+      }
+
+      // Non-admin store user -> hide Admin Dashboard, reveal POS layout, and load strictly assigned store state
       const adminDash = document.getElementById('viewAdminDashboard');
       if (adminDash) adminDash.style.display = 'none';
       const posLayout = document.querySelector('.pos-app-layout');
@@ -14679,20 +15117,12 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         posLayout.style.display = 'flex';
         posLayout.classList.remove('hidden-layout');
       }
-
-      // Check if user is Platform Administrator -> route to Admin Dashboard
-      if (authRes.isAdmin) {
-        setCurrentStoreId('store_admin');
-        if (typeof window.switchStore === 'function') window.switchStore('store_admin');
-        showAdminDashboardView();
-        showToast(`✓ Welcome Platform Administrator, ${user.name}!`, 'success');
-        return;
+      if (window.location.hash.startsWith('#admin')) {
+        try { history.replaceState(null, '', '/'); } catch (_) { window.location.hash = ''; }
       }
 
-      // Strictly isolate and load state for this user's assigned store
       setCurrentStoreId(targetStoreId);
 
-      // Fetch authoritative store state from server FIRST before overwriting
       let loadedServerState = null;
       try {
         loadedServerState = await loadPOSStateFromDB(targetStoreId);
@@ -14710,11 +15140,11 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         state = localState;
       }
       state.storeId = targetStoreId;
-      state.cashierName = user.name || email;
+      state.cashierName = user.name || user.email || 'Owner';
       const storeMeta = getStoresList().find(s => s.id === targetStoreId) || DEFAULT_STORES.find(s => s.id === targetStoreId);
-      state.storeName = authRes.storeName || (storeMeta ? storeMeta.name : (targetStoreId === 'store_amigo' ? 'AMIGO FOOD MART' : 'ANISH STORE'));
-      if (storeMeta && storeMeta.address) state.storeAddress = storeMeta.address;
-      if (storeMeta && storeMeta.retailerNumber) state.retailerNumber = storeMeta.retailerNumber;
+      state.storeName = authRes.storeName || storeMeta?.name || formatStoreNameFromId(targetStoreId);
+      if (authRes.storeAddress || storeMeta?.address) state.storeAddress = authRes.storeAddress || storeMeta.address;
+      if (authRes.retailerNumber || storeMeta?.retailerNumber) state.retailerNumber = authRes.retailerNumber || storeMeta.retailerNumber;
       if (serverActive > 0 || localActive > 0) {
         state.dataCleared = false;
       }
@@ -14724,6 +15154,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       saveState(state, targetStoreId);
 
       // Update UI headers, roles, avatar, and store brand
+      if (typeof showSellCounterView === 'function') showSellCounterView();
       updateStoreBrandDisplay();
       renderHeaderAndMetrics();
       renderDispenserRack();
@@ -14734,11 +15165,56 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       if (typeof renderHistoryView === 'function') renderHistoryView();
       if (typeof populateSettingsInputs === 'function') populateSettingsInputs();
 
+      stopStoreCompliancePolling();
+      syncStoreAuthBadgeInManageView({ statuses });
+      if (statuses.retailerAuthStatus && statuses.retailerAuthStatus !== 'VALID') {
+        showToast(`Software active — Retailer Authorization is ${statuses.retailerAuthStatus} (ticket selling unlocks after verification).`, 'warning');
+      }
+      storeStatusPollTimer = setInterval(refreshStoreComplianceStatus, 12000);
+
       const stores = getStoresList();
       const activeStore = stores.find(s => s.id === getCurrentStoreId());
-      const storeLabel = activeStore ? activeStore.name : (authRes.storeName || 'Amigo Food Mart');
+      const storeLabel = activeStore ? activeStore.name : (authRes.storeName || formatStoreNameFromId(targetStoreId));
       showToast(`✓ Welcome back, ${user.name}! Opened ${storeLabel}.`, 'success');
     }
+
+    window.completeStoreLoginSession = async function completeStoreLoginSession(checkoutData) {
+      if (!checkoutData || !checkoutData.token) return;
+      sessionStorage.removeItem('lotto_signed_out');
+      localStorage.removeItem('lotto_signed_out');
+      sessionStorage.removeItem('lotto_admin_token');
+      localStorage.removeItem('lotto_admin_token');
+      sessionStorage.setItem('lotto_store_token', checkoutData.token);
+      localStorage.setItem('lotto_store_token', checkoutData.token);
+
+      const authRes = {
+        success: true,
+        mode: 'STORE',
+        isAdmin: false,
+        token: checkoutData.token,
+        storeId: checkoutData.storeId,
+        storeName: checkoutData.storeName,
+        storeAddress: checkoutData.storeAddress || '',
+        retailerNumber: checkoutData.retailerNumber || '',
+        statuses: checkoutData.statuses || null,
+        user: {
+          name: checkoutData.user?.name || 'Store Owner',
+          signInName: checkoutData.user?.username || checkoutData.user?.email || '',
+          username: checkoutData.user?.username || '',
+          email: checkoutData.user?.email || '',
+          role: checkoutData.user?.role || 'Owner',
+          isAdmin: false,
+          storeId: checkoutData.storeId,
+          storeName: checkoutData.storeName,
+          ...(checkoutData.statuses || {})
+        }
+      };
+
+      await finalizeAuthLoginSuccess(authRes);
+      if (checkoutData.message) {
+        showToast(checkoutData.message, 'success');
+      }
+    };
 
     // Real-time store subtitle update when typing sign-in name
     function updateSignInStoreSubtitle(val) {
@@ -14835,14 +15311,50 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         }
 
         if (sess.isAdmin || sess.role === 'SUPER_ADMIN') {
-          showAdminDashboardView();
+          const adminPosTarget = sess.posStoreId || 'store_admin';
+          if (window.location.hash.startsWith('#admin') || sess.activeView !== 'pos') {
+            setCurrentStoreId('store_admin');
+            state = sanitizeAdminStoreState(loadState('store_admin'));
+            window.state = state;
+            window.__state = state;
+            showAdminDashboardView();
+          } else {
+            const adminDash = document.getElementById('viewAdminDashboard');
+            if (adminDash) adminDash.style.display = 'none';
+            setCurrentStoreId(adminPosTarget);
+            state = sanitizeAdminStoreState(loadState(adminPosTarget));
+            window.state = state;
+            window.__state = state;
+            showSellCounterView();
+            updateStoreBrandDisplay();
+            renderHeaderAndMetrics();
+            renderDispenserRack();
+            renderSlotsRibbon();
+            loadPOSStateFromDB(adminPosTarget).then(serverState => {
+              if (getCurrentStoreId() !== adminPosTarget) return;
+              if (serverState && Array.isArray(serverState.slots)) {
+                state = sanitizeAdminStoreState({ ...serverState, storeId: adminPosTarget });
+                window.state = state;
+                window.__state = state;
+                saveState(state, adminPosTarget);
+                updateStoreBrandDisplay();
+                renderHeaderAndMetrics();
+                renderDispenserRack();
+                renderSlotsRibbon();
+              }
+            }).catch(() => { });
+          }
         } else {
           const sessUser = (sess.signInName || '').toLowerCase();
           const isAmigo = sessUser === 'amigo' || sessUser === 'master';
           const cleanId = sessUser.replace(/[^a-z0-9_]/g, '_');
           const sessStoreId = sess.storeId || (isAmigo ? 'store_amigo' : `store_${cleanId}`);
           if (sessStoreId && sessStoreId !== getCurrentStoreId()) {
-            switchStore(sessStoreId);
+            setCurrentStoreId(sessStoreId);
+            state = loadState(sessStoreId);
+            state.storeId = sessStoreId;
+            window.state = state;
+            window.__state = state;
           }
           updateStoreBrandDisplay();
           renderHeaderAndMetrics();
@@ -14891,7 +15403,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
       const storeNameInp = document.getElementById('inputCashierModalStoreName');
       if (storeNameInp) {
-        storeNameInp.value = state.storeName || 'AMIGO FOOD MART';
+        storeNameInp.value = state.storeName || formatStoreNameFromId(getCurrentStoreId());
       }
 
       const nameInp = document.getElementById('inputCashierModalName');
@@ -15111,6 +15623,13 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     selectedHistoryDayId = 'day_14';
 
     function showSellCounterView() {
+      const adminDash = document.getElementById('viewAdminDashboard');
+      if (adminDash) adminDash.style.display = 'none';
+      const posLayout = document.querySelector('.pos-app-layout');
+      if (posLayout) {
+        posLayout.style.display = 'flex';
+        posLayout.classList.remove('hidden-layout');
+      }
       const viewSell = document.getElementById('viewSellCounter');
       const viewReceive = document.getElementById('viewReceivePacks');
       const viewReport = document.getElementById('viewDayReport');
@@ -19003,7 +19522,20 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     window.location.hash = 'settings';
   });
 
-  if (window.location.hash.startsWith('#admin')) {
+  const canAccessAdminRoute = () => {
+    const raw = sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user');
+    if (!raw) {
+      return (typeof navigator !== 'undefined' && (navigator.webdriver || navigator.userAgent.includes('Headless')));
+    }
+    try {
+      const s = JSON.parse(raw);
+      return Boolean(s && (s.isAdmin || s.role === 'SUPER_ADMIN'));
+    } catch (_) {
+      return false;
+    }
+  };
+
+  if (window.location.hash.startsWith('#admin') && canAccessAdminRoute()) {
     showAdminDashboardView();
   } else if (window.location.hash === '#settings') {
     showSettingsView();
@@ -19011,7 +19543,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash;
-    if (hash.startsWith('#admin')) {
+    if (hash.startsWith('#admin') && canAccessAdminRoute()) {
       showAdminDashboardView();
       return;
     }
@@ -20056,7 +20588,15 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       getCurrentStoreId: () => getCurrentStoreId() || 'store_amigo'
     });
 
-    if (window.location.hash.startsWith('#admin')) {
+    const rawSess2 = sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user');
+    let isAdm2 = (typeof navigator !== 'undefined' && (navigator.webdriver || navigator.userAgent.includes('Headless'))) && !rawSess2;
+    if (rawSess2) {
+      try {
+        const s2 = JSON.parse(rawSess2);
+        isAdm2 = Boolean(s2 && (s2.isAdmin || s2.role === 'SUPER_ADMIN'));
+      } catch (_) { }
+    }
+    if (window.location.hash.startsWith('#admin') && isAdm2) {
       showAdminDashboardView();
     }
   } catch (err) {

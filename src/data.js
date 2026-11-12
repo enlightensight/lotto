@@ -1439,6 +1439,13 @@ export function parseLotteryBarcode(raw, customGames = []) {
             }
           }
 
+          if (storeId === 'store_admin' && (parsed.storeName === 'AMIGO FOOD MART' || parsed.storeName === 'ANISH STORE')) {
+            parsed.storeName = 'ADMIN STORE';
+            parsed.storeAddress = 'Platform Head Office, Warner Robins, GA, 31088';
+            parsed.retailerNumber = 'GA-ADM01';
+            if (parsed.cashierName === 'master') parsed.cashierName = 'Platform Administrator';
+          }
+
           return parsed;
         }
       } catch (e) {

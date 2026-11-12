@@ -1169,7 +1169,8 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) .admin-modal,
 /* ----------------------------------------------------------------------------
    8. Status Badges & Indicators
    ---------------------------------------------------------------------------- */
-#viewAdminDashboard .badge-status {
+#viewAdminDashboard .badge-status,
+.admin-modal .badge-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1184,7 +1185,8 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) .admin-modal,
   line-height: 1;
 }
 
-#viewAdminDashboard .badge-status::before {
+#viewAdminDashboard .badge-status::before,
+.admin-modal .badge-status::before {
   content: '';
   width: 6px;
   height: 6px;
@@ -1194,31 +1196,46 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) .admin-modal,
 }
 
 #viewAdminDashboard .badge-status.approved,
+.admin-modal .badge-status.approved,
 #viewAdminDashboard .badge-status.active,
-#viewAdminDashboard .badge-status.allocated {
+.admin-modal .badge-status.active,
+#viewAdminDashboard .badge-status.allocated,
+.admin-modal .badge-status.allocated {
   background: var(--admin-emerald-bg);
   border: 1px solid var(--admin-emerald-border);
   color: var(--admin-emerald-text);
 }
 
 #viewAdminDashboard .badge-status.pending,
-#viewAdminDashboard .badge-status.review {
+.admin-modal .badge-status.pending,
+#viewAdminDashboard .badge-status.review,
+.admin-modal .badge-status.review {
   background: var(--admin-amber-bg);
   border: 1px solid var(--admin-amber-border);
   color: var(--admin-amber-text);
 }
 
 #viewAdminDashboard .badge-status.rejected,
+.admin-modal .badge-status.rejected,
 #viewAdminDashboard .badge-status.suspended,
-#viewAdminDashboard .badge-status.blocked {
+.admin-modal .badge-status.suspended,
+#viewAdminDashboard .badge-status.blocked,
+.admin-modal .badge-status.blocked {
   background: var(--admin-rose-bg);
   border: 1px solid var(--admin-rose-border);
   color: var(--admin-rose-text);
 }
 
 #viewAdminDashboard .badge-status.info,
+.admin-modal .badge-status.info,
 #viewAdminDashboard .badge-status.more_info,
-#viewAdminDashboard .badge-status.requested {
+.admin-modal .badge-status.more_info,
+#viewAdminDashboard .badge-status.more-info,
+.admin-modal .badge-status.more-info,
+#viewAdminDashboard .badge-status.more-info-required,
+.admin-modal .badge-status.more-info-required,
+#viewAdminDashboard .badge-status.requested,
+.admin-modal .badge-status.requested {
   background: var(--admin-sky-bg);
   border: 1px solid var(--admin-sky-border);
   color: var(--admin-sky-text);
@@ -1689,4 +1706,183 @@ html:not([data-theme="dark"]):not([data-admin-theme="dark"]) .admin-modal,
   border: 1px solid var(--admin-rose-border);
   border-radius: 8px;
   color: var(--admin-rose-text);
+}
+
+/* Sign-In Page: Send Lottery License CTA & File Preview */
+.btn-signin-apply-license {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-signin-apply-license:hover {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.6);
+}
+
+[data-theme="dark"] .btn-signin-apply-license {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.app-license-files-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.app-license-file-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-bg-surface-elevated);
+  font-size: 0.8rem;
+  color: var(--admin-text-main);
+}
+
+.app-license-file-chip img {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid var(--admin-border-subtle);
+  flex-shrink: 0;
+}
+
+/* Admin Application & License Review Grid */
+.admin-review-app-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.15fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .admin-review-app-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-review-section {
+  background: var(--admin-bg-surface-elevated);
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.admin-review-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--admin-text-muted);
+  margin-bottom: 10px;
+}
+
+.admin-review-kv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.admin-review-kv-label {
+  font-size: 0.72rem;
+  color: var(--admin-text-muted);
+}
+
+.admin-review-kv-val {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--admin-heading-color);
+  word-break: break-word;
+}
+
+.admin-license-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.admin-license-tab {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-bg-surface-elevated);
+  color: var(--admin-text-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-license-tab.active {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-subtle);
+  color: var(--admin-primary);
+}
+
+.doc-viewer-viewport img {
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 48px;
+  min-height: 48px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid var(--admin-border-subtle);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.app-license-dropzone {
+  border: 1.5px dashed var(--admin-border-subtle);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  background: var(--admin-bg-surface-elevated);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.app-license-dropzone.drag-over {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-subtle);
+}
+
+.admin-zip-entry-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.admin-zip-entry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border-subtle);
+  background: var(--admin-bg-surface-elevated);
+  font-size: 0.82rem;
+}
+
+.doc-viewer-viewport iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 6px;
 }

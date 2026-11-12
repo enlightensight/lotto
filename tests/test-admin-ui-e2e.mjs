@@ -88,16 +88,9 @@ it('Feature 6: Stock Allocation table & modal exist', () => {
   assert.ok(indexHtml.includes('id="adminAllocPackNumInput"'));
 });
 
-it('Feature 7: Multi-Store Reports has 4 sub-sections (Sales, Inventory, Shifts, Discrepancies)', () => {
-  assert.ok(indexHtml.includes('id="paneAdminReports"'));
-  assert.ok(indexHtml.includes('data-report-tab="sales"'));
-  assert.ok(indexHtml.includes('data-report-tab="inventory"'));
-  assert.ok(indexHtml.includes('data-report-tab="shifts"'));
-  assert.ok(indexHtml.includes('data-report-tab="discrepancies"'));
-  assert.ok(indexHtml.includes('id="adminReportSalesTableBody"'));
-  assert.ok(indexHtml.includes('id="adminReportInventoryTableBody"'));
-  assert.ok(indexHtml.includes('id="adminReportShiftsTableBody"'));
-  assert.ok(indexHtml.includes('id="adminReportDiscrepanciesTableBody"'));
+it('Feature 7: Multi-Store Reports sidebar item and pane are removed', () => {
+  assert.strictEqual(indexHtml.includes('id="paneAdminReports"'), false);
+  assert.strictEqual(indexHtml.includes('data-admin-tab="reports"'), false);
 });
 
 // ----------------------------------------------------------------------------

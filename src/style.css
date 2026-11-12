@@ -25049,3 +25049,133 @@ dialog#modalShiftReportViewer[open] {
   cursor: default !important;
   opacity: 0.7 !important;
 }
+/* ==========================================================================
+   SETBOX MODAL UI ALIGNMENT & CONFLICT DESIGN POLISH (REFERENCE IMAGE 3)
+   ========================================================================== */
+.setbox-modal-modern {
+  width: min(96vw, 880px) !important;
+  max-width: 880px !important;
+  max-height: 94vh !important;
+  overflow-y: auto !important;
+}
+.setbox-modal-body {
+  grid-template-columns: 1fr 270px !important;
+  gap: 22px !important;
+  padding: 20px 24px 24px 24px !important;
+  align-items: start !important;
+}
+@media (max-width: 768px) {
+  .setbox-modal-body {
+    grid-template-columns: 1fr !important;
+  }
+}
+.setbox-main-col {
+  min-width: 0 !important;
+  gap: 14px !important;
+}
+.setbox-input-wrap {
+  height: 52px !important;
+}
+.setbox-number-input {
+  font-size: 22px !important;
+}
+.setbox-input-wrap.wrap-conflict .setbox-number-input {
+  color: #b91c1c !important;
+  font-size: 18px !important;
+}
+[data-theme="dark"] .setbox-input-wrap.wrap-conflict .setbox-number-input {
+  color: #fca5a5 !important;
+}
+.setbox-input-wrap.wrap-conflict .setbox-stepper-btns {
+  border-left-color: #fca5a5 !important;
+}
+.setbox-input-wrap.wrap-conflict .setbox-step-arrow {
+  background: #ffffff !important;
+}
+.setbox-input-wrap.wrap-conflict .setbox-step-arrow:first-child {
+  border-bottom-color: #fca5a5 !important;
+}
+[data-theme="dark"] .setbox-input-wrap.wrap-conflict .setbox-step-arrow {
+  background: #27272a !important;
+}
+#optConflictSoldOut {
+  border: 1.5px solid #b91c1c !important;
+  background: #ffffff !important;
+}
+#optConflictReturned {
+  border: 1.5px solid #b45309 !important;
+  background: #ffffff !important;
+}
+#optConflictChangeBox {
+  border: 1.5px solid #cbd5e1 !important;
+  background: #f8fafc !important;
+}
+[data-theme="dark"] #optConflictSoldOut {
+  background: #18181b !important;
+}
+[data-theme="dark"] #optConflictReturned {
+  background: #18181b !important;
+}
+[data-theme="dark"] #optConflictChangeBox {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+.setbox-opt-card.on[data-action="soldout"] {
+  border: 2px solid #b91c1c !important;
+  background: #fff5f5 !important;
+  box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.14) !important;
+}
+.setbox-opt-card.on[data-action="return"] {
+  border: 2px solid #b45309 !important;
+  background: #fffbeb !important;
+  box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.14) !important;
+}
+.setbox-opt-card.on[data-action="changebox"] {
+  border: 2px solid #2563eb !important;
+  background: #eff6ff !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14) !important;
+}
+.setbox-modal-footer {
+  padding: 4px 0 0 0 !important;
+  border-top: none !important;
+  background: transparent !important;
+  width: 100% !important;
+}
+.setbox-btn-not-in-box {
+  min-width: 155px !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+.setbox-btn-action-primary {
+  flex: 1 !important;
+  white-space: nowrap !important;
+  padding: 0 22px !important;
+  text-align: center !important;
+}
+
+/* Override global dialog input / focus rules inside Set Box modal */
+.setbox-input-label.label-conflict {
+  color: #b91c1c !important;
+}
+[data-theme="dark"] .setbox-input-label.label-conflict {
+  color: #fca5a5 !important;
+}
+#setBoxModal #setBoxNumberInput,
+#setBoxModal #setBoxNumberInput:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 8px !important;
+}
+#setBoxModal #setBoxFieldWrap.wrap-conflict {
+  background: #fdecec !important;
+  border: 1.5px solid #b91c1c !important;
+}
+[data-theme="dark"] #setBoxModal #setBoxFieldWrap.wrap-conflict {
+  background: rgba(185, 28, 28, 0.2) !important;
+  border-color: #ef4444 !important;
+}
+#setBoxModal #setBoxNumberInput:focus-visible {
+  outline: none !important;
+}

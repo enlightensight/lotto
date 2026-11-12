@@ -27,8 +27,8 @@ export const DEFAULT_LOTTERY_CATALOG = [
 ];
 
 export const DEFAULT_INITIAL_STORES = [
-  { storeId: 'store_amigo', storeName: 'AMIGO FOOD MART', ownerUsername: 'amigo', retailerNumber: 'GA-89412', address: '2300 MOODY RD WARNER ROBINS, GA, 31088', phone: '(478) 923-4567', totalBoxes: 65, authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' },
-  { storeId: 'store_downtown', storeName: 'DOWNTOWN QUICK MART', ownerUsername: 'downtown_owner', retailerNumber: 'GA-94103', address: '104 N COMMERCIAL BLVD, WARNER ROBINS, GA, 31088', phone: '(478) 953-8821', totalBoxes: 60, authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' }
+  { storeId: 'store_amigo', storeName: 'AMIGO FOOD MART', ownerUsername: 'amigo', retailerNumber: 'GA-89412', address: '2300 MOODY RD WARNER ROBINS, GA, 31088', phone: '(478) 923-4567', totalBoxes: 65, subscriptionStatus: 'ACTIVE', documentStatus: 'APPROVED', retailerAuthStatus: 'VALID', softwareAccessStatus: 'ACTIVE', authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' },
+  { storeId: 'store_downtown', storeName: 'DOWNTOWN QUICK MART', ownerUsername: 'downtown_owner', retailerNumber: 'GA-94103', address: '104 N COMMERCIAL BLVD, WARNER ROBINS, GA, 31088', phone: '(478) 953-8821', totalBoxes: 60, subscriptionStatus: 'ACTIVE', documentStatus: 'APPROVED', retailerAuthStatus: 'VALID', softwareAccessStatus: 'ACTIVE', authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' }
 ];
 
 export const DEFAULT_INITIAL_APPLICATIONS = [
@@ -386,17 +386,16 @@ export async function updateStoreStatus(storeId, authorizationStatus, operationa
   return { success: false, message: 'Store not found.' };
 }
 
-export async function reviewStoreApplication(appId, decision, adminUsername, notes = '') {
+export async function reviewStoreApplication(appId, decision, adminUsername, notes = '', extra = {}) {
   try {
     const res = await fetch(`/api/admin/applications/${encodeURIComponent(appId)}/review`, {
       method: 'POST',
       headers: getAdminHeaders(),
-      body: JSON.stringify({ decision, adminUsername, notes })
+      body: JSON.stringify({ decision, adminUsername, notes, ...extra })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) return data;
-    }
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.success) return data;
+    if (data && data.message) return { success: false, message: data.message };
   } catch (err) {}
 
   const st = getLocalAdminState();
@@ -776,15 +775,117 @@ export async function adminLogout() {
   localStorage.removeItem('lotto_remembered_user');
 }
 
+export async function fetchSubscriptionPlans() {
+  const res = await fetch('/api/subscription/plans');
+  return res.json();
+}
+
+export async function fetchPaymentGatewayConfig() {
+  const res = await fetch('/api/payments/config');
+  return res.json();
+}
+
+export async function createPaymentCheckoutSession(planId, billingCycle = 'monthly') {
+  const res = await fetch('/api/payments/create-checkout-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ planId, billingCycle, returnOrigin: window.location.origin })
+  });
+  return res.json();
+}
+
+export async function checkoutSubscriptionAndRegister(payload) {
+  const res = await fetch('/api/subscriptions/checkout-and-register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+export async function resubmitStoreDocuments(payload) {
+  const headers = { 'Content-Type': 'application/json' };
+  const storeToken = sessionStorage.getItem('lotto_store_token') || localStorage.getItem('lotto_store_token');
+  if (storeToken) {
+    headers['x-store-token'] = storeToken;
+    headers['Authorization'] = `Bearer ${storeToken}`;
+  }
+  const res = await fetch('/api/store/resubmit-documents', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+export async function fetchStoreAdminDetails(storeId) {
+  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/details`, {
+    headers: getAdminHeaders()
+  });
+  return res.json();
+}
+
+export async function verifyStoreDocumentsAndRetailer(storeId, payload) {
+  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/verify-documents`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+export async function suspendStoreWithReason(storeId, reason, adminUsername = 'admin') {
+  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/suspend`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify({ reason, adminUsername })
+  });
+  return res.json();
+}
+
+export async function reapproveSuspendedStore(storeId, payload = {}) {
+  const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/reapprove`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
 export function checkStoreCanSell(storeId, gameId = null) {
   const st = getLocalAdminState();
   const store = st.stores.find(s => s.storeId === storeId);
-  
-  if (store && store.authorizationStatus === 'SUSPENDED') {
+  let sessionUser = null;
+  try {
+    sessionUser = JSON.parse(sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user') || 'null');
+  } catch (_) {}
+
+  const effectiveAccess = store?.softwareAccessStatus || (sessionUser?.storeId === storeId ? sessionUser?.softwareAccessStatus : null);
+  const effectiveAuth = store?.authorizationStatus;
+  if (effectiveAccess === 'SUSPENDED' || effectiveAuth === 'SUSPENDED') {
+    const rsn = store?.suspensionReason || sessionUser?.suspensionReason || '';
     return {
       allowed: false,
       reason: 'STORE_SUSPENDED',
-      message: `Store "${store.storeName}" is currently SUSPENDED by Lottery Administration. Ticket sales are disabled.`
+      message: `Store "${store?.storeName || storeId}" is SUSPENDED.${rsn ? ' Reason: ' + rsn : ' Ticket sales are disabled.'}`
+    };
+  }
+
+  const subStatus = store?.subscriptionStatus || (sessionUser?.storeId === storeId ? sessionUser?.subscriptionStatus : null);
+  if (subStatus && subStatus !== 'ACTIVE') {
+    return {
+      allowed: false,
+      reason: 'SUBSCRIPTION_INACTIVE',
+      message: `Store subscription is ${subStatus}. Ticket selling is disabled.`
+    };
+  }
+
+  const retailerStatus = store?.retailerAuthStatus || (sessionUser?.storeId === storeId ? sessionUser?.retailerAuthStatus : null);
+  if (retailerStatus && retailerStatus !== 'VALID') {
+    return {
+      allowed: false,
+      reason: 'RETAILER_AUTH_REQUIRED',
+      message: `Lottery ticket sales are locked: Official lottery retailer authorization is "${retailerStatus}" for this business location. Software access is ACTIVE while official retailer verification is completed.`
     };
   }
 

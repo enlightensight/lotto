@@ -15,19 +15,54 @@ export function onDbStatusChange(callback) {
   }
 }
 
-function getAuthHeaders(customHeaders = {}) {
+export function getAuthHeaders(customHeaders = {}) {
   const headers = { 'Content-Type': 'application/json', ...customHeaders };
   if (typeof localStorage !== 'undefined' || typeof sessionStorage !== 'undefined') {
-    const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('lotto_store_token') : null) ||
-                  (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_store_token') : null) ||
-                  (typeof localStorage !== 'undefined' ? localStorage.getItem('lotto_admin_token') : null) ||
-                  (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_admin_token') : null);
-    if (token) {
-      headers['x-store-token'] = token;
-      headers['Authorization'] = 'Bearer ' + token;
+    const rawSess = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_session_user') : null) ||
+                    (typeof localStorage !== 'undefined' ? localStorage.getItem('lotto_session_user') : null);
+    let sess = null;
+    try { sess = rawSess ? JSON.parse(rawSess) : null; } catch (_) { }
+
+    const adminToken = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_admin_token') : null) ||
+                       (typeof localStorage !== 'undefined' ? localStorage.getItem('lotto_admin_token') : null) ||
+                       sess?.adminToken || null;
+    const storeToken = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('lotto_store_token') : null) ||
+                       (typeof localStorage !== 'undefined' ? localStorage.getItem('lotto_store_token') : null) ||
+                       sess?.storeToken || null;
+
+    if (sess && (sess.isAdmin || sess.role === 'SUPER_ADMIN')) {
+      if (adminToken) {
+        headers['x-admin-token'] = adminToken;
+        headers['Authorization'] = 'Bearer ' + adminToken;
+      }
+    } else if (sess && !sess.isAdmin) {
+      if (storeToken) {
+        headers['x-store-token'] = storeToken;
+        headers['Authorization'] = 'Bearer ' + storeToken;
+      }
+    } else if (storeToken) {
+      headers['x-store-token'] = storeToken;
+      headers['Authorization'] = 'Bearer ' + storeToken;
+    } else if (adminToken) {
+      headers['x-admin-token'] = adminToken;
+      headers['Authorization'] = 'Bearer ' + adminToken;
     }
   }
   return headers;
+}
+
+async function handleStoreAccessForbidden(res) {
+  if (!res || res.status !== 403) return false;
+  try {
+    const data = await res.clone().json().catch(() => null);
+    if (data && (data.code === 'STORE_SUSPENDED' || data.code === 'SESSION_REVOKED' || data.code === 'SUBSCRIPTION_INACTIVE')) {
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('jackpotlo:store-suspended', { detail: data }));
+      }
+      return true;
+    }
+  } catch (_) {}
+  return false;
 }
 
 function notifyListeners() {
@@ -71,12 +106,17 @@ export async function checkMySQLStatus() {
 export async function saveDayReportToDB(reportData) {
   if (!reportData) return false;
   try {
+    const storeId = reportData.storeId || (typeof window !== 'undefined' && window.getCurrentStoreId ? window.getCurrentStoreId() : 'store_amigo');
     const res = await fetch('/api/save-day-report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reportData),
+      headers: getAuthHeaders({ 'x-store-id': storeId }),
+      body: JSON.stringify({ ...reportData, storeId }),
       signal: AbortSignal.timeout(5000)
     });
+    if (res.status === 403) {
+      await handleStoreAccessForbidden(res);
+      return false;
+    }
     if (res.ok) {
       const result = await res.json();
       console.log('✅ [MySQL] Daily report saved successfully to MySQL (ID: ' + (result.insertId || 'OK') + ')');
@@ -94,12 +134,17 @@ export async function saveDayReportToDB(reportData) {
 export async function saveShiftReportToDB(shiftData) {
   if (!shiftData) return false;
   try {
+    const storeId = shiftData.storeId || (typeof window !== 'undefined' && window.getCurrentStoreId ? window.getCurrentStoreId() : 'store_amigo');
     const res = await fetch('/api/save-shift-report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(shiftData),
+      headers: getAuthHeaders({ 'x-store-id': storeId }),
+      body: JSON.stringify({ ...shiftData, storeId }),
       signal: AbortSignal.timeout(5000)
     });
+    if (res.status === 403) {
+      await handleStoreAccessForbidden(res);
+      return false;
+    }
     if (res.ok) {
       const result = await res.json();
       console.log('✅ [MySQL] Shift #' + shiftData.shiftNumber + ' saved to MySQL database!');
@@ -124,13 +169,16 @@ export async function syncPOSStateToDB(state, immediate = false) {
   const doSync = async () => {
     try {
       const headers = getAuthHeaders({ 'x-store-id': storeId });
-      await fetch(`/api/sync-pos-state?storeId=${encodeURIComponent(storeId)}`, {
+      const res = await fetch(`/api/sync-pos-state?storeId=${encodeURIComponent(storeId)}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ storeId, state }),
         keepalive: true,
         signal: AbortSignal.timeout(5000)
       });
+      if (res.status === 403) {
+        await handleStoreAccessForbidden(res);
+      }
     } catch (e) {
       // Silently fail if DB offline
     }
@@ -172,7 +220,8 @@ export async function clearPOSStateOnDB(targetStoreId = null) {
 export async function syncHistoricalShiftsToDB(shiftHistory = []) {
   if (!Array.isArray(shiftHistory) || shiftHistory.length === 0) return;
   try {
-    const res = await fetch('/api/shift-reports', { signal: AbortSignal.timeout(4000) });
+    const storeId = typeof window !== 'undefined' && window.getCurrentStoreId ? window.getCurrentStoreId() : 'store_amigo';
+    const res = await fetch('/api/shift-reports', { headers: getAuthHeaders({ 'x-store-id': storeId }), signal: AbortSignal.timeout(4000) });
     if (!res.ok) return;
     const data = await res.json();
     const existingShifts = data.shifts || [];
@@ -194,12 +243,15 @@ export async function syncHistoricalShiftsToDB(shiftHistory = []) {
 export async function logTicketScanToDB(scanData) {
   if (!scanData || !scanData.barcode) return;
   try {
-    await fetch('/api/log-scan', {
+    const res = await fetch('/api/log-scan', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(scanData),
       signal: AbortSignal.timeout(3000)
     });
+    if (res.status === 403) {
+      await handleStoreAccessForbidden(res);
+    }
   } catch (err) {
     // Silently continue if DB offline
   }
@@ -210,6 +262,10 @@ export async function loadPOSStateFromDB(targetStoreId = null) {
   try {
     const headers = getAuthHeaders({ 'x-store-id': storeId });
     const res = await fetch(`/api/load-pos-state?storeId=${encodeURIComponent(storeId)}`, { headers, signal: AbortSignal.timeout(4000) });
+    if (res.status === 403) {
+      await handleStoreAccessForbidden(res);
+      return null;
+    }
     if (res.ok) {
       const data = await res.json();
       if (data && data.success && data.state) {

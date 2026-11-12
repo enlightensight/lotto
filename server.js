@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import https from 'https';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import * as inventoryService from './inventoryService.js';
 
@@ -17,7 +19,12 @@ const app = express();
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3001;
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({
+  limit: '75mb',
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Number parsing utilities to ensure zero NaNs in database
 const parseNum = (val, defaultVal = 0) => {
@@ -87,6 +94,7 @@ const dbConfig = getDatabaseConfig();
 
 let pool = null;
 let isDbConnected = false;
+let isDbInitialized = false;
 let dbLastError = null;
 
 // Initialize Database, Tables & Clean Views (Safe for local and cloud environments)
@@ -118,18 +126,20 @@ async function initDatabase() {
       console.log('✅ [MySQL] Enterprise database schema and human-readable views verified.');
     }
 
-    isDbConnected = true;
-    dbLastError = null;
-    inventoryService.initInventoryService(pool, true);
-    console.log(`✅ [MySQL] Connected to database "${dbConfig.database}" at ${dbConfig.host}:${dbConfig.port}`);
-
-    // 4. Run automatic data migration & purge empty boxes
+    // 4. Run automatic data migration & purge empty boxes BEFORE accepting DB-ready traffic
     await migrateCleanData(pool);
 
-    // 5. Hydrate central state from persistent MySQL tables
+    // 5. Hydrate central state from persistent MySQL tables BEFORE reporting connected
     await syncAdminStateFromDatabase(pool);
+
+    isDbConnected = true;
+    isDbInitialized = true;
+    dbLastError = null;
+    inventoryService.initInventoryService(pool, true);
+    console.log(`✅ [MySQL] Connected & synchronized with database "${dbConfig.database}" at ${dbConfig.host}:${dbConfig.port}`);
   } catch (err) {
     isDbConnected = false;
+    isDbInitialized = false;
     dbLastError = err.message;
     inventoryService.initInventoryService(null, false);
     console.warn(`⚠️ [MySQL] Connection error at ${dbConfig.host}:${dbConfig.port}: ${err.message}`);
@@ -167,27 +177,112 @@ async function syncAdminStateFromDatabase(db) {
       }
     } catch (_) { }
 
-    // Sync stores
+    // Sync stores (including separated compliance, subscription, suspension & tokenVersion columns)
     try {
       const [storeRows] = await db.query('SELECT * FROM stores');
       if (storeRows.length > 0) {
         storeRows.forEach(row => {
           const idx = st.stores.findIndex(s => s.storeId === row.store_id);
-          const storeObj = {
+          const merged = applyStoreDbRow(idx >= 0 ? { ...st.stores[idx] } : {}, row);
+          if (idx >= 0) {
+            st.stores[idx] = merged;
+          } else {
+            st.stores.push(merged);
+          }
+        });
+      }
+    } catch (_) { }
+
+    // Sync store applications
+    try {
+      const [appRows] = await db.query('SELECT * FROM store_applications ORDER BY id DESC LIMIT 200');
+      if (appRows.length > 0) {
+        if (!Array.isArray(st.applications)) st.applications = [];
+        appRows.forEach(row => {
+          let docs = [];
+          let licenseFiles = [];
+          let subscription = null;
+          try { docs = typeof row.documents === 'string' ? JSON.parse(row.documents) : (row.documents || []); } catch (_) { }
+          try { if (row.license_files_json) licenseFiles = JSON.parse(row.license_files_json); } catch (_) { }
+          try { if (row.subscription_json) subscription = typeof row.subscription_json === 'string' ? JSON.parse(row.subscription_json) : row.subscription_json; } catch (_) { }
+          const appKey = row.app_id || `db_app_${row.id}`;
+          const appObj = {
+            id: appKey,
             storeId: row.store_id,
             storeName: row.store_name,
-            ownerUsername: row.owner_username,
-            retailerNumber: row.retailer_number,
-            address: row.address,
-            phone: row.phone,
-            totalBoxes: row.total_boxes || 65,
-            authorizationStatus: row.authorization_status,
-            operationalStatus: row.operational_status
+            applicantName: row.applicant_name,
+            ownerUsername: row.owner_username || '',
+            applicantEmail: row.applicant_email || '',
+            applicantPhone: row.applicant_phone || '',
+            businessTaxId: row.business_tax_id || '',
+            lotteryRetailerId: row.lottery_retailer_id || '',
+            licenseExpiry: row.license_expiry || '',
+            address: row.address || '',
+            documentsUrl: row.documents_url || '',
+            applicantNotes: row.applicant_notes || '',
+            documents: Array.isArray(docs) ? docs : [],
+            licenseFiles: Array.isArray(licenseFiles) ? licenseFiles : [],
+            subscription,
+            documentStatus: row.document_status || (row.status === 'APPROVED' ? 'APPROVED' : (row.status === 'MORE_INFO_REQUIRED' ? 'ACTION_REQUIRED' : 'PENDING_REVIEW')),
+            retailerAuthStatus: row.retailer_auth_status || 'PENDING_VERIFICATION',
+            status: row.status || 'PENDING',
+            adminNotes: row.admin_notes || '',
+            reviewedBy: row.reviewed_by || null,
+            reviewedAt: row.reviewed_at || null,
+            resubmissionCount: Number(row.resubmission_count) || 0,
+            resubmittedAt: row.resubmitted_at || null,
+            createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString()
           };
+          const idx = st.applications.findIndex(a => a.id === appKey || (a.storeId && a.storeId === row.store_id));
           if (idx >= 0) {
-            st.stores[idx] = { ...st.stores[idx], ...storeObj };
+            st.applications[idx] = { ...st.applications[idx], ...appObj, licenseFiles: appObj.licenseFiles.length ? appObj.licenseFiles : (st.applications[idx].licenseFiles || []) };
           } else {
-            st.stores.push(storeObj);
+            st.applications.push(appObj);
+          }
+        });
+      }
+    } catch (_) { }
+
+    // Sync payment transactions
+    try {
+      const [payRows] = await db.query('SELECT * FROM payment_transactions ORDER BY id DESC LIMIT 300');
+      if (payRows.length > 0) {
+        st.paymentTransactions = payRows.map(r => ({
+          paymentRef: r.payment_ref,
+          provider: r.provider,
+          providerEventId: r.provider_event_id,
+          storeId: r.store_id,
+          planId: r.plan_id,
+          billingCycle: r.billing_cycle,
+          amountCents: Number(r.amount_cents) || 0,
+          currency: r.currency || 'usd',
+          paymentStatus: r.payment_status,
+          consumed: Boolean(r.consumed),
+          consumedAt: r.consumed_at || null
+        }));
+      }
+    } catch (_) { }
+
+    // Sync audit logs
+    try {
+      const [auditRows] = await db.query('SELECT * FROM admin_audit_logs ORDER BY created_at DESC LIMIT 200');
+      if (auditRows.length > 0) {
+        if (!Array.isArray(st.auditLogs)) st.auditLogs = [];
+        auditRows.forEach(r => {
+          if (!st.auditLogs.some(x => x.id === r.id)) {
+            let details = {};
+            try { details = r.details_json ? JSON.parse(r.details_json) : {}; } catch (_) { }
+            st.auditLogs.push({
+              id: r.id,
+              adminUsername: r.admin_username,
+              actorRole: r.actor_role,
+              actionType: r.action_type,
+              targetEntity: r.target_entity,
+              targetId: r.target_id,
+              storeId: r.store_id,
+              details,
+              createdAt: r.created_at
+            });
           }
         });
       }
@@ -253,25 +348,130 @@ async function syncAdminStateFromDatabase(db) {
   }
 }
 
-// Automatic Data Migration Helper - Purges empty boxes and ensures Date field is populated
+// MySQL 8.0 & MariaDB safe column migration helper
+async function ensureColumn(db, tableName, colName, colDef) {
+  try {
+    const [rows] = await db.query(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
+      [tableName, colName]
+    );
+    if (!rows || rows.length === 0) {
+      await db.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${colName}\` ${colDef}`);
+    }
+  } catch (err) {
+    console.warn(`Notice migrating ${tableName}.${colName}:`, err.message);
+  }
+}
+
+// Automatic Data Migration Helper - Purges empty boxes and ensures schema/columns exist
 async function migrateCleanData(db) {
   try {
-    // 1. Ensure columns exist before cleanup
-    try {
-      await db.query(`ALTER TABLE day_box_sales ADD COLUMN IF NOT EXISTS \`date\` VARCHAR(20) NOT NULL DEFAULT ''`);
-      await db.query(`ALTER TABLE shift_box_sales ADD COLUMN IF NOT EXISTS \`date\` VARCHAR(30) NOT NULL DEFAULT ''`);
-      await db.query(`ALTER TABLE active_dispensers ADD COLUMN IF NOT EXISTS \`date\` DATE NOT NULL DEFAULT (CURRENT_DATE)`);
-      await db.query(`ALTER TABLE store_inventory ADD COLUMN IF NOT EXISTS \`store_id\` VARCHAR(60) NOT NULL DEFAULT 'store_amigo'`);
-      await db.query(`ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS \`store_id\` VARCHAR(60) NOT NULL DEFAULT 'store_amigo'`);
-      await db.query(`ALTER TABLE shift_reports ADD COLUMN IF NOT EXISTS \`store_id\` VARCHAR(60) NOT NULL DEFAULT 'store_amigo'`);
-      await db.query(`
-        CREATE TABLE IF NOT EXISTS \`store_pos_state\` (
-          \`store_id\` VARCHAR(60) PRIMARY KEY,
-          \`state_data\` LONGTEXT NOT NULL,
-          \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
-    } catch (_) { }
+    // 1. Ensure core & compliance tables/columns exist safely across MySQL 8.0 and MariaDB
+    await ensureColumn(db, 'day_box_sales', 'date', "VARCHAR(20) NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'shift_box_sales', 'date', "VARCHAR(30) NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'active_dispensers', 'date', "DATE NOT NULL DEFAULT (CURRENT_DATE)");
+    await ensureColumn(db, 'store_inventory', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
+    await ensureColumn(db, 'daily_reports', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
+    await ensureColumn(db, 'shift_reports', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS \`store_pos_state\` (
+        \`store_id\` VARCHAR(60) PRIMARY KEY,
+        \`state_data\` LONGTEXT NOT NULL,
+        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS \`payment_transactions\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`payment_ref\` VARCHAR(140) UNIQUE NOT NULL,
+        \`provider\` VARCHAR(40) NOT NULL,
+        \`provider_event_id\` VARCHAR(140) NULL,
+        \`store_id\` VARCHAR(60) NULL,
+        \`plan_id\` VARCHAR(40) NOT NULL,
+        \`billing_cycle\` VARCHAR(20) NOT NULL DEFAULT 'monthly',
+        \`amount_cents\` INT NOT NULL,
+        \`currency\` VARCHAR(10) NOT NULL DEFAULT 'usd',
+        \`payment_status\` VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+        \`consumed\` TINYINT(1) NOT NULL DEFAULT 0,
+        \`consumed_at\` VARCHAR(40) NULL,
+        \`raw_payload\` LONGTEXT NULL,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS \`admin_audit_logs\` (
+        \`id\` VARCHAR(80) PRIMARY KEY,
+        \`admin_username\` VARCHAR(80) NOT NULL,
+        \`actor_role\` VARCHAR(40) NOT NULL DEFAULT 'ADMIN',
+        \`action_type\` VARCHAR(80) NOT NULL,
+        \`target_entity\` VARCHAR(60) NOT NULL,
+        \`target_id\` VARCHAR(80) NOT NULL,
+        \`store_id\` VARCHAR(60) NULL,
+        \`details_json\` TEXT NULL,
+        \`created_at\` VARCHAR(40) NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Separated store subscription, document, retailer authorization, software access, suspension & token_version columns
+    const storeMigrations = [
+      ['owner_name', 'VARCHAR(120) NULL'],
+      ['owner_email', 'VARCHAR(150) NULL'],
+      ['tax_id', 'VARCHAR(60) NULL'],
+      ['license_expiry', 'VARCHAR(40) NULL'],
+      ['subscription_status', "VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'"],
+      ['document_status', "VARCHAR(30) NOT NULL DEFAULT 'APPROVED'"],
+      ['retailer_auth_status', "VARCHAR(30) NOT NULL DEFAULT 'VALID'"],
+      ['software_access_status', "VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'"],
+      ['subscription_plan', 'VARCHAR(50) NULL'],
+      ['subscription_billing_cycle', 'VARCHAR(20) NULL'],
+      ['subscription_amount_paid', 'DECIMAL(10, 2) NULL'],
+      ['payment_ref', 'VARCHAR(140) NULL'],
+      ['payment_provider', 'VARCHAR(40) NULL'],
+      ['paid_at', 'VARCHAR(40) NULL'],
+      ['token_version', 'INT NOT NULL DEFAULT 1'],
+      ['suspension_reason', 'TEXT NULL'],
+      ['suspended_at', 'VARCHAR(40) NULL'],
+      ['suspended_by', 'VARCHAR(60) NULL'],
+      ['reapproved_at', 'VARCHAR(40) NULL'],
+      ['reapproved_by', 'VARCHAR(60) NULL'],
+      ['reapproval_notes', 'TEXT NULL'],
+      ['last_suspension_reason', 'TEXT NULL'],
+      ['subscription_json', 'TEXT NULL']
+    ];
+    for (const [col, def] of storeMigrations) {
+      await ensureColumn(db, 'stores', col, def);
+    }
+
+    const appMigrations = [
+      ['app_id', 'VARCHAR(80) NULL'],
+      ['owner_username', 'VARCHAR(80) NULL'],
+      ['license_expiry', 'VARCHAR(40) NULL'],
+      ['documents_url', 'TEXT NULL'],
+      ['applicant_notes', 'TEXT NULL'],
+      ['document_status', "VARCHAR(30) NULL DEFAULT 'PENDING_REVIEW'"],
+      ['retailer_auth_status', "VARCHAR(30) NULL DEFAULT 'PENDING_VERIFICATION'"],
+      ['subscription_json', 'TEXT NULL'],
+      ['license_files_json', 'LONGTEXT NULL'],
+      ['resubmission_count', 'INT NOT NULL DEFAULT 0'],
+      ['resubmitted_at', 'VARCHAR(40) NULL']
+    ];
+    for (const [col, def] of appMigrations) {
+      await ensureColumn(db, 'store_applications', col, def);
+    }
+
+    const auditMigrations = [
+      ['actor_role', "VARCHAR(40) NOT NULL DEFAULT 'ADMIN'"],
+      ['store_id', 'VARCHAR(60) NULL'],
+      ['details_json', 'TEXT NULL'],
+      ['created_at', "VARCHAR(40) NULL"]
+    ];
+    for (const [col, def] of auditMigrations) {
+      await ensureColumn(db, 'admin_audit_logs', col, def);
+    }
 
     // 2. PURGE ALL EMPTY BOXES from existing database
     await db.query(`
@@ -519,33 +719,49 @@ app.get(['/health', '/api/health'], async (req, res) => {
 
 // 1. Health & Connection Status Check
 app.get('/api/db-status', async (req, res) => {
-  if (!pool) {
-    return res.json({ connected: false, message: 'MySQL Pool is not initialized.', error: dbLastError });
-  }
-  try {
-    const [rows] = await pool.query('SELECT 1 + 1 AS solution');
-    isDbConnected = true;
-    dbLastError = null;
-    res.json({
-      connected: true,
-      database: dbConfig.database,
-      host: dbConfig.host,
-      port: dbConfig.port,
-      status: 'Online & Synced'
-    });
-  } catch (err) {
-    isDbConnected = false;
-    dbLastError = err.message;
-    res.status(500).json({ connected: false, error: err.message });
-  }
-});
+    if (!pool || !isDbInitialized) {
+      return res.json({ connected: false, initializing: Boolean(pool), message: pool ? 'MySQL schema migration & hydration in progress...' : 'MySQL Pool is not initialized.', error: dbLastError });
+    }
+    try {
+      const [rows] = await pool.query('SELECT 1 + 1 AS solution');
+      isDbConnected = true;
+      dbLastError = null;
+      res.json({
+        connected: true,
+        initialized: true,
+        database: dbConfig.database,
+        host: dbConfig.host,
+        port: dbConfig.port,
+        status: 'Online & Synced'
+      });
+    } catch (err) {
+      isDbConnected = false;
+      dbLastError = err.message;
+      res.status(500).json({ connected: false, error: err.message });
+    }
+  });
 
 // 2. Save Daily Report (Saves Parent + Itemized Active Box Sales with Date)
 app.post('/api/save-day-report', requireStoreActive, async (req, res) => {
+  const d = req.body || {};
+  const hasDaySales = parseNum(d.totalScratcherSales, 0) > 0 || (Array.isArray(d.boxes) && d.boxes.some(b => {
+    if (b.isMultiPack && Array.isArray(b.subRows)) return b.subRows.some(sr => parseIntSafe(sr.close, 0) > parseIntSafe(sr.open, 0) || parseNum(sr.total, 0) > 0);
+    return !b.isEmpty && (parseIntSafe(b.close, 0) > parseIntSafe(b.open, 0) || parseNum(b.total, 0) > 0);
+  }));
+  if (hasDaySales) {
+    const authChk = await checkStoreRetailerAuthForSales(req, d.storeId);
+    if (!authChk.allowed) {
+      return res.status(403).json({
+        success: false,
+        code: 'RETAILER_AUTH_REQUIRED',
+        retailerAuthStatus: authChk.retailerAuthStatus,
+        message: 'Access Denied: Cannot record lottery sales in Daily Report until official lottery retailer authorization is VALID.'
+      });
+    }
+  }
   if (!isDbConnected || !pool) return res.status(503).json({ success: false, message: 'MySQL is offline.' });
 
   try {
-    const d = req.body;
     const reportDate = d.reportDate || new Date().toLocaleDateString('en-US');
     const reportTime = d.reportTime || new Date().toLocaleTimeString('en-US');
     const net = (parseNum(d.totalSales, 0) || (parseNum(d.totalScratcherSales, 0) + parseNum(d.onlineSales, 0))) -
@@ -647,10 +863,23 @@ app.get('/api/day-report/:id/boxes', requireStoreActive, async (req, res) => {
 
 // 5. Save Shift Report (Saves Parent + Itemized Active Box Sales with Date)
 app.post('/api/save-shift-report', requireStoreActive, async (req, res) => {
+  const h = req.body || {};
+  const hasShiftSales = parseIntSafe(h.totalTicketsSold, 0) > 0 || parseNum(h.totalSalesRevenue, 0) > 0 ||
+    (Array.isArray(h.slots) && h.slots.some(s => (Number(s.currentTicket) || 0) > (Number(s.startTicket) || 0)));
+  if (hasShiftSales) {
+    const authChk = await checkStoreRetailerAuthForSales(req, h.storeId);
+    if (!authChk.allowed) {
+      return res.status(403).json({
+        success: false,
+        code: 'RETAILER_AUTH_REQUIRED',
+        retailerAuthStatus: authChk.retailerAuthStatus,
+        message: 'Access Denied: Cannot record lottery sales in Shift Report until official lottery retailer authorization is VALID.'
+      });
+    }
+  }
   if (!isDbConnected || !pool) return res.status(503).json({ success: false, message: 'MySQL is offline.' });
 
   try {
-    const h = req.body;
     const floatVal = parseNum(h.drawerFloat, 0);
     const lottoSales = parseNum(h.totalSalesRevenue, 0);
     const cashes = parseNum(h.cashes, 0);
@@ -773,12 +1002,206 @@ app.post('/api/reports/send-email', requireStoreActive, async (req, res) => {
 });
 
 // Persistent storage paths for multi-client state & users synchronization
-const DATA_DIR = path.join(__dirname, 'server_data');
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'server_data');
+const LICENSES_DIR = path.join(DATA_DIR, 'licenses');
 if (!fs.existsSync(DATA_DIR)) {
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) { }
 }
+if (!fs.existsSync(LICENSES_DIR)) {
+  try { fs.mkdirSync(LICENSES_DIR, { recursive: true }); } catch (_) { }
+}
 const POS_STATE_FILE = path.join(DATA_DIR, 'pos_state.json');
 const USERS_FILE = path.join(DATA_DIR, 'registered_users.json');
+
+const ALLOWED_LICENSE_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tif', '.tiff',
+  '.pdf', '.txt', '.csv',
+  '.zip', '.7z', '.rar', '.tar', '.gz',
+  '.enc', '.gpg', '.pgp', '.asc', '.p7m', '.p7s'
+]);
+
+const MIME_BY_EXT = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+  '.tif': 'image/tiff',
+  '.tiff': 'image/tiff',
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain; charset=utf-8',
+  '.csv': 'text/csv; charset=utf-8',
+  '.zip': 'application/zip',
+  '.7z': 'application/x-7z-compressed',
+  '.rar': 'application/vnd.rar',
+  '.tar': 'application/x-tar',
+  '.gz': 'application/gzip',
+  '.enc': 'application/octet-stream',
+  '.gpg': 'application/pgp-encrypted',
+  '.pgp': 'application/pgp-encrypted',
+  '.asc': 'application/pgp-signature',
+  '.p7m': 'application/pkcs7-mime',
+  '.p7s': 'application/pkcs7-signature'
+};
+
+const ARCHIVE_EXTS = new Set(['.zip', '.7z', '.rar', '.tar', '.gz']);
+const ENCRYPTED_EXTS = new Set(['.enc', '.gpg', '.pgp', '.asc', '.p7m', '.p7s']);
+
+function sanitizeRelativePath(rawPath, fallbackName) {
+  const cleaned = String(rawPath || fallbackName || 'file')
+    .replace(/\\/g, '/')
+    .split('/')
+    .map(seg => seg.trim())
+    .filter(seg => seg && seg !== '.' && seg !== '..' && !seg.startsWith('__MACOSX'))
+    .join('/');
+  return cleaned || fallbackName || 'file';
+}
+
+// Parse PKZIP Central Directory without external dependencies (supports ZipCrypto/AES encrypted flag detection)
+function parseZipDirectory(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 22) return null;
+  const minOffset = Math.max(0, buf.length - 65557);
+  let eocdOffset = -1;
+  for (let i = buf.length - 22; i >= minOffset; i--) {
+    if (buf.readUInt32LE(i) === 0x06054b50) {
+      eocdOffset = i;
+      break;
+    }
+  }
+  if (eocdOffset < 0) return null;
+
+  const totalEntries = buf.readUInt16LE(eocdOffset + 10);
+  const cdOffset = buf.readUInt32LE(eocdOffset + 16);
+  const entries = [];
+  let pos = cdOffset;
+
+  for (let i = 0; i < totalEntries && pos + 46 <= buf.length; i++) {
+    if (buf.readUInt32LE(pos) !== 0x02014b50) break;
+    const flags = buf.readUInt16LE(pos + 8);
+    const method = buf.readUInt16LE(pos + 10);
+    const compressedSize = buf.readUInt32LE(pos + 20);
+    const uncompressedSize = buf.readUInt32LE(pos + 24);
+    const nameLen = buf.readUInt16LE(pos + 28);
+    const extraLen = buf.readUInt16LE(pos + 30);
+    const commentLen = buf.readUInt16LE(pos + 32);
+    const localHeaderOffset = buf.readUInt32LE(pos + 42);
+    const entryName = buf.subarray(pos + 46, pos + 46 + nameLen).toString('utf8');
+    pos += 46 + nameLen + extraLen + commentLen;
+
+    if (!entryName || entryName.endsWith('/')) continue;
+    const ext = path.extname(entryName).toLowerCase();
+    entries.push({
+      name: entryName,
+      ext,
+      method,
+      encrypted: (flags & 1) !== 0 || ENCRYPTED_EXTS.has(ext),
+      compressedSize,
+      uncompressedSize,
+      localHeaderOffset
+    });
+  }
+  return entries;
+}
+
+function extractZipEntry(buf, targetName) {
+  const entries = parseZipDirectory(buf);
+  if (!entries) return { error: 'Not a valid ZIP archive.' };
+  const entry = entries.find(e => e.name === targetName);
+  if (!entry) return { error: 'Entry not found in ZIP archive.' };
+  if (entry.encrypted) return { error: 'Entry is password-encrypted inside the ZIP. Download the archive and open with the provided password.' };
+  if (entry.uncompressedSize > 15 * 1024 * 1024) return { error: 'ZIP entry exceeds 15 MB preview limit.' };
+
+  const lh = entry.localHeaderOffset;
+  if (lh + 30 > buf.length || buf.readUInt32LE(lh) !== 0x04034b50) {
+    return { error: 'Invalid local ZIP file header.' };
+  }
+  const lNameLen = buf.readUInt16LE(lh + 26);
+  const lExtraLen = buf.readUInt16LE(lh + 28);
+  const dataStart = lh + 30 + lNameLen + lExtraLen;
+  const dataEnd = Math.min(buf.length, dataStart + entry.compressedSize);
+  const raw = buf.subarray(dataStart, dataEnd);
+
+  try {
+    const out = entry.method === 0
+      ? raw
+      : entry.method === 8
+        ? zlib.inflateRawSync(raw, { maxOutputLength: 15 * 1024 * 1024 })
+        : null;
+    if (!out) return { error: `ZIP compression method (${entry.method}) cannot be previewed inline. Download the ZIP file instead.` };
+    return { buffer: out, entry };
+  } catch (err) {
+    return { error: `Failed to decompress ZIP entry: ${err.message}` };
+  }
+}
+
+function saveLicenseAttachments(appId, files = []) {
+  if (!Array.isArray(files) || files.length === 0) return [];
+  const saved = [];
+  const maxFiles = Math.min(files.length, 25);
+  let totalBytes = 0;
+
+  for (let i = 0; i < maxFiles; i++) {
+    const f = files[i] || {};
+    const dataUrl = String(f.dataUrl || f.data || '');
+    const match = /^data:([a-zA-Z0-9.+/-]*);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+    if (!match) continue;
+
+    const declaredMime = String(match[1] || f.mimeType || '').toLowerCase();
+    const origName = String(f.name || `license_${i + 1}`).trim();
+    let ext = path.extname(origName).toLowerCase();
+    if (!ext && declaredMime) {
+      const mimeEntry = Object.entries(MIME_BY_EXT).find(([, m]) => m.split(';')[0] === declaredMime);
+      if (mimeEntry) ext = mimeEntry[0];
+    }
+    if (!ALLOWED_LICENSE_EXTENSIONS.has(ext)) continue;
+
+    const buf = Buffer.from(match[2], 'base64');
+    // Limit each file to 15 MB and cumulative payload to 45 MB
+    if (buf.length === 0 || buf.length > 15 * 1024 * 1024 || totalBytes + buf.length > 45 * 1024 * 1024) continue;
+    totalBytes += buf.length;
+
+    const relativePath = sanitizeRelativePath(f.relativePath || origName, origName);
+    const safeBase = path.basename(origName).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60) || `license_${i + 1}${ext}`;
+    const storedName = `app_${appId}_${i + 1}_${safeBase.endsWith(ext) ? safeBase : safeBase + ext}`;
+    fs.writeFileSync(path.join(LICENSES_DIR, storedName), buf);
+
+    const mimeType = MIME_BY_EXT[ext] || declaredMime || 'application/octet-stream';
+    let zipEntries = null;
+    let hasEncryptedEntries = false;
+    if (ext === '.zip') {
+      const parsed = parseZipDirectory(buf);
+      if (parsed) {
+        zipEntries = parsed.map(({ name, ext: entryExt, uncompressedSize, encrypted }) => ({
+          name,
+          ext: entryExt,
+          size: uncompressedSize,
+          encrypted
+        }));
+        hasEncryptedEntries = parsed.some(e => e.encrypted);
+      }
+    }
+
+    const isEncrypted = ENCRYPTED_EXTS.has(ext) || hasEncryptedEntries || Boolean(f.isEncrypted);
+    const isArchive = ARCHIVE_EXTS.has(ext);
+    const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
+
+    saved.push({
+      id: `lic_${appId}_${i + 1}`,
+      name: path.basename(relativePath) || origName,
+      relativePath,
+      ext,
+      storedName,
+      mimeType,
+      size: buf.length,
+      sha256,
+      isArchive,
+      isEncrypted,
+      zipEntries
+    });
+  }
+  return saved;
+}
 
 function getPosStateFilePath(storeId = 'store_amigo') {
   const cleanId = String(storeId || 'store_amigo').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -791,8 +1214,34 @@ app.post('/api/sync-pos-state', requireStoreActive, async (req, res) => {
     const raw = req.body;
     if (!raw) return res.status(400).json({ success: false, message: 'Missing state payload' });
     const stateObj = (raw && raw.state) ? raw.state : raw;
-    const storeId = req.query.storeId || raw.storeId || stateObj.storeId || 'store_amigo';
+    const requestedStoreId = req.query.storeId || raw.storeId || stateObj.storeId || 'store_amigo';
+    const storeId = (req.storeSession && !req.adminSession) ? req.storeSession.storeId : requestedStoreId;
+
+    // Enforce official retailer authorization on any offline/retry POS state sync carrying lottery ticket sales
+    const hasSyncedLotterySales =
+      (Array.isArray(stateObj.slots) && stateObj.slots.some(s => s && ((Number(s.ticketsSold) || 0) > 0 || ((Number(s.currentTicket) || 0) > (Number(s.startTicket) || 0))))) ||
+      (Array.isArray(stateObj.soldBarcodes) && stateObj.soldBarcodes.length > 0) ||
+      (Array.isArray(stateObj.soldOutThisShift) && stateObj.soldOutThisShift.some(x => (Number(x?.ticketsSold) || 0) > 0)) ||
+      (Array.isArray(stateObj.shiftHistory) && stateObj.shiftHistory.some(sh => (Number(sh?.totalTicketsSold) || 0) > 0 || (Number(sh?.totalSalesRevenue) || 0) > 0)) ||
+      (Array.isArray(stateObj.dayReports) && stateObj.dayReports.some(dr => (Number(dr?.totalScratcherSales) || 0) > 0));
+    if (hasSyncedLotterySales) {
+      const authChk = await checkStoreRetailerAuthForSales(req, storeId);
+      if (!authChk.allowed) {
+        return res.status(403).json({
+          success: false,
+          code: 'RETAILER_AUTH_REQUIRED',
+          retailerAuthStatus: authChk.retailerAuthStatus,
+          message: 'Access Denied: Offline/synced lottery ticket sales cannot be recorded until official lottery retailer authorization is VALID.'
+        });
+      }
+    }
     stateObj.storeId = storeId;
+    if (storeId === 'store_admin' && (stateObj.storeName === 'AMIGO FOOD MART' || stateObj.storeName === 'ANISH STORE')) {
+      stateObj.storeName = 'ADMIN STORE';
+      stateObj.storeAddress = 'Platform Head Office, Warner Robins, GA, 31088';
+      stateObj.retailerNumber = 'GA-ADM01';
+      stateObj.cashierName = 'Platform Administrator';
+    }
     const stateJson = JSON.stringify(stateObj);
 
     const targetFile = getPosStateFilePath(storeId);
@@ -847,8 +1296,19 @@ app.post('/api/sync-pos-state', requireStoreActive, async (req, res) => {
 // 9. Load POS State from MySQL or fallback JSON store (Isolated per storeId)
 app.get('/api/load-pos-state', requireStoreActive, async (req, res) => {
   try {
-    const storeId = req.query.storeId || 'store_amigo';
+    const requestedStoreId = req.query.storeId || 'store_amigo';
+    const storeId = (req.storeSession && !req.adminSession) ? req.storeSession.storeId : requestedStoreId;
     const targetFile = getPosStateFilePath(storeId);
+
+    const normalizeAdminLeak = (obj) => {
+      if (obj && storeId === 'store_admin' && (obj.storeName === 'AMIGO FOOD MART' || obj.storeName === 'ANISH STORE')) {
+        obj.storeName = 'ADMIN STORE';
+        obj.storeAddress = 'Platform Head Office, Warner Robins, GA, 31088';
+        obj.retailerNumber = 'GA-ADM01';
+        obj.cashierName = 'Platform Administrator';
+      }
+      return obj;
+    };
 
     // 1. Try MySQL first from store_pos_state table (or legacy pos_state for store_amigo)
     if (isDbConnected && pool) {
@@ -859,7 +1319,7 @@ app.get('/api/load-pos-state', requireStoreActive, async (req, res) => {
           rows = legacyRows;
         }
         if (rows.length > 0 && rows[0].state_data) {
-          const stateObj = JSON.parse(rows[0].state_data);
+          const stateObj = normalizeAdminLeak(JSON.parse(rows[0].state_data));
           stateObj.storeId = storeId;
           return res.json({ success: true, storeId, state: stateObj, updatedAt: rows[0].updated_at });
         }
@@ -873,7 +1333,7 @@ app.get('/api/load-pos-state', requireStoreActive, async (req, res) => {
     if (fs.existsSync(targetFile)) {
       const raw = fs.readFileSync(targetFile, 'utf8');
       const stat = fs.statSync(targetFile);
-      const stateObj = JSON.parse(raw);
+      const stateObj = normalizeAdminLeak(JSON.parse(raw));
       stateObj.storeId = storeId;
       return res.json({ success: true, storeId, state: stateObj, updatedAt: stat.mtime });
     }
@@ -887,7 +1347,8 @@ app.get('/api/load-pos-state', requireStoreActive, async (req, res) => {
 // 9a. Clear POS State across server & database (Isolated per storeId)
 app.post('/api/clear-pos-state', requireStoreActive, async (req, res) => {
   try {
-    const storeId = req.query.storeId || req.body?.storeId || 'store_amigo';
+    const requestedStoreId = req.query.storeId || req.body?.storeId || 'store_amigo';
+    const storeId = (req.storeSession && !req.adminSession) ? req.storeSession.storeId : requestedStoreId;
     const targetFile = getPosStateFilePath(storeId);
     if (fs.existsSync(targetFile)) {
       try { fs.unlinkSync(targetFile); } catch (_) { }
@@ -973,8 +1434,22 @@ app.post('/api/log-scan', requireStoreActive, async (req, res) => {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US');
     const timeStr = now.toLocaleTimeString('en-US');
-    const storeId = s.storeId || 'store_amigo';
+    const storeId = (req.storeSession && !req.adminSession)
+      ? req.storeSession.storeId
+      : (s.storeId || req.headers['x-store-id'] || 'store_amigo');
     const cleanPack = (s.packNumber && s.packNumber !== '---') ? String(s.packNumber).trim() : null;
+
+    if (!s.action || s.action === 'SOLD') {
+      const authChk = await checkStoreRetailerAuthForSales(req, storeId);
+      if (!authChk.allowed) {
+        return res.status(403).json({
+          success: false,
+          code: 'RETAILER_AUTH_REQUIRED',
+          retailerAuthStatus: authChk.retailerAuthStatus,
+          message: 'Access Denied: Official lottery retailer authorization must be VALID before scanning or recording ticket sales.'
+        });
+      }
+    }
 
     let inventoryResult = null;
     let inventoryError = null;
@@ -1258,6 +1733,331 @@ function getActiveAdminSession(token) {
 const activeStoreSessions = new Map();
 const revokedStoreTokens = new Set();
 
+const SUBSCRIPTION_PLANS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    priceMonthly: 49,
+    priceAnnual: 490,
+    maxBoxes: 65,
+    description: 'Essential lottery POS & shift controls for single-counter retailers.',
+    features: ['Up to 65 Dispenser Boxes', 'Real-Time Shift & Day Reports', 'Barcode & Scanner Support']
+  },
+  {
+    id: 'pro',
+    name: 'Growth Pro',
+    priceMonthly: 99,
+    priceAnnual: 990,
+    maxBoxes: 120,
+    description: 'Complete POS automation, pack inventory reconciliation & compliance tracking.',
+    features: ['Up to 120 Dispenser Boxes', 'Automated Reconciliation & Reports', 'Priority Verification Support']
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    priceMonthly: 179,
+    priceAnnual: 1790,
+    maxBoxes: 250,
+    description: 'Full multi-staff compliance, audit trails & dedicated onboarding.',
+    features: ['Unlimited Dispenser Capacity', 'Full Compliance Audit History', 'Dedicated Onboarding & SLA']
+  }
+];
+
+function applyStoreDbRow(target, row) {
+  if (!row || typeof row !== 'object') return target;
+  const out = target && typeof target === 'object' ? target : {};
+  out.storeId = row.store_id;
+  out.storeName = row.store_name || out.storeName;
+  out.ownerName = row.owner_name || out.ownerName || '';
+  out.ownerUsername = row.owner_username || out.ownerUsername;
+  out.ownerEmail = row.owner_email || out.ownerEmail || '';
+  out.retailerNumber = row.retailer_number || out.retailerNumber;
+  out.taxId = row.tax_id || out.taxId || '';
+  out.licenseExpiry = row.license_expiry || out.licenseExpiry || '';
+  out.address = row.address || out.address;
+  out.phone = row.phone || out.phone;
+  out.totalBoxes = Number(row.total_boxes) || out.totalBoxes || 65;
+  if (row.authorization_status) out.authorizationStatus = row.authorization_status;
+  if (row.operational_status) out.operationalStatus = row.operational_status;
+  if (row.subscription_status) out.subscriptionStatus = row.subscription_status;
+  if (row.document_status) out.documentStatus = row.document_status;
+  if (row.retailer_auth_status) out.retailerAuthStatus = row.retailer_auth_status;
+  if (row.software_access_status) out.softwareAccessStatus = row.software_access_status;
+  if (row.token_version !== undefined && row.token_version !== null) {
+    out.tokenVersion = Math.max(1, Number(row.token_version) || 1);
+  }
+  if (row.suspension_reason !== undefined && row.suspension_reason !== null) out.suspensionReason = row.suspension_reason;
+  if (row.suspended_at !== undefined && row.suspended_at !== null) out.suspendedAt = row.suspended_at;
+  if (row.suspended_by !== undefined && row.suspended_by !== null) out.suspendedBy = row.suspended_by;
+  if (row.reapproved_at !== undefined && row.reapproved_at !== null) out.reapprovedAt = row.reapproved_at;
+  if (row.reapproved_by !== undefined && row.reapproved_by !== null) out.reapprovedBy = row.reapproved_by;
+  if (row.reapproval_notes !== undefined && row.reapproval_notes !== null) out.reapprovalNotes = row.reapproval_notes;
+  if (row.last_suspension_reason !== undefined && row.last_suspension_reason !== null) out.lastSuspensionReason = row.last_suspension_reason;
+  if (row.subscription_json) {
+    try {
+      out.subscription = typeof row.subscription_json === 'string' ? JSON.parse(row.subscription_json) : row.subscription_json;
+    } catch (_) { }
+  }
+  return normalizeStoreStatuses(out);
+}
+
+async function persistStoreComplianceToMySQL(store) {
+  if (!isDbConnected || !pool || !store || !store.storeId) return;
+  normalizeStoreStatuses(store);
+  try {
+    const subJson = store.subscription ? JSON.stringify(store.subscription) : null;
+    await pool.query(
+      `INSERT INTO stores (
+        store_id, store_name, owner_username, owner_name, owner_email, retailer_number, tax_id, license_expiry,
+        address, phone, total_boxes, authorization_status, operational_status,
+        subscription_status, document_status, retailer_auth_status, software_access_status,
+        subscription_plan, subscription_billing_cycle, subscription_amount_paid, payment_ref, payment_provider, paid_at,
+        token_version, suspension_reason, suspended_at, suspended_by,
+        reapproved_at, reapproved_by, reapproval_notes, last_suspension_reason, subscription_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        store_name = VALUES(store_name),
+        owner_username = VALUES(owner_username),
+        owner_name = VALUES(owner_name),
+        owner_email = VALUES(owner_email),
+        retailer_number = VALUES(retailer_number),
+        tax_id = VALUES(tax_id),
+        license_expiry = VALUES(license_expiry),
+        address = VALUES(address),
+        phone = VALUES(phone),
+        authorization_status = VALUES(authorization_status),
+        operational_status = VALUES(operational_status),
+        subscription_status = VALUES(subscription_status),
+        document_status = VALUES(document_status),
+        retailer_auth_status = VALUES(retailer_auth_status),
+        software_access_status = VALUES(software_access_status),
+        subscription_plan = VALUES(subscription_plan),
+        subscription_billing_cycle = VALUES(subscription_billing_cycle),
+        subscription_amount_paid = VALUES(subscription_amount_paid),
+        payment_ref = VALUES(payment_ref),
+        payment_provider = VALUES(payment_provider),
+        paid_at = VALUES(paid_at),
+        token_version = VALUES(token_version),
+        suspension_reason = VALUES(suspension_reason),
+        suspended_at = VALUES(suspended_at),
+        suspended_by = VALUES(suspended_by),
+        reapproved_at = VALUES(reapproved_at),
+        reapproved_by = VALUES(reapproved_by),
+        reapproval_notes = VALUES(reapproval_notes),
+        last_suspension_reason = VALUES(last_suspension_reason),
+        subscription_json = VALUES(subscription_json),
+        updated_at = CURRENT_TIMESTAMP`,
+      [
+        store.storeId,
+        store.storeName || store.storeId,
+        store.ownerUsername || 'owner',
+        store.ownerName || null,
+        store.ownerEmail || null,
+        store.retailerNumber || null,
+        store.taxId || null,
+        store.licenseExpiry || null,
+        store.address || null,
+        store.phone || null,
+        Number(store.totalBoxes) || 65,
+        store.authorizationStatus || 'APPROVED',
+        store.operationalStatus || 'ACTIVE',
+        store.subscriptionStatus || 'ACTIVE',
+        store.documentStatus || 'APPROVED',
+        store.retailerAuthStatus || 'VALID',
+        store.softwareAccessStatus || 'ACTIVE',
+        store.subscription?.planId || null,
+        store.subscription?.billingCycle || null,
+        store.subscription?.amountPaid != null ? Number(store.subscription.amountPaid) : null,
+        store.subscription?.paymentRef || null,
+        store.subscription?.provider || null,
+        store.subscription?.paidAt || null,
+        Math.max(1, Number(store.tokenVersion) || 1),
+        store.suspensionReason || '',
+        store.suspendedAt || null,
+        store.suspendedBy || null,
+        store.reapprovedAt || null,
+        store.reapprovedBy || null,
+        store.reapprovalNotes || null,
+        store.lastSuspensionReason || null,
+        subJson
+      ]
+    );
+  } catch (dbErr) {
+    console.warn('MySQL persistStoreCompliance error:', dbErr.message);
+  }
+}
+
+async function refreshStoreFromMySQL(storeId) {
+  if (!isDbConnected || !pool || !storeId) return null;
+  try {
+    const [rows] = await pool.query('SELECT * FROM stores WHERE store_id = ? LIMIT 1', [storeId]);
+    if (!rows || rows.length === 0) return null;
+    const st = getAdminState();
+    const idx = (st.stores || []).findIndex(s => s.storeId === storeId);
+    const updated = applyStoreDbRow(idx >= 0 ? { ...st.stores[idx] } : {}, rows[0]);
+    if (idx >= 0) st.stores[idx] = updated;
+    else st.stores.push(updated);
+    saveAdminState(st);
+    return updated;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function checkStoreRetailerAuthForSales(req, explicitStoreId = null) {
+  const storeId = (req.storeSession && !req.adminSession)
+    ? req.storeSession.storeId
+    : (explicitStoreId || req.authorizedStoreId || 'store_amigo');
+  let storeRec = await refreshStoreFromMySQL(storeId);
+  if (!storeRec) {
+    const st = getAdminState();
+    storeRec = (st.stores || []).find(s => s.storeId === storeId) || null;
+  }
+  if (storeRec) {
+    normalizeStoreStatuses(storeRec);
+    if (storeRec.retailerAuthStatus !== 'VALID') {
+      return {
+        allowed: false,
+        storeId,
+        retailerAuthStatus: storeRec.retailerAuthStatus,
+        softwareAccessStatus: storeRec.softwareAccessStatus
+      };
+    }
+  }
+  return { allowed: true, storeId };
+}
+
+function normalizeStoreStatuses(store) {
+  if (!store || typeof store !== 'object') return store;
+  const legacySuspended = store.softwareAccessStatus === 'SUSPENDED' || store.authorizationStatus === 'SUSPENDED' || store.authorizationStatus === 'REJECTED';
+  store.subscriptionStatus = store.subscriptionStatus || (store.subscription && store.subscription.status) || 'ACTIVE';
+  store.documentStatus = store.documentStatus || 'APPROVED';
+  store.retailerAuthStatus = store.retailerAuthStatus || 'VALID';
+  store.softwareAccessStatus = legacySuspended ? 'SUSPENDED' : (store.softwareAccessStatus || 'ACTIVE');
+  store.tokenVersion = Math.max(1, Number(store.tokenVersion) || 1);
+
+  // Maintain backwards-compatible status mirrors for existing callers & legacy metrics
+  store.authorizationStatus = store.softwareAccessStatus === 'SUSPENDED' ? 'SUSPENDED' : 'APPROVED';
+  store.operationalStatus = store.softwareAccessStatus === 'SUSPENDED' ? 'INACTIVE' : 'ACTIVE';
+  store.canSellLottery = (
+    store.softwareAccessStatus === 'ACTIVE' &&
+    store.subscriptionStatus === 'ACTIVE' &&
+    store.retailerAuthStatus === 'VALID'
+  );
+  return store;
+}
+
+function sanitizeStoreForAdmin(store, st = null) {
+  if (!store || typeof store !== 'object') return null;
+  normalizeStoreStatuses(store);
+  const { password, passwordHash, requestedPassword, requestedPasswordHash, ...safeStore } = store;
+  if (st) {
+    const linkedApp = (st.applications || []).find(a => a.storeId === store.storeId);
+    if (linkedApp) {
+      safeStore.applicationId = linkedApp.id;
+      safeStore.taxId = safeStore.taxId || linkedApp.businessTaxId || '';
+      safeStore.licenseExpiry = safeStore.licenseExpiry || linkedApp.licenseExpiry || '';
+      safeStore.licenseFilesCount = Array.isArray(linkedApp.licenseFiles) ? linkedApp.licenseFiles.length : 0;
+      safeStore.resubmissionCount = Number(linkedApp.resubmissionCount) || 0;
+      safeStore.lastResubmittedAt = linkedApp.resubmittedAt || null;
+      safeStore.applicantNotes = linkedApp.applicantNotes || '';
+      safeStore.adminNotes = linkedApp.adminNotes || '';
+    }
+    safeStore.auditCount = (st.auditLogs || []).filter(l => l.targetId === store.storeId || l.storeId === store.storeId).length;
+  }
+  return safeStore;
+}
+
+function sanitizeApplicationForAdmin(appRec) {
+  if (!appRec || typeof appRec !== 'object') return null;
+  const { requestedPassword, requestedPasswordHash, ...safeApp } = appRec;
+  return safeApp;
+}
+
+function recordAuditEvent(st, { adminUsername = 'system', actorRole = 'ADMIN', actionType, targetEntity, targetId, storeId = null, details = {} }) {
+  if (!st) return;
+  if (!Array.isArray(st.auditLogs)) st.auditLogs = [];
+  const entry = {
+    id: `aud_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    adminUsername,
+    actorRole,
+    actionType,
+    targetEntity,
+    targetId: String(targetId || ''),
+    storeId: storeId || (targetEntity === 'stores' ? String(targetId || '') : null),
+    details,
+    createdAt: new Date().toISOString()
+  };
+  st.auditLogs.unshift(entry);
+  if (isDbConnected && pool) {
+    pool.query(
+      `INSERT IGNORE INTO admin_audit_logs (id, admin_username, actor_role, action_type, target_entity, target_id, store_id, details_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [entry.id, entry.adminUsername, entry.actorRole, entry.actionType, entry.targetEntity, entry.targetId, entry.storeId, JSON.stringify(entry.details || {}), entry.createdAt]
+    ).catch(() => { });
+  }
+}
+
+function buildCleanStorePosState({ storeId, storeName, address = '', retailerNumber = '', ownerName = '', ownerEmail = '' }) {
+  return {
+    storeId,
+    storeName,
+    storeAddress: address,
+    retailerNumber,
+    totalSlots: 65,
+    shiftNumber: 1,
+    shiftStatus: 'SHIFT_NOT_STARTED',
+    settings: {
+      storeName,
+      storeAddress: address,
+      cashierName: ownerName || 'Owner',
+      reportEmail: ownerEmail || ''
+    },
+    slots: Array.from({ length: 65 }, (_, i) => ({
+      boxNumber: i + 1,
+      gameName: '',
+      price: 1,
+      packNumber: '',
+      startTicket: 0,
+      currentTicket: 0,
+      ticketsSold: 0,
+      status: 'EMPTY'
+    })),
+    inStockInventory: [],
+    shiftHistory: [],
+    dayReports: [],
+    partialTakeOuts: [],
+    soldOutThisShift: [],
+    lastSavedAt: new Date().toISOString()
+  };
+}
+
+function ensureStorePosStateFile(storeParams) {
+  const storeStateFile = getPosStateFilePath(storeParams.storeId);
+  if (!fs.existsSync(storeStateFile)) {
+    const cleanState = buildCleanStorePosState(storeParams);
+    try {
+      fs.writeFileSync(storeStateFile, JSON.stringify(cleanState, null, 2), 'utf8');
+    } catch (_) { }
+    return cleanState;
+  }
+  return null;
+}
+
+function isStoreTokenStillValid(session, tokenVersionInJwt = null) {
+  if (!session || !session.storeId) return false;
+  const st = getAdminState();
+  const storeRec = (st.stores || []).find(s => s.storeId === session.storeId);
+  if (storeRec) {
+    normalizeStoreStatuses(storeRec);
+    if (storeRec.softwareAccessStatus === 'SUSPENDED') return false;
+    const minVersion = Number(storeRec.tokenVersion) || 1;
+    const tokVer = Number(tokenVersionInJwt ?? session.tokenVersion) || 1;
+    if (tokVer < minVersion) return false;
+  }
+  return true;
+}
+
 function getActiveStoreSession(token) {
   if (!token || typeof token !== 'string') return null;
   const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
@@ -1265,14 +2065,15 @@ function getActiveStoreSession(token) {
 
   const cached = activeStoreSessions.get(cleanToken);
   if (cached) {
-    if (new Date(cached.expiresAt) <= new Date()) {
+    if (new Date(cached.expiresAt) <= new Date() || !isStoreTokenStillValid(cached, cached.tokenVersion)) {
+      revokedStoreTokens.add(cleanToken);
       activeStoreSessions.delete(cleanToken);
       return null;
     }
     return cached;
   }
 
-  // 1. Verify via cryptographic JWT verification
+  // 1. Verify via cryptographic JWT verification (checks persisted tokenVersion & suspension status)
   if (cleanToken.split('.').length === 3) {
     const jwtPayload = verifyJWT(cleanToken);
     if (jwtPayload && jwtPayload.storeId) {
@@ -1284,9 +2085,14 @@ function getActiveStoreSession(token) {
         username: jwtPayload.username,
         email: jwtPayload.email,
         role: jwtPayload.role || 'STORE_USER',
+        tokenVersion: Number(jwtPayload.tokenVersion) || 1,
         createdAt: new Date((jwtPayload.iat || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
         expiresAt: new Date((jwtPayload.exp || Math.floor(Date.now() / 1000) + 86400) * 1000).toISOString()
       };
+      if (!isStoreTokenStillValid(session, session.tokenVersion)) {
+        revokedStoreTokens.add(cleanToken);
+        return null;
+      }
       activeStoreSessions.set(cleanToken, session);
       return session;
     }
@@ -1297,7 +2103,7 @@ function getActiveStoreSession(token) {
   const sessionRecord = (st.storeSessions || []).find(s => s.token === cleanToken);
   if (sessionRecord) {
     if (revokedStoreTokens.has(cleanToken)) return null;
-    if (new Date(sessionRecord.expiresAt) > new Date()) {
+    if (new Date(sessionRecord.expiresAt) > new Date() && isStoreTokenStillValid(sessionRecord, sessionRecord.tokenVersion)) {
       activeStoreSessions.set(cleanToken, sessionRecord);
       return sessionRecord;
     } else {
@@ -1308,19 +2114,25 @@ function getActiveStoreSession(token) {
   return null;
 }
 
-function revokeStoreSessions(storeId) {
+function revokeStoreSessions(storeId, existingSt = null) {
   for (const [token, sess] of activeStoreSessions.entries()) {
     if (sess.storeId === storeId) {
       revokedStoreTokens.add(token);
       activeStoreSessions.delete(token);
     }
   }
-  const st = getAdminState();
+  const st = existingSt || getAdminState();
+  const storeRec = (st.stores || []).find(s => s.storeId === storeId);
+  if (storeRec) {
+    storeRec.tokenVersion = Math.max(1, Number(storeRec.tokenVersion) || 1) + 1;
+  }
   if (Array.isArray(st.storeSessions)) {
     st.storeSessions.forEach(s => {
       if (s.storeId === storeId) revokedStoreTokens.add(s.token);
     });
     st.storeSessions = st.storeSessions.filter(s => s.storeId !== storeId);
+  }
+  if (!existingSt) {
     saveAdminState(st);
   }
 }
@@ -1521,43 +2333,109 @@ function requireAdminRole(req, res, next) {
   });
 }
 
-// Security Middleware: Enforce Store Active Status & Invalidate on Suspension
-function requireStoreActive(req, res, next) {
+// Security Middleware: Enforce Store Active Status & Invalidate on Suspension (MySQL + Memory)
+async function requireStoreActive(req, res, next) {
+  const explicitStoreId = String(req.headers['x-store-id'] || req.body?.storeId || req.query?.storeId || '').trim();
+
   // Platform Administrator has root audit visibility over all stores
   const rawAdminToken = req.headers['x-admin-token'] || req.headers['authorization'] || '';
   const adminToken = rawAdminToken.startsWith('Bearer ') ? rawAdminToken.slice(7).trim() : rawAdminToken.trim();
   if (adminToken && (adminToken === PROVISION_KEY || getActiveAdminSession(adminToken))) {
     req.adminSession = getActiveAdminSession(adminToken) || { username: 'SUPER_ADMIN', role: 'SUPER_ADMIN' };
+    req.authorizedStoreId = explicitStoreId || 'store_admin';
     return next();
   }
 
-  const storeId = req.headers['x-store-id'] || req.body?.storeId || req.query?.storeId || 'store_amigo';
   const rawToken = req.headers['x-store-token'] || req.headers['authorization'] || '';
   const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken.trim();
 
-  // If a store session token is provided, verify it is currently active and not revoked
+  // If a store session token is provided, verify it is active AND strictly scoped to its assigned storeId
   if (token && (token.startsWith('str_') || token.startsWith('ey') || token.split('.').length === 3)) {
     const session = getActiveStoreSession(token);
     if (!session) {
+      // Check if token belonged to a suspended store so UI displays the exact suspension reason
+      const jwtInfo = token.split('.').length === 3 ? verifyJWT(token) : null;
+      const stCheck = getAdminState();
+      const targetStore = jwtInfo?.storeId ? (stCheck.stores || []).find(s => s.storeId === jwtInfo.storeId) : null;
+      if (targetStore) normalizeStoreStatuses(targetStore);
+      if (targetStore && targetStore.softwareAccessStatus === 'SUSPENDED') {
+        return res.status(403).json({
+          success: false,
+          code: 'STORE_SUSPENDED',
+          storeId: targetStore.storeId,
+          storeName: targetStore.storeName,
+          suspensionReason: targetStore.suspensionReason || 'Suspended by lottery administration.',
+          suspendedAt: targetStore.suspendedAt || null,
+          canSubmitCorrection: true,
+          message: `Access Denied: Store "${targetStore.storeName}" is suspended. Reason: ${targetStore.suspensionReason || 'Suspended by administration.'}`
+        });
+      }
       return res.status(403).json({
         success: false,
         code: 'SESSION_REVOKED',
         message: 'Access Denied: Store session is invalid or has been revoked due to store status change. Please log in again.'
       });
     }
+    if (explicitStoreId && session.storeId && explicitStoreId !== session.storeId) {
+      return res.status(403).json({
+        success: false,
+        code: 'STORE_ACCESS_DENIED',
+        message: `Access Denied: Store session for "${session.storeId}" cannot access "${explicitStoreId}".`
+      });
+    }
+    req.storeSession = session;
+    req.authorizedStoreId = session.storeId;
   }
 
+  const storeId = req.storeSession?.storeId || explicitStoreId || 'store_amigo';
+  req.authorizedStoreId = storeId;
+
+  if (isDbConnected && pool) {
+    await refreshStoreFromMySQL(storeId);
+  }
   const st = getAdminState();
-  const store = st.stores.find(s => s.storeId === storeId);
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (req.storeSession && store) {
+    normalizeStoreStatuses(store);
+    const minTokenVer = Math.max(1, Number(store.tokenVersion) || 1);
+    const sessTokenVer = Number(req.storeSession.tokenVersion) || 1;
+    if (sessTokenVer < minTokenVer) {
+      revokedStoreTokens.add(req.storeSession.token);
+      activeStoreSessions.delete(req.storeSession.token);
+      return res.status(403).json({
+        success: false,
+        code: store.softwareAccessStatus === 'SUSPENDED' ? 'STORE_SUSPENDED' : 'SESSION_REVOKED',
+        storeId: store.storeId,
+        storeName: store.storeName,
+        suspensionReason: store.suspensionReason || undefined,
+        canSubmitCorrection: store.softwareAccessStatus === 'SUSPENDED',
+        message: 'Access Denied: Store session has been revoked across devices. Please sign in again.'
+      });
+    }
+  }
   if (store) {
-    if (store.authorizationStatus === 'SUSPENDED') {
+    normalizeStoreStatuses(store);
+    if (store.softwareAccessStatus === 'SUSPENDED' || store.authorizationStatus === 'SUSPENDED') {
       return res.status(403).json({
         success: false,
         code: 'STORE_SUSPENDED',
-        message: `Access Denied: Store "${store.storeName}" has been suspended by lottery administration.`
+        storeId: store.storeId,
+        storeName: store.storeName,
+        suspensionReason: store.suspensionReason || 'Suspended by lottery administration.',
+        suspendedAt: store.suspendedAt || null,
+        canSubmitCorrection: true,
+        message: `Access Denied: Store "${store.storeName}" has been suspended. Reason: ${store.suspensionReason || 'Contact administrator.'}`
       });
     }
-    // Normal stores in PENDING status are permitted to sell and activate tickets without admin approval
+    if (store.subscriptionStatus && store.subscriptionStatus !== 'ACTIVE') {
+      return res.status(403).json({
+        success: false,
+        code: 'SUBSCRIPTION_INACTIVE',
+        storeId: store.storeId,
+        subscriptionStatus: store.subscriptionStatus,
+        message: `Access Denied: Store "${store.storeName}" subscription is ${store.subscriptionStatus}.`
+      });
+    }
     if (store.authorizationStatus === 'REJECTED') {
       return res.status(403).json({
         success: false,
@@ -1566,23 +2444,24 @@ function requireStoreActive(req, res, next) {
       });
     }
   }
+  req.storeRecord = store || null;
   next();
 }
 
-// 14a. Unified Login Endpoint (Automatic Password-Based Identity Resolution)
+// 14a. Unified Login Endpoint (Strict Hash-Verified Identity Resolution)
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const rawIdentifier = (req.body?.email || req.body?.username || '').trim();
+    const rawIdentifier = (req.body?.identifier || req.body?.email || req.body?.username || '').trim();
     const rawPassword = req.body?.password != null ? String(req.body.password).trim() : '';
 
     if (!rawIdentifier || !rawPassword) {
-      return res.status(400).json({ success: false, message: 'Please provide both email address and password.' });
+      return res.status(400).json({ success: false, message: 'Please provide both ID / email address and password.' });
     }
 
     const normIdentifier = rawIdentifier.toLowerCase();
     const st = getAdminState();
 
-    // 1. Retrieve candidate records for this identifier (supports ID, username, or email)
+    // 1. Retrieve candidate records for this identifier (supports ID, username, storeId, or email)
     let matchedAdmin = null;
     let matchedStoreUser = null;
 
@@ -1604,7 +2483,7 @@ app.post('/api/auth/login', async (req, res) => {
       } catch (_) { }
     }
 
-    // In-memory state fallbacks
+    // In-memory state fallbacks (matching MySQL lookup fields including storeId / store_id)
     if (!matchedAdmin && Array.isArray(st.admins)) {
       matchedAdmin = st.admins.find(a =>
         ((a.email || '').toLowerCase().trim() === normIdentifier ||
@@ -1618,29 +2497,32 @@ app.post('/api/auth/login', async (req, res) => {
         ((u.email || '').toLowerCase().trim() === normIdentifier ||
           (u.username || '').toLowerCase().trim() === normIdentifier ||
           (u.normalizedEmail || '').toLowerCase().trim() === normIdentifier ||
-          (u.id || '').toLowerCase().trim() === normIdentifier) &&
+          (u.id || '').toLowerCase().trim() === normIdentifier ||
+          (u.storeId || u.store_id || '').toLowerCase().trim() === normIdentifier) &&
         u.isActive !== false
       );
     }
 
-    // 2. Verify submitted password against matching records independently
-    const adminPasswords = new Set(['aj123456@', 'AX123456@', '1234', 'AdminPass_Unified2026_SuperSecure#99', 'AdminPass_cf777d216e0933e84559#Root99']);
+    // 2. Verify submitted password strictly against stored PBKDF2 hashes
+    let isAdminMatch = matchedAdmin ? verifyPassword(rawPassword, matchedAdmin.password_hash) : false;
 
-    let isAdminMatch = matchedAdmin ? (adminPasswords.has(rawPassword) || verifyPassword(rawPassword, matchedAdmin.password_hash)) : false;
-
-    // Stores can ONLY log in with their own original password - never with default admin 1234
     let isStoreMatch = false;
     if (matchedStoreUser) {
       const sHash = matchedStoreUser.password_hash || matchedStoreUser.passwordHash;
-      const sUser = (matchedStoreUser.username || '').toLowerCase().trim();
-      const sId = (matchedStoreUser.store_id || matchedStoreUser.storeId || '').toLowerCase().trim();
-
       if (verifyPassword(rawPassword, sHash)) {
         isStoreMatch = true;
-      } else if ((sUser === 'amigo' || sId === 'store_amigo') && rawPassword === '0000') {
-        isStoreMatch = true;
-      } else if ((sUser === 'anish' || sId === 'store_anish') && rawPassword === 'AX123456@') {
-        isStoreMatch = true;
+        if (needsPasswordRehash(sHash)) {
+          const upgraded = hashPassword(rawPassword);
+          matchedStoreUser.password_hash = upgraded;
+          matchedStoreUser.passwordHash = upgraded;
+          matchedStoreUser.updatedAt = new Date().toISOString();
+          saveAdminState(st);
+          if (isDbConnected && pool) {
+            try {
+              await pool.query('UPDATE store_users SET password_hash = ? WHERE id = ?', [upgraded, matchedStoreUser.id]);
+            } catch (_) { }
+          }
+        }
       }
     }
 
@@ -1651,10 +2533,8 @@ app.post('/api/auth/login', async (req, res) => {
         isStoreMatch = false;
       } else if (mode === 'STORE') {
         isAdminMatch = false;
-      } else if (normIdentifier === 'admin' || normIdentifier === 'adm_001' || normIdentifier === 'admin@jackpotlo.com') {
+      } else if (normIdentifier === 'admin' || normIdentifier === 'adm_001' || normIdentifier === 'store_admin' || normIdentifier === 'admin@jackpotlo.com') {
         isStoreMatch = false;
-      } else if (normIdentifier === 'amigo' || normIdentifier === 'usr_amigo_1' || normIdentifier.includes('amigo')) {
-        isAdminMatch = false;
       } else {
         isAdminMatch = false;
       }
@@ -1746,48 +2626,65 @@ app.post('/api/auth/login', async (req, res) => {
 
     // 4. Branch B: Verified Store User
     if (isStoreMatch) {
-      // Check store user's account_status - STRICT: ONLY APPROVED ACCOUNTS MAY LOG IN!
+      const uNameSlug = (matchedStoreUser.username || matchedStoreUser.email || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const targetStoreId = matchedStoreUser.store_id || matchedStoreUser.storeId || (uNameSlug.includes('amigo') ? 'store_amigo' : `store_${uNameSlug}`);
+      let storeRec = isDbConnected && pool ? await refreshStoreFromMySQL(targetStoreId) : null;
+      if (!storeRec) {
+        storeRec = (st.stores || []).find(s => s.storeId === targetStoreId);
+      }
+      if (storeRec) normalizeStoreStatuses(storeRec);
+
       const userStatus = matchedStoreUser.account_status || matchedStoreUser.accountStatus || 'PENDING';
+      if (storeRec && (storeRec.softwareAccessStatus === 'SUSPENDED' || storeRec.authorizationStatus === 'SUSPENDED')) {
+        return res.status(403).json({
+          success: false,
+          code: 'STORE_SUSPENDED',
+          storeId: storeRec.storeId,
+          storeName: storeRec.storeName,
+          suspensionReason: storeRec.suspensionReason || 'Account suspended by administration.',
+          suspendedAt: storeRec.suspendedAt || null,
+          subscriptionStatus: storeRec.subscriptionStatus,
+          documentStatus: storeRec.documentStatus,
+          retailerAuthStatus: storeRec.retailerAuthStatus,
+          softwareAccessStatus: 'SUSPENDED',
+          canSubmitCorrection: true,
+          message: `Store Suspended: "${storeRec.storeName}" software access is SUSPENDED. Reason: ${storeRec.suspensionReason || 'Please resolve compliance issues and submit corrected documents.'}`
+        });
+      }
+
       if (userStatus !== 'APPROVED') {
         return res.status(403).json({
           success: false,
-          code: 'STORE_USER_NOT_APPROVED',
+          code: userStatus === 'SUSPENDED' ? 'STORE_SUSPENDED' : 'STORE_USER_NOT_APPROVED',
+          storeId: targetStoreId,
+          storeName: storeRec?.storeName || '',
+          suspensionReason: storeRec?.suspensionReason || '',
+          canSubmitCorrection: userStatus === 'SUSPENDED',
           message: userStatus === 'SUSPENDED'
-            ? 'Access Denied: This store user account has been suspended by lottery administration.'
+            ? `Access Denied: This store account has been suspended.${storeRec?.suspensionReason ? ' Reason: ' + storeRec.suspensionReason : ''}`
             : (userStatus === 'REJECTED'
               ? 'Access Denied: This store account application was rejected.'
               : 'Access Denied: Account is pending administrator approval. Only approved accounts can log in.')
         });
       }
 
-      // Check parent store authorization and operational status
-      const uNameSlug = (matchedStoreUser.username || matchedStoreUser.email || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
-      const targetStoreId = matchedStoreUser.store_id || matchedStoreUser.storeId || (uNameSlug.includes('amigo') ? 'store_amigo' : `store_${uNameSlug}`);
-      let storeRec = (st.stores || []).find(s => s.storeId === targetStoreId);
-      if (!storeRec && isDbConnected && pool) {
-        try {
-          const [sRows] = await pool.query('SELECT * FROM stores WHERE store_id = ?', [targetStoreId]);
-          if (sRows.length > 0) {
-            storeRec = {
-              storeId: sRows[0].store_id,
-              storeName: sRows[0].store_name,
-              authorizationStatus: sRows[0].authorization_status,
-              operationalStatus: sRows[0].operational_status
-            };
-          }
-        } catch (_) { }
-      }
-
       if (storeRec) {
-        if (storeRec.authorizationStatus !== 'APPROVED') {
+        if (storeRec.subscriptionStatus && storeRec.subscriptionStatus !== 'ACTIVE') {
+          return res.status(403).json({
+            success: false,
+            code: 'SUBSCRIPTION_INACTIVE',
+            storeId: storeRec.storeId,
+            subscriptionStatus: storeRec.subscriptionStatus,
+            message: `Access Denied: Subscription for "${storeRec.storeName}" is ${storeRec.subscriptionStatus}.`
+          });
+        }
+        if (storeRec.authorizationStatus !== 'APPROVED' || storeRec.softwareAccessStatus !== 'ACTIVE') {
           return res.status(403).json({
             success: false,
             code: 'STORE_NOT_APPROVED',
-            message: storeRec.authorizationStatus === 'SUSPENDED'
-              ? `Access Denied: Store "${storeRec.storeName}" has been suspended by lottery administration.`
-              : (storeRec.authorizationStatus === 'REJECTED'
-                ? `Access Denied: Store "${storeRec.storeName}" application was rejected.`
-                : `Access Denied: Store "${storeRec.storeName}" is pending authorization. Only approved stores can log in.`)
+            message: storeRec.authorizationStatus === 'REJECTED'
+              ? `Access Denied: Store "${storeRec.storeName}" application was rejected.`
+              : `Access Denied: Store "${storeRec.storeName}" software access is not active.`
           });
         }
         if (storeRec.operationalStatus === 'INACTIVE') {
@@ -1799,7 +2696,7 @@ app.post('/api/auth/login', async (req, res) => {
         }
       }
 
-      // Issue standard signed RFC 7519 JSON Web Token (JWT)
+      const tokenVersion = Number(storeRec?.tokenVersion) || 1;
       const token = generateJWT({
         sub: matchedStoreUser.id || matchedStoreUser.username,
         userId: matchedStoreUser.id,
@@ -1808,7 +2705,8 @@ app.post('/api/auth/login', async (req, res) => {
         email: matchedStoreUser.email,
         role: matchedStoreUser.role || 'STORE_USER',
         isAdmin: false,
-        mode: 'STORE'
+        mode: 'STORE',
+        tokenVersion
       }, 86400);
 
       const storeSession = {
@@ -1818,6 +2716,7 @@ app.post('/api/auth/login', async (req, res) => {
         username: matchedStoreUser.username,
         email: matchedStoreUser.email,
         role: matchedStoreUser.role || 'STORE_USER',
+        tokenVersion,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       };
@@ -1827,6 +2726,20 @@ app.post('/api/auth/login', async (req, res) => {
       st.storeSessions = st.storeSessions.filter(s => new Date(s.expiresAt) > new Date()).slice(-99);
       st.storeSessions.push(storeSession);
       saveAdminState(st);
+
+      const statuses = storeRec ? {
+        subscriptionStatus: storeRec.subscriptionStatus,
+        documentStatus: storeRec.documentStatus,
+        retailerAuthStatus: storeRec.retailerAuthStatus,
+        softwareAccessStatus: storeRec.softwareAccessStatus,
+        canSellLottery: Boolean(storeRec.canSellLottery)
+      } : {
+        subscriptionStatus: 'ACTIVE',
+        documentStatus: 'APPROVED',
+        retailerAuthStatus: 'VALID',
+        softwareAccessStatus: 'ACTIVE',
+        canSellLottery: true
+      };
 
       return res.json({
         success: true,
@@ -1840,6 +2753,11 @@ app.post('/api/auth/login', async (req, res) => {
         tokenType: 'Bearer',
         storeId: targetStoreId,
         storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`),
+        storeAddress: storeRec?.address || '',
+        retailerNumber: storeRec?.retailerNumber || '',
+        statuses,
+        subscription: storeRec?.subscription || null,
+        suspensionReason: '',
         user: {
           id: matchedStoreUser.id,
           username: matchedStoreUser.username,
@@ -1847,7 +2765,10 @@ app.post('/api/auth/login', async (req, res) => {
           email: matchedStoreUser.email,
           role: matchedStoreUser.role || 'STORE_USER',
           storeId: targetStoreId,
-          storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`)
+          storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`),
+          storeAddress: storeRec?.address || '',
+          retailerNumber: storeRec?.retailerNumber || '',
+          ...statuses
         }
       });
     }
@@ -2005,21 +2926,38 @@ app.post('/api/admin/change-password', requireAdminRole, async (req, res) => {
   }
 });
 
-// 14b-3. Administrator Logout Endpoint (Revokes Server Session Token)
+// 14b-3. Administrator & Store Logout Endpoint (Revokes Server Session Tokens)
 app.post(['/api/admin/logout', '/api/auth/logout'], (req, res) => {
   try {
-    const rawToken = req.headers['x-admin-token'] || req.headers['authorization'] || req.body?.token || '';
-    const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken.trim();
+    const rawAuth = req.headers['authorization'] || req.body?.token || '';
+    const bearer = rawAuth.startsWith('Bearer ') ? rawAuth.slice(7).trim() : rawAuth.trim();
+    const adminToken = (req.headers['x-admin-token'] || '').trim() || (req.headers['x-store-token'] ? '' : bearer);
+    const storeToken = (req.headers['x-store-token'] || '').trim() || (!req.headers['x-admin-token'] ? bearer : '');
 
-    if (token) {
-      activeAdminSessions.delete(token);
-      const st = getAdminState();
+    let stateChanged = false;
+    const st = getAdminState();
+
+    if (adminToken) {
+      activeAdminSessions.delete(adminToken);
       if (Array.isArray(st.adminSessions)) {
-        st.adminSessions = st.adminSessions.filter(s => s.token !== token);
-        saveAdminState(st);
+        const before = st.adminSessions.length;
+        st.adminSessions = st.adminSessions.filter(s => s.token !== adminToken);
+        if (st.adminSessions.length !== before) stateChanged = true;
       }
     }
-    return res.json({ success: true, message: 'Administrator session revoked successfully.' });
+
+    if (storeToken) {
+      revokedStoreTokens.add(storeToken);
+      activeStoreSessions.delete(storeToken);
+      if (Array.isArray(st.storeSessions)) {
+        const before = st.storeSessions.length;
+        st.storeSessions = st.storeSessions.filter(s => s.token !== storeToken);
+        if (st.storeSessions.length !== before) stateChanged = true;
+      }
+    }
+
+    if (stateChanged) saveAdminState(st);
+    return res.json({ success: true, message: 'Session revoked successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -2054,63 +2992,1320 @@ app.get('/api/admin/overview', requireAdminRole, (req, res) => {
   });
 });
 
-// 14d. Admin: Stores List
-app.get('/api/admin/stores', requireAdminRole, (req, res) => {
-  const st = getAdminState();
-  res.json({ success: true, stores: st.stores });
+// 14c-2. Public: Subscription Plans Catalog & Payment Gateway Config
+app.get('/api/subscription/plans', (req, res) => {
+  res.json({ success: true, plans: SUBSCRIPTION_PLANS });
 });
 
-// 14e. Admin: Update Store Status (Suspend / Reactivate)
+function isStripeConfigured() {
+  return Boolean(process.env.STRIPE_SECRET_KEY && String(process.env.STRIPE_SECRET_KEY).trim().length > 10);
+}
+
+function isLocalTestPaymentEnabled() {
+  return process.env.ALLOW_LOCAL_TEST_PAYMENT === 'true';
+}
+
+function getTestWebhookSecret() {
+  return process.env.STRIPE_WEBHOOK_SECRET || process.env.TEST_PAYMENT_WEBHOOK_SECRET || JWT_SECRET;
+}
+
+function stripeHttpsRequest(method, apiPath, formParams = null) {
+  return new Promise((resolve, reject) => {
+    const secretKey = String(process.env.STRIPE_SECRET_KEY || '').trim();
+    const postData = formParams ? new URLSearchParams(formParams).toString() : null;
+    const req = https.request({
+      hostname: 'api.stripe.com',
+      port: 443,
+      path: apiPath,
+      method,
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+        ...(postData ? {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(postData)
+        } : {})
+      }
+    }, (resp) => {
+      let raw = '';
+      resp.on('data', chunk => { raw += chunk; });
+      resp.on('end', () => {
+        try {
+          const parsed = JSON.parse(raw || '{}');
+          resolve({ statusCode: resp.statusCode || 500, body: parsed });
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+    req.on('error', reject);
+    if (postData) req.write(postData);
+    req.end();
+  });
+}
+
+function verifyStripeWebhookSignature(rawBodyBuf, sigHeader, secret) {
+  if (!rawBodyBuf || !sigHeader || !secret) return false;
+  const parts = String(sigHeader).split(',').reduce((acc, p) => {
+    const [k, v] = p.split('=');
+    if (k && v) acc[k.trim()] = v.trim();
+    return acc;
+  }, {});
+  const timestamp = parts.t;
+  const sig = parts.v1;
+  if (!timestamp || !sig) return false;
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(`${timestamp}.${Buffer.isBuffer(rawBodyBuf) ? rawBodyBuf.toString('utf8') : String(rawBodyBuf)}`)
+    .digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
+  } catch (_) {
+    return false;
+  }
+}
+
+async function getPaymentTransaction(paymentRef) {
+  if (!paymentRef) return null;
+  if (isDbConnected && pool) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM payment_transactions WHERE payment_ref = ? LIMIT 1', [paymentRef]);
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        return {
+          paymentRef: r.payment_ref,
+          provider: r.provider,
+          providerEventId: r.provider_event_id,
+          storeId: r.store_id,
+          planId: r.plan_id,
+          billingCycle: r.billing_cycle,
+          amountCents: Number(r.amount_cents) || 0,
+          currency: r.currency || 'usd',
+          paymentStatus: r.payment_status,
+          consumed: Boolean(r.consumed),
+          consumedAt: r.consumed_at || null
+        };
+      }
+    } catch (_) { }
+  }
+  const st = getAdminState();
+  return (st.paymentTransactions || []).find(tx => tx.paymentRef === paymentRef) || null;
+}
+
+async function upsertPaymentTransaction(tx) {
+  const st = getAdminState();
+  if (!Array.isArray(st.paymentTransactions)) st.paymentTransactions = [];
+  const idx = st.paymentTransactions.findIndex(x => x.paymentRef === tx.paymentRef);
+  if (idx >= 0) st.paymentTransactions[idx] = { ...st.paymentTransactions[idx], ...tx };
+  else st.paymentTransactions.unshift(tx);
+  saveAdminState(st);
+
+  if (isDbConnected && pool) {
+    try {
+      await pool.query(
+        `INSERT INTO payment_transactions (
+          payment_ref, provider, provider_event_id, store_id, plan_id, billing_cycle,
+          amount_cents, currency, payment_status, consumed, consumed_at, raw_payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          provider_event_id = COALESCE(VALUES(provider_event_id), provider_event_id),
+          store_id = COALESCE(VALUES(store_id), store_id),
+          amount_cents = VALUES(amount_cents),
+          payment_status = VALUES(payment_status),
+          consumed = GREATEST(consumed, VALUES(consumed)),
+          consumed_at = COALESCE(VALUES(consumed_at), consumed_at),
+          raw_payload = COALESCE(VALUES(raw_payload), raw_payload),
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          tx.paymentRef,
+          tx.provider || 'stripe',
+          tx.providerEventId || null,
+          tx.storeId || null,
+          tx.planId || 'pro',
+          tx.billingCycle || 'monthly',
+          Number(tx.amountCents) || 0,
+          tx.currency || 'usd',
+          tx.paymentStatus || 'PENDING',
+          tx.consumed ? 1 : 0,
+          tx.consumedAt || null,
+          tx.rawPayload ? JSON.stringify(tx.rawPayload) : null
+        ]
+      );
+    } catch (dbErr) {
+      console.warn('MySQL payment_transactions upsert warning:', dbErr.message);
+    }
+  }
+}
+
+app.get('/api/payments/config', (req, res) => {
+  const stripeReady = isStripeConfigured();
+  const testReady = isLocalTestPaymentEnabled();
+  res.json({
+    success: true,
+    gateway: stripeReady ? 'stripe' : (testReady ? 'stripe_test_harness' : 'none'),
+    configured: stripeReady,
+    webhookConfigured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+    testHarnessEnabled: testReady
+  });
+});
+
+app.post('/api/payments/create-checkout-session', async (req, res) => {
+  try {
+    const planId = String(req.body?.planId || 'pro').toLowerCase().trim();
+    const billingCycle = String(req.body?.billingCycle || 'monthly').toLowerCase() === 'annual' ? 'annual' : 'monthly';
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
+    if (!plan) return res.status(400).json({ success: false, message: `Unknown subscription plan: ${planId}` });
+
+    const expectedAmount = billingCycle === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+    const expectedCents = Math.round(expectedAmount * 100);
+
+    if (isStripeConfigured()) {
+      const origin = String(req.headers.origin || req.body?.returnOrigin || `http://localhost:${PORT}`).replace(/\/$/, '');
+      const stripeRes = await stripeHttpsRequest('POST', '/v1/checkout/sessions', {
+        mode: 'payment',
+        success_url: `${origin}/?checkout_session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/?checkout_cancelled=1`,
+        'line_items[0][quantity]': '1',
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][unit_amount]': String(expectedCents),
+        'line_items[0][price_data][product_data][name]': `Jackpotlo ${plan.name} (${billingCycle})`,
+        'metadata[planId]': plan.id,
+        'metadata[billingCycle]': billingCycle
+      });
+      if (stripeRes.statusCode >= 400 || !stripeRes.body?.id) {
+        return res.status(502).json({
+          success: false,
+          code: 'PAYMENT_GATEWAY_ERROR',
+          message: stripeRes.body?.error?.message || 'Failed to create Stripe Checkout session.'
+        });
+      }
+      await upsertPaymentTransaction({
+        paymentRef: stripeRes.body.id,
+        provider: 'stripe',
+        planId: plan.id,
+        billingCycle,
+        amountCents: expectedCents,
+        currency: 'usd',
+        paymentStatus: 'PENDING',
+        consumed: false
+      });
+      return res.json({
+        success: true,
+        gateway: 'stripe',
+        sessionId: stripeRes.body.id,
+        checkoutUrl: stripeRes.body.url,
+        amountCents: expectedCents
+      });
+    }
+
+    if (isLocalTestPaymentEnabled()) {
+      const sessionId = `cs_test_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+      await upsertPaymentTransaction({
+        paymentRef: sessionId,
+        provider: 'stripe_test_harness',
+        planId: plan.id,
+        billingCycle,
+        amountCents: expectedCents,
+        currency: 'usd',
+        paymentStatus: 'PENDING',
+        consumed: false
+      });
+      return res.json({
+        success: true,
+        gateway: 'stripe_test_harness',
+        sessionId,
+        amountCents: expectedCents
+      });
+    }
+
+    return res.status(503).json({
+      success: false,
+      code: 'PAYMENT_GATEWAY_NOT_CONFIGURED',
+      gateway: 'none',
+      message: 'Live payment gateway is not configured on this server (STRIPE_SECRET_KEY missing). Configure merchant credentials before charging customers.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Trusted Payment Webhook (Stripe HMAC-SHA256 verified, idempotent event ledger)
+app.post('/api/payments/webhook', async (req, res) => {
+  const sigHeader = req.headers['stripe-signature'];
+  const webhookSecret = isStripeConfigured()
+    ? process.env.STRIPE_WEBHOOK_SECRET
+    : (isLocalTestPaymentEnabled() ? getTestWebhookSecret() : null);
+
+  if (!webhookSecret) {
+    return res.status(503).json({ success: false, code: 'WEBHOOK_NOT_CONFIGURED', message: 'Stripe webhook secret is not configured.' });
+  }
+  const verified = verifyStripeWebhookSignature(req.rawBody || JSON.stringify(req.body || {}), sigHeader, webhookSecret);
+  if (!verified) {
+    return res.status(400).json({ success: false, code: 'INVALID_WEBHOOK_SIGNATURE', message: 'Invalid payment webhook signature.' });
+  }
+
+  const event = req.body || {};
+  const obj = event?.data?.object || {};
+  const paymentRef = obj.id || obj.payment_intent || '';
+  if (!paymentRef) {
+    return res.status(400).json({ success: false, message: 'Missing payment object ID in webhook event.' });
+  }
+
+  const existing = await getPaymentTransaction(paymentRef);
+  if (existing && existing.providerEventId && event.id && existing.providerEventId === event.id) {
+    return res.json({ received: true, duplicate: true, paymentRef });
+  }
+
+  let mappedStatus = 'PENDING';
+  if (event.type === 'checkout.session.completed' && obj.payment_status === 'paid') mappedStatus = 'PAID';
+  else if (event.type === 'payment_intent.succeeded' || obj.status === 'succeeded') mappedStatus = 'PAID';
+  else if (event.type === 'checkout.session.expired' || obj.status === 'canceled') mappedStatus = 'CANCELLED';
+  else if (event.type === 'payment_intent.payment_failed' || obj.payment_status === 'unpaid') mappedStatus = 'FAILED';
+
+  await upsertPaymentTransaction({
+    paymentRef,
+    provider: isStripeConfigured() ? 'stripe' : 'stripe_test_harness',
+    providerEventId: event.id || `evt_${Date.now()}`,
+    planId: obj.metadata?.planId || existing?.planId || 'pro',
+    billingCycle: obj.metadata?.billingCycle || existing?.billingCycle || 'monthly',
+    amountCents: Number(obj.amount_total ?? obj.amount_received ?? obj.amount ?? existing?.amountCents ?? 0),
+    currency: String(obj.currency || 'usd').toLowerCase(),
+    paymentStatus: mappedStatus,
+    consumed: existing?.consumed || false,
+    rawPayload: { eventType: event.type, paymentStatus: obj.payment_status || obj.status }
+  });
+
+  res.json({ received: true, paymentRef, paymentStatus: mappedStatus });
+});
+
+async function verifyAndLockSubscriptionPayment({ paymentRef, plan, billingCycle }) {
+  const expectedAmount = billingCycle === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+  const expectedCents = Math.round(expectedAmount * 100);
+  const cleanRef = String(paymentRef || '').trim();
+
+  if (!cleanRef) {
+    return { ok: false, status: 402, code: 'PAYMENT_SESSION_REQUIRED', message: 'A server-verified payment session/reference is required.' };
+  }
+
+  // 1. Idempotency check in MySQL + memory ledger
+  const existingTx = await getPaymentTransaction(cleanRef);
+  if (existingTx && existingTx.consumed) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'DUPLICATE_PAYMENT',
+      message: `Payment reference "${cleanRef}" was already used to activate a store subscription.`
+    };
+  }
+
+  // 2. Live Stripe API Verification when STRIPE_SECRET_KEY is configured
+  if (isStripeConfigured()) {
+    const endpoint = cleanRef.startsWith('pi_')
+      ? `/v1/payment_intents/${encodeURIComponent(cleanRef)}`
+      : `/v1/checkout/sessions/${encodeURIComponent(cleanRef)}`;
+    const stripeRes = await stripeHttpsRequest('GET', endpoint);
+    if (stripeRes.statusCode >= 400 || !stripeRes.body?.id) {
+      return { ok: false, status: 402, code: 'PAYMENT_NOT_FOUND', message: 'Unable to verify payment with Stripe.' };
+    }
+    const obj = stripeRes.body;
+    const isPaid = cleanRef.startsWith('pi_') ? obj.status === 'succeeded' : obj.payment_status === 'paid';
+    const paidCents = Number(cleanRef.startsWith('pi_') ? (obj.amount_received ?? obj.amount) : obj.amount_total) || 0;
+    const currency = String(obj.currency || 'usd').toLowerCase();
+
+    if (!isPaid) {
+      await upsertPaymentTransaction({
+        paymentRef: cleanRef, provider: 'stripe', planId: plan.id, billingCycle,
+        amountCents: paidCents, currency, paymentStatus: obj.status === 'canceled' ? 'CANCELLED' : 'FAILED', consumed: false
+      });
+      return { ok: false, status: 402, code: 'PAYMENT_NOT_COMPLETED', message: `Stripe reports payment is not paid (status: ${obj.payment_status || obj.status}).` };
+    }
+    if (currency !== 'usd' || paidCents !== expectedCents) {
+      return {
+        ok: false,
+        status: 400,
+        code: 'PAYMENT_AMOUNT_MISMATCH',
+        message: `Payment amount (${paidCents} cents ${currency}) does not match selected plan "${plan.name}" (${expectedCents} cents usd).`
+      };
+    }
+    await upsertPaymentTransaction({
+      paymentRef: cleanRef, provider: 'stripe', planId: plan.id, billingCycle,
+      amountCents: paidCents, currency, paymentStatus: 'PAID', consumed: false
+    });
+    return { ok: true, provider: 'stripe', paymentRef: cleanRef, amountPaid: expectedAmount, amountCents: paidCents };
+  }
+
+  // 3. Test-Harness Verification ONLY when explicitly enabled for automated audit testing
+  if (isLocalTestPaymentEnabled()) {
+    if (!existingTx) {
+      return { ok: false, status: 402, code: 'PAYMENT_NOT_VERIFIED', message: 'No confirmed payment webhook/session found for this payment reference.' };
+    }
+    if (existingTx.paymentStatus !== 'PAID') {
+      return { ok: false, status: 402, code: 'PAYMENT_NOT_COMPLETED', message: `Payment has status ${existingTx.paymentStatus} and cannot activate a subscription.` };
+    }
+    if (Number(existingTx.amountCents) !== expectedCents || String(existingTx.currency || 'usd').toLowerCase() !== 'usd') {
+      return {
+        ok: false,
+        status: 400,
+        code: 'PAYMENT_AMOUNT_MISMATCH',
+        message: `Verified payment amount (${existingTx.amountCents} cents) does not match plan "${plan.name}" (${expectedCents} cents).`
+      };
+    }
+    return { ok: true, provider: existingTx.provider || 'stripe_test_harness', paymentRef: cleanRef, amountPaid: expectedAmount, amountCents: expectedCents };
+  }
+
+  // 4. Fail Closed when no real payment gateway is configured
+  return {
+    ok: false,
+    status: 503,
+    code: 'PAYMENT_GATEWAY_NOT_CONFIGURED',
+    message: 'Payment gateway is not configured on this server (STRIPE_SECRET_KEY missing). Subscriptions cannot be activated without server-verified payment.'
+  };
+}
+
+// 14c-3. Public: Customer Subscription Checkout & Immediate Store Registration
+app.post('/api/subscriptions/checkout-and-register', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const planId = String(b.planId || 'pro').toLowerCase().trim();
+    const billingCycle = String(b.billingCycle || 'monthly').toLowerCase() === 'annual' ? 'annual' : 'monthly';
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
+    if (!plan) {
+      return res.status(400).json({ success: false, message: `Unknown subscription plan: ${planId}` });
+    }
+
+    const paymentRefInput = String(b.paymentSessionId || b.paymentRef || '').trim();
+    const paymentVerification = await verifyAndLockSubscriptionPayment({
+      paymentRef: paymentRefInput,
+      plan,
+      billingCycle
+    });
+    if (!paymentVerification.ok) {
+      return res.status(paymentVerification.status).json({
+        success: false,
+        code: paymentVerification.code,
+        message: paymentVerification.message
+      });
+    }
+    const paymentRef = paymentVerification.paymentRef;
+    const storeName = String(b.storeName || b.name || '').trim();
+    const applicantName = String(b.applicantName || b.ownerName || '').trim();
+    const applicantEmail = String(b.applicantEmail || b.email || '').trim();
+    const applicantPhone = String(b.applicantPhone || b.phone || '').trim();
+    const businessTaxId = String(b.businessTaxId || b.taxId || '').trim();
+    const lotteryRetailerId = String(b.lotteryRetailerId || b.retailerId || '').trim();
+    const licenseExpiry = String(b.licenseExpiry || '').trim();
+    const address = String(b.address || '').trim();
+    const rawUsername = String(b.username || '').trim();
+    const requestedPassword = String(b.password || b.desiredPassword || '').trim();
+    const archivePassword = String(b.archivePassword || '').trim();
+    const documentsUrl = String(b.documentsUrl || b.licenseUrl || '').trim();
+    const applicantNotes = String(b.notes || b.applicantNotes || '').trim();
+    const paymentMethodLabel = String(b.paymentMethodLabel || 'Card •••• 4242').trim();
+
+    if (!storeName || !applicantName || !applicantEmail || !applicantPhone || !address) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store Name, Owner Name, Email, Phone Number, and Physical Address are required.'
+      });
+    }
+    if (!requestedPassword || requestedPassword.length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please create a store login password (minimum 4 characters).'
+      });
+    }
+
+    const st = getAdminState();
+    const normEmail = applicantEmail.toLowerCase().trim();
+    const slugBase = (rawUsername || applicantEmail.split('@')[0] || storeName)
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/^_+|_+$/g, '') || 'owner';
+    const ownerUser = slugBase;
+
+    const duplicateUser = (st.storeUsers || []).find(u =>
+      (u.normalizedEmail && u.normalizedEmail === normEmail) ||
+      (u.email && u.email.toLowerCase().trim() === normEmail) ||
+      (rawUsername && u.username && u.username.toLowerCase().trim() === ownerUser)
+    );
+    if (duplicateUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this email or Login ID already exists. Please sign in or choose another Login ID.'
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) || 'store';
+    const storeId = `store_${storeSlug}_${String(Date.now()).slice(-5)}`;
+    const appId = `app_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+
+    const rawUploads = Array.isArray(b.licenseFiles) ? b.licenseFiles : [];
+    const licenseFiles = saveLicenseAttachments(appId, rawUploads);
+    if (rawUploads.length > 0 && licenseFiles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Uploaded files must be supported document/image/archive formats and under 15 MB each.'
+      });
+    }
+
+    const docLabels = licenseFiles.map(f => f.relativePath || f.name);
+    if (documentsUrl && /^https?:\/\//i.test(documentsUrl)) docLabels.push(documentsUrl);
+
+    const amountPaid = paymentVerification.amountPaid;
+    const subscriptionInfo = {
+      planId: plan.id,
+      planName: plan.name,
+      billingCycle,
+      amountPaid,
+      amountCents: paymentVerification.amountCents,
+      currency: 'USD',
+      provider: paymentVerification.provider,
+      paymentRef,
+      paymentMethodLabel,
+      status: 'ACTIVE',
+      paidAt: nowIso
+    };
+
+    const passwordHash = hashPassword(requestedPassword);
+    const userId = `usr_${Date.now()}`;
+
+    const newStore = {
+      storeId,
+      storeName,
+      ownerName: applicantName,
+      ownerUsername: ownerUser,
+      ownerEmail: applicantEmail,
+      retailerNumber: lotteryRetailerId || 'PENDING-VERIFY',
+      taxId: businessTaxId,
+      licenseExpiry,
+      address,
+      phone: applicantPhone,
+      totalBoxes: plan.maxBoxes || 65,
+      subscriptionStatus: 'ACTIVE',
+      documentStatus: 'PENDING_REVIEW',
+      retailerAuthStatus: 'PENDING_VERIFICATION',
+      softwareAccessStatus: 'ACTIVE',
+      authorizationStatus: 'APPROVED',
+      operationalStatus: 'ACTIVE',
+      subscription: subscriptionInfo,
+      tokenVersion: 1,
+      suspensionReason: '',
+      suspendedAt: null,
+      suspendedBy: null,
+      reapprovedAt: null,
+      reapprovedBy: null,
+      suspensionHistory: [],
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+    normalizeStoreStatuses(newStore);
+    st.stores.push(newStore);
+
+    if (!Array.isArray(st.storeUsers)) st.storeUsers = [];
+    st.storeUsers.push({
+      id: userId,
+      storeId,
+      username: ownerUser,
+      email: applicantEmail,
+      normalizedEmail: normEmail,
+      passwordHash,
+      fullName: applicantName,
+      role: 'Owner',
+      accountStatus: 'APPROVED',
+      isActive: true,
+      createdAt: nowIso
+    });
+
+    const newApp = {
+      id: appId,
+      storeId,
+      storeName,
+      applicantName,
+      ownerUsername: ownerUser,
+      applicantEmail,
+      applicantPhone,
+      businessTaxId,
+      lotteryRetailerId,
+      licenseExpiry,
+      address,
+      documentsUrl: /^https?:\/\//i.test(documentsUrl) ? documentsUrl : '',
+      applicantNotes,
+      archivePassword,
+      licenseFiles,
+      documents: docLabels,
+      subscription: subscriptionInfo,
+      documentStatus: 'PENDING_REVIEW',
+      retailerAuthStatus: 'PENDING_VERIFICATION',
+      status: 'PENDING',
+      adminNotes: '',
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewHistory: [],
+      resubmissionCount: 0,
+      createdAt: nowIso
+    };
+    st.applications.unshift(newApp);
+
+    // Ensure clean isolated POS workspace exists immediately
+    const cleanState = buildCleanStorePosState({
+      storeId,
+      storeName,
+      address,
+      retailerNumber: newStore.retailerNumber,
+      ownerName: applicantName,
+      ownerEmail: applicantEmail
+    });
+    ensureStorePosStateFile({
+      storeId,
+      storeName,
+      address,
+      retailerNumber: newStore.retailerNumber,
+      ownerName: applicantName,
+      ownerEmail: applicantEmail
+    });
+
+    // Consume verified payment reference atomically so duplicate callbacks cannot create duplicate subscriptions
+    await upsertPaymentTransaction({
+      paymentRef,
+      provider: paymentVerification.provider,
+      storeId,
+      planId: plan.id,
+      billingCycle,
+      amountCents: paymentVerification.amountCents,
+      currency: 'usd',
+      paymentStatus: 'PAID',
+      consumed: true,
+      consumedAt: nowIso
+    });
+
+    await persistStoreComplianceToMySQL(newStore);
+    if (isDbConnected && pool) {
+      try {
+        await pool.query(
+          `INSERT INTO store_applications (
+            store_id, store_name, applicant_name, owner_username, applicant_email, applicant_phone,
+            business_tax_id, lottery_retailer_id, license_expiry, address, documents_url, applicant_notes,
+            documents, license_files_json, subscription_json, document_status, retailer_auth_status, status, app_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_REVIEW', 'PENDING_VERIFICATION', 'PENDING', ?)`,
+          [
+            storeId, storeName, applicantName, ownerUser, applicantEmail, applicantPhone,
+            businessTaxId, lotteryRetailerId, licenseExpiry, address, newApp.documentsUrl, applicantNotes,
+            JSON.stringify(docLabels), JSON.stringify(licenseFiles), JSON.stringify(subscriptionInfo), appId
+          ]
+        );
+        await pool.query(
+          `INSERT INTO store_pos_state (store_id, state_data) VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE state_data = VALUES(state_data), updated_at = CURRENT_TIMESTAMP`,
+          [storeId, JSON.stringify(cleanState)]
+        );
+        await pool.query(
+          `INSERT INTO store_users (id, store_id, username, email, normalized_email, password_hash, full_name, role, account_status, is_active, approved_by, approved_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'Owner', 'APPROVED', 1, 'SUBSCRIPTION_SELF_SERVICE', CURRENT_TIMESTAMP)`,
+          [userId, storeId, ownerUser, applicantEmail, normEmail, passwordHash, applicantName]
+        );
+      } catch (dbErr) {
+        console.warn('MySQL subscription provisioning warning:', dbErr.message);
+      }
+    }
+
+    // Record required audit trail events (no plaintext password!)
+    recordAuditEvent(st, {
+      adminUsername: ownerUser,
+      actorRole: 'CUSTOMER',
+      actionType: 'SUBSCRIPTION_PAYMENT_COMPLETED',
+      targetEntity: 'stores',
+      targetId: storeId,
+      storeId,
+      details: { planId: plan.id, planName: plan.name, billingCycle, amountPaid, paymentRef, paymentMethodLabel }
+    });
+    recordAuditEvent(st, {
+      adminUsername: ownerUser,
+      actorRole: 'CUSTOMER',
+      actionType: 'STORE_ACCOUNT_CREATED',
+      targetEntity: 'stores',
+      targetId: storeId,
+      storeId,
+      details: { storeName, username: ownerUser, email: applicantEmail, retailerNumber: newStore.retailerNumber, immediateSoftwareAccess: 'ACTIVE' }
+    });
+    recordAuditEvent(st, {
+      adminUsername: ownerUser,
+      actorRole: 'CUSTOMER',
+      actionType: 'DOCUMENTS_SUBMITTED',
+      targetEntity: 'store_applications',
+      targetId: appId,
+      storeId,
+      details: { storeId, fileCount: licenseFiles.length, retailerNumber: lotteryRetailerId || null }
+    });
+
+    // Issue immediate live session JWT
+    const token = generateJWT({
+      sub: userId,
+      userId,
+      storeId,
+      username: ownerUser,
+      email: applicantEmail,
+      role: 'Owner',
+      isAdmin: false,
+      mode: 'STORE',
+      tokenVersion: 1
+    }, 86400);
+
+    const storeSession = {
+      token,
+      userId,
+      storeId,
+      username: ownerUser,
+      email: applicantEmail,
+      role: 'Owner',
+      tokenVersion: 1,
+      createdAt: nowIso,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    };
+    activeStoreSessions.set(token, storeSession);
+    if (!Array.isArray(st.storeSessions)) st.storeSessions = [];
+    st.storeSessions.push(storeSession);
+
+    saveAdminState(st);
+
+    const statuses = {
+      subscriptionStatus: newStore.subscriptionStatus,
+      documentStatus: newStore.documentStatus,
+      retailerAuthStatus: newStore.retailerAuthStatus,
+      softwareAccessStatus: newStore.softwareAccessStatus,
+      canSellLottery: false
+    };
+
+    res.status(201).json({
+      success: true,
+      message: `Subscription activated (${plan.name}) and store "${storeName}" is ready for immediate software access. Lottery selling unlocks once official retailer authorization is verified.`,
+      token,
+      mode: 'STORE',
+      isAdmin: false,
+      storeId,
+      storeName,
+      storeAddress: address,
+      retailerNumber: newStore.retailerNumber,
+      subscription: subscriptionInfo,
+      statuses,
+      application: sanitizeApplicationForAdmin(newApp),
+      user: {
+        id: userId,
+        username: ownerUser,
+        name: applicantName,
+        email: applicantEmail,
+        role: 'Owner',
+        storeId,
+        storeName,
+        storeAddress: address,
+        retailerNumber: newStore.retailerNumber,
+        ...statuses
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 14c-4. Authenticated Store: Fetch Live Account Status & Compliance Notifications
+app.get('/api/store/account-status', requireStoreActive, (req, res) => {
+  const storeId = req.authorizedStoreId;
+  const st = getAdminState();
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+  normalizeStoreStatuses(store);
+  const linkedApp = (st.applications || []).find(a => a.storeId === storeId);
+  const notifications = [];
+  if (store.softwareAccessStatus === 'ACTIVE' && store.retailerAuthStatus !== 'VALID') {
+    notifications.push({
+      type: 'warning',
+      code: 'RETAILER_AUTH_PENDING',
+      title: 'Official Lottery Retailer Authorization Pending Verification',
+      message: 'Your Jackpotlo subscription & software access are ACTIVE, but actual lottery ticket sales are locked until official lottery retailer authorization is verified for this business location.'
+    });
+  }
+  if (store.documentStatus === 'ACTION_REQUIRED' || store.documentStatus === 'REJECTED') {
+    notifications.push({
+      type: 'error',
+      code: 'DOCUMENTS_ACTION_REQUIRED',
+      title: 'Action Required on Submitted Documents',
+      message: linkedApp?.adminNotes || 'Administrator requested updated or corrected documents.'
+    });
+  }
+  if (store.reapprovedAt && !store.suspensionReason) {
+    notifications.push({
+      type: 'success',
+      code: 'ACCESS_RESTORED',
+      title: 'Account Reapproved',
+      message: `Your store was reapproved at ${new Date(store.reapprovedAt).toLocaleString()}.${store.reapprovalNotes ? ' Note: ' + store.reapprovalNotes : ''}`
+    });
+  }
+  res.json({
+    success: true,
+    storeId: store.storeId,
+    storeName: store.storeName,
+    retailerNumber: store.retailerNumber,
+    statuses: {
+      subscriptionStatus: store.subscriptionStatus,
+      documentStatus: store.documentStatus,
+      retailerAuthStatus: store.retailerAuthStatus,
+      softwareAccessStatus: store.softwareAccessStatus,
+      canSellLottery: store.canSellLottery
+    },
+    subscription: store.subscription || null,
+    suspensionReason: store.suspensionReason || '',
+    suspendedAt: store.suspendedAt || null,
+    reapprovedAt: store.reapprovedAt || null,
+    documentReviewNotes: linkedApp?.adminNotes || '',
+    notifications
+  });
+});
+
+// 14c-5. Store Customer: Submit Corrected Business / Retailer Documents (Never Self-Reactivates Suspended Access!)
+app.post('/api/store/resubmit-documents', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const rawToken = req.headers['x-store-token'] || req.headers['authorization'] || '';
+    const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken.trim();
+    const st = getAdminState();
+
+    let targetStore = null;
+    let actorUser = null;
+
+    if (token) {
+      const sess = getActiveStoreSession(token);
+      if (sess && sess.storeId) {
+        targetStore = (st.stores || []).find(s => s.storeId === sess.storeId);
+        actorUser = (st.storeUsers || []).find(u => u.storeId === sess.storeId && (u.id === sess.userId || u.username === sess.username));
+      }
+    }
+
+    if (!targetStore) {
+      const id = String(b.identifier || b.email || b.username || '').trim().toLowerCase();
+      const pw = String(b.password || '').trim();
+      if (!id || !pw) {
+        return res.status(401).json({ success: false, message: 'Please enter your Login ID/Email and password to submit corrected documents.' });
+      }
+      let matchedUser = null;
+      if (isDbConnected && pool) {
+        try {
+          const [uRows] = await pool.query(
+            'SELECT * FROM store_users WHERE (LOWER(email) = ? OR LOWER(username) = ? OR LOWER(normalized_email) = ? OR LOWER(id) = ? OR LOWER(store_id) = ?) AND is_active = 1 LIMIT 1',
+            [id, id, id, id, id]
+          );
+          if (uRows && uRows.length > 0) {
+            matchedUser = {
+              id: uRows[0].id,
+              storeId: uRows[0].store_id,
+              username: uRows[0].username,
+              email: uRows[0].email,
+              normalizedEmail: uRows[0].normalized_email,
+              passwordHash: uRows[0].password_hash,
+              fullName: uRows[0].full_name,
+              role: uRows[0].role
+            };
+          }
+        } catch (_) { }
+      }
+      if (!matchedUser) {
+        matchedUser = (st.storeUsers || []).find(u =>
+          (u.username && u.username.toLowerCase().trim() === id) ||
+          (u.email && u.email.toLowerCase().trim() === id) ||
+          (u.normalizedEmail && u.normalizedEmail === id)
+        );
+      }
+      if (!matchedUser || !verifyPassword(pw, matchedUser.passwordHash)) {
+        return res.status(401).json({ success: false, message: 'Invalid store credentials. Corrected documents not accepted.' });
+      }
+      actorUser = matchedUser;
+      targetStore = isDbConnected && pool ? await refreshStoreFromMySQL(matchedUser.storeId) : null;
+      if (!targetStore) {
+        targetStore = (st.stores || []).find(s => s.storeId === matchedUser.storeId);
+      }
+    }
+
+    if (!targetStore) {
+      return res.status(404).json({ success: false, message: 'Associated store record not found.' });
+    }
+    normalizeStoreStatuses(targetStore);
+
+    const rawUploads = Array.isArray(b.licenseFiles) ? b.licenseFiles : [];
+    const notes = String(b.notes || b.correctionNotes || '').trim();
+    const newRetailerId = String(b.retailerId || b.lotteryRetailerId || '').trim();
+    const newTaxId = String(b.taxId || b.businessTaxId || '').trim();
+    const newExpiry = String(b.licenseExpiry || '').trim();
+    const newAddress = String(b.address || '').trim();
+
+    if (rawUploads.length === 0 && !notes && !newRetailerId) {
+      return res.status(400).json({ success: false, message: 'Please upload corrected document(s) or provide updated retailer details.' });
+    }
+
+    let linkedApp = (st.applications || []).find(a => a.storeId === targetStore.storeId);
+    const appId = linkedApp ? linkedApp.id : `app_${targetStore.storeId}`;
+    const savedFiles = rawUploads.length > 0 ? saveLicenseAttachments(`${appId}_resub_${Date.now()}`, rawUploads) : [];
+    if (rawUploads.length > 0 && savedFiles.length === 0) {
+      return res.status(400).json({ success: false, message: 'Uploaded files must be valid documents/images/archives under 15 MB.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    if (newRetailerId) targetStore.retailerNumber = newRetailerId;
+    if (newTaxId) targetStore.taxId = newTaxId;
+    if (newExpiry) targetStore.licenseExpiry = newExpiry;
+    if (newAddress) targetStore.address = newAddress;
+
+    // CRITICAL: Corrected submission sets documentStatus to PENDING_REVIEW; NEVER changes softwareAccessStatus from SUSPENDED!
+    targetStore.documentStatus = 'PENDING_REVIEW';
+    targetStore.updatedAt = nowIso;
+
+    if (!linkedApp) {
+      linkedApp = {
+        id: appId,
+        storeId: targetStore.storeId,
+        storeName: targetStore.storeName,
+        applicantName: actorUser?.fullName || targetStore.ownerName || targetStore.ownerUsername,
+        ownerUsername: targetStore.ownerUsername,
+        applicantEmail: actorUser?.email || targetStore.ownerEmail || '',
+        applicantPhone: targetStore.phone || '',
+        businessTaxId: targetStore.taxId || '',
+        lotteryRetailerId: targetStore.retailerNumber || '',
+        licenseExpiry: targetStore.licenseExpiry || '',
+        address: targetStore.address || '',
+        licenseFiles: [],
+        documents: [],
+        status: 'PENDING',
+        resubmissionCount: 0,
+        reviewHistory: [],
+        createdAt: nowIso
+      };
+      st.applications.unshift(linkedApp);
+    }
+
+    if (savedFiles.length > 0) {
+      linkedApp.licenseFiles = [...savedFiles, ...(Array.isArray(linkedApp.licenseFiles) ? linkedApp.licenseFiles : [])];
+      const newLabels = savedFiles.map(f => f.relativePath || f.name);
+      linkedApp.documents = [...newLabels, ...(Array.isArray(linkedApp.documents) ? linkedApp.documents : [])];
+    }
+    if (newRetailerId) linkedApp.lotteryRetailerId = newRetailerId;
+    if (newTaxId) linkedApp.businessTaxId = newTaxId;
+    if (newExpiry) linkedApp.licenseExpiry = newExpiry;
+    if (newAddress) linkedApp.address = newAddress;
+    if (notes) linkedApp.applicantNotes = notes;
+    linkedApp.status = 'PENDING';
+    linkedApp.documentStatus = 'PENDING_REVIEW';
+    linkedApp.resubmittedAt = nowIso;
+    linkedApp.resubmissionCount = (Number(linkedApp.resubmissionCount) || 0) + 1;
+
+    recordAuditEvent(st, {
+      adminUsername: actorUser?.username || targetStore.ownerUsername || 'customer',
+      actorRole: 'CUSTOMER',
+      actionType: 'CORRECTED_DOCUMENTS_SUBMITTED',
+      targetEntity: 'stores',
+      targetId: targetStore.storeId,
+      storeId: targetStore.storeId,
+      details: {
+        fileCount: savedFiles.length,
+        notes,
+        retailerIdUpdated: newRetailerId || null,
+        softwareAccessRemains: targetStore.softwareAccessStatus
+      }
+    });
+
+    normalizeStoreStatuses(targetStore);
+    saveAdminState(st);
+    await persistStoreComplianceToMySQL(targetStore);
+    if (isDbConnected && pool && linkedApp) {
+      try {
+        await pool.query(
+          `UPDATE store_applications SET document_status = ?, status = ?, resubmission_count = ?, resubmitted_at = ?, applicant_notes = COALESCE(?, applicant_notes), documents = ?, license_files_json = ? WHERE store_id = ?`,
+          [linkedApp.documentStatus, linkedApp.status, linkedApp.resubmissionCount || 0, linkedApp.resubmittedAt || nowIso, notes || null, JSON.stringify(linkedApp.documents || []), JSON.stringify(linkedApp.licenseFiles || []), targetStore.storeId]
+        );
+      } catch (dbErr) { console.warn('MySQL resubmit update warning:', dbErr.message); }
+    }
+    return res.json({
+      success: true,
+      storeId: targetStore.storeId,
+      documentStatus: targetStore.documentStatus,
+      softwareAccessStatus: targetStore.softwareAccessStatus,
+      retailerAuthStatus: targetStore.retailerAuthStatus,
+      resubmissionCount: linkedApp.resubmissionCount,
+      message: targetStore.softwareAccessStatus === 'SUSPENDED'
+        ? 'Corrected documents received and queued for Admin review. Software access remains SUSPENDED until an administrator reapproves the account.'
+        : 'Updated documents received and queued for Admin review.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 14d. Admin: Stores List (Sanitized — never exposes passwords/hashes)
+app.get('/api/admin/stores', requireAdminRole, (req, res) => {
+  const st = getAdminState();
+  const stores = (st.stores || []).map(s => sanitizeStoreForAdmin(s, st));
+  res.json({ success: true, stores });
+});
+
+// 14d-2. Admin: Full Store Inspection Details (Subscription, Business Info, Docs, Retailer Auth, Audit Trail — ZERO passwords)
+app.get('/api/admin/stores/:storeId/details', requireAdminRole, (req, res) => {
+  const { storeId } = req.params;
+  const st = getAdminState();
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+
+  const safeStore = sanitizeStoreForAdmin(store, st);
+  const linkedApp = (st.applications || []).find(a => a.storeId === storeId);
+  const users = (st.storeUsers || [])
+    .filter(u => u.storeId === storeId)
+    .map(u => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      fullName: u.fullName,
+      role: u.role,
+      accountStatus: u.accountStatus,
+      isActive: u.isActive,
+      createdAt: u.createdAt
+    }));
+  const auditHistory = (st.auditLogs || []).filter(l => l.targetId === storeId || l.storeId === storeId).slice(0, 50);
+
+  res.json({
+    success: true,
+    store: safeStore,
+    application: sanitizeApplicationForAdmin(linkedApp),
+    users,
+    auditHistory
+  });
+});
+
+// 14e-1. Admin: Verify Store Documents & Official Retailer Authorization (Kept Distinct!)
+app.post('/api/admin/stores/:storeId/verify-documents', requireAdminRole, async (req, res) => {
+  const { storeId } = req.params;
+  const { documentStatus, retailerAuthStatus, adminNotes, adminUsername } = req.body || {};
+  const st = getAdminState();
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+  normalizeStoreStatuses(store);
+
+  const actor = req.adminSession?.username || adminUsername || 'admin';
+  const nowIso = new Date().toISOString();
+  const validDocStatuses = ['PENDING_REVIEW', 'APPROVED', 'ACTION_REQUIRED', 'REJECTED'];
+  const validRetailerStatuses = ['PENDING_VERIFICATION', 'VALID', 'INVALID', 'SUSPENDED'];
+
+  if (documentStatus) {
+    if (!validDocStatuses.includes(documentStatus)) {
+      return res.status(400).json({ success: false, message: `Invalid documentStatus: ${documentStatus}` });
+    }
+    store.documentStatus = documentStatus;
+  }
+  if (retailerAuthStatus) {
+    if (!validRetailerStatuses.includes(retailerAuthStatus)) {
+      return res.status(400).json({ success: false, message: `Invalid retailerAuthStatus: ${retailerAuthStatus}` });
+    }
+    store.retailerAuthStatus = retailerAuthStatus;
+  }
+  store.updatedAt = nowIso;
+  normalizeStoreStatuses(store);
+
+  const linkedApp = (st.applications || []).find(a => a.storeId === storeId);
+  if (linkedApp) {
+    if (documentStatus) {
+      linkedApp.documentStatus = documentStatus;
+      linkedApp.status = documentStatus === 'APPROVED' ? 'APPROVED' : (documentStatus === 'ACTION_REQUIRED' ? 'MORE_INFO_REQUIRED' : (documentStatus === 'REJECTED' ? 'REJECTED' : 'PENDING'));
+    }
+    if (retailerAuthStatus) linkedApp.retailerAuthStatus = retailerAuthStatus;
+    if (adminNotes !== undefined) linkedApp.adminNotes = String(adminNotes || '').trim();
+    linkedApp.reviewedBy = actor;
+    linkedApp.reviewedAt = nowIso;
+  }
+
+  if (documentStatus) {
+    recordAuditEvent(st, {
+      adminUsername: actor,
+      actorRole: 'ADMIN',
+      actionType: documentStatus === 'APPROVED' ? 'ADMIN_DOCUMENTS_APPROVED' : `ADMIN_DOCUMENTS_${documentStatus}`,
+      targetEntity: 'stores',
+      targetId: storeId,
+      storeId,
+      details: { documentStatus, adminNotes: String(adminNotes || '').trim() }
+    });
+  }
+  if (retailerAuthStatus) {
+    recordAuditEvent(st, {
+      adminUsername: actor,
+      actorRole: 'ADMIN',
+      actionType: 'RETAILER_AUTHORIZATION_UPDATED',
+      targetEntity: 'stores',
+      targetId: storeId,
+      storeId,
+      details: { retailerAuthStatus, retailerNumber: store.retailerNumber, adminNotes: String(adminNotes || '').trim() }
+    });
+  }
+
+  saveAdminState(st);
+  await persistStoreComplianceToMySQL(store);
+  if (isDbConnected && pool && linkedApp) {
+    try {
+      await pool.query(
+        `UPDATE store_applications SET document_status = ?, retailer_auth_status = ?, status = ?, admin_notes = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP WHERE store_id = ?`,
+        [linkedApp.documentStatus || store.documentStatus, linkedApp.retailerAuthStatus || store.retailerAuthStatus, linkedApp.status || 'PENDING', linkedApp.adminNotes || '', actor, storeId]
+      );
+    } catch (dbErr) { console.warn('MySQL verify-documents app update warning:', dbErr.message); }
+  }
+  res.json({ success: true, store: sanitizeStoreForAdmin(store, st), message: 'Store verification statuses updated.' });
+});
+
+// 14e-2. Admin: Suspend Store Immediately (Reason Required, Revokes Tokens, Preserves POS Data)
+app.post('/api/admin/stores/:storeId/suspend', requireAdminRole, async (req, res) => {
+  const { storeId } = req.params;
+  const reason = String(req.body?.reason || '').trim();
+  const documentStatus = req.body?.documentStatus || 'ACTION_REQUIRED';
+  const actor = req.adminSession?.username || req.body?.adminUsername || 'admin';
+  if (!reason) {
+    return res.status(400).json({ success: false, message: 'A clear suspension reason is required.' });
+  }
+
+  const st = getAdminState();
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+
+  const nowIso = new Date().toISOString();
+  store.softwareAccessStatus = 'SUSPENDED';
+  store.authorizationStatus = 'SUSPENDED';
+  store.operationalStatus = 'INACTIVE';
+  if (['ACTION_REQUIRED', 'REJECTED', 'PENDING_REVIEW'].includes(documentStatus)) {
+    store.documentStatus = documentStatus;
+  }
+  store.suspensionReason = reason;
+  store.suspendedAt = nowIso;
+  store.suspendedBy = actor;
+  store.updatedAt = nowIso;
+  if (!Array.isArray(store.suspensionHistory)) store.suspensionHistory = [];
+  store.suspensionHistory.unshift({ reason, suspendedAt: nowIso, suspendedBy: actor });
+
+  const linkedApp = (st.applications || []).find(a => a.storeId === storeId);
+  if (linkedApp) {
+    linkedApp.adminNotes = reason;
+    linkedApp.documentStatus = store.documentStatus;
+    linkedApp.status = 'MORE_INFO_REQUIRED';
+  }
+
+  // Revoke all active sessions & increment persisted tokenVersion across devices
+  revokeStoreSessions(storeId, st);
+  if (Array.isArray(st.storeUsers)) {
+    st.storeUsers.forEach(u => {
+      if (u.storeId === storeId) u.accountStatus = 'SUSPENDED';
+    });
+  }
+
+  recordAuditEvent(st, {
+    adminUsername: actor,
+    actorRole: 'ADMIN',
+    actionType: 'STORE_SUSPENDED',
+    targetEntity: 'stores',
+    targetId: storeId,
+    storeId,
+    details: { storeName: store.storeName, reason, suspendedAt: nowIso, tokenVersion: store.tokenVersion, dataPreserved: true }
+  });
+
+  normalizeStoreStatuses(store);
+  saveAdminState(st);
+
+  await persistStoreComplianceToMySQL(store);
+  if (isDbConnected && pool) {
+    try {
+      await pool.query('UPDATE store_users SET account_status = ?, updated_at = CURRENT_TIMESTAMP WHERE store_id = ?', ['SUSPENDED', storeId]);
+      if (linkedApp) {
+        await pool.query('UPDATE store_applications SET status = ?, document_status = ?, admin_notes = ? WHERE store_id = ?', [linkedApp.status, linkedApp.documentStatus, linkedApp.adminNotes || reason, storeId]);
+      }
+    } catch (dbErr) {
+      console.warn('MySQL suspend update error:', dbErr.message);
+    }
+  }
+
+  res.json({
+    success: true,
+    store: sanitizeStoreForAdmin(store, st),
+    message: `Store "${store.storeName}" suspended immediately and active sessions revoked.`
+  });
+});
+
+// 14e-3. Admin: Reapprove Suspended Store (Requires Valid Subscription + Official Retailer Auth + Resolved Docs)
+app.post('/api/admin/stores/:storeId/reapprove', requireAdminRole, async (req, res) => {
+  const { storeId } = req.params;
+  const { notes, markDocumentsApproved, retailerAuthStatus, adminUsername } = req.body || {};
+  const actor = req.adminSession?.username || adminUsername || 'admin';
+  const st = getAdminState();
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+  normalizeStoreStatuses(store);
+
+  if (markDocumentsApproved === true) {
+    store.documentStatus = 'APPROVED';
+  }
+  if (retailerAuthStatus === 'VALID') {
+    store.retailerAuthStatus = 'VALID';
+  }
+
+  if (store.subscriptionStatus !== 'ACTIVE') {
+    return res.status(400).json({
+      success: false,
+      code: 'SUBSCRIPTION_INVALID',
+      message: `Cannot reapprove store: Subscription status is ${store.subscriptionStatus}, must be ACTIVE.`
+    });
+  }
+  if (store.retailerAuthStatus !== 'VALID') {
+    return res.status(400).json({
+      success: false,
+      code: 'RETAILER_AUTH_INVALID',
+      message: `Cannot reapprove store: Official lottery retailer authorization is ${store.retailerAuthStatus}. Verify official retailer authorization as VALID first.`
+    });
+  }
+  if (store.documentStatus !== 'APPROVED') {
+    return res.status(400).json({
+      success: false,
+      code: 'DOCUMENTS_NOT_APPROVED',
+      message: `Cannot reapprove store: Document status is ${store.documentStatus}. Confirm corrected documents are approved first.`
+    });
+  }
+
+  const nowIso = new Date().toISOString();
+  const prevReason = store.suspensionReason || '';
+  store.softwareAccessStatus = 'ACTIVE';
+  store.authorizationStatus = 'APPROVED';
+  store.operationalStatus = 'ACTIVE';
+  store.reapprovedAt = nowIso;
+  store.reapprovedBy = actor;
+  store.reapprovalNotes = String(notes || '').trim();
+  if (prevReason) store.lastSuspensionReason = prevReason;
+  store.suspensionReason = '';
+  store.updatedAt = nowIso;
+
+  if (Array.isArray(st.storeUsers)) {
+    st.storeUsers.forEach(u => {
+      if (u.storeId === storeId) u.accountStatus = 'APPROVED';
+    });
+  }
+
+  const linkedApp = (st.applications || []).find(a => a.storeId === storeId);
+  if (linkedApp) {
+    linkedApp.status = 'APPROVED';
+    linkedApp.documentStatus = 'APPROVED';
+    linkedApp.retailerAuthStatus = store.retailerAuthStatus;
+    if (notes) linkedApp.adminNotes = String(notes).trim();
+    linkedApp.reviewedBy = actor;
+    linkedApp.reviewedAt = nowIso;
+  }
+
+  recordAuditEvent(st, {
+    adminUsername: actor,
+    actorRole: 'ADMIN',
+    actionType: 'STORE_REAPPROVED',
+    targetEntity: 'stores',
+    targetId: storeId,
+    storeId,
+    details: { storeName: store.storeName, previousSuspensionReason: prevReason, notes: store.reapprovalNotes, reapprovedAt: nowIso }
+  });
+  recordAuditEvent(st, {
+    adminUsername: actor,
+    actorRole: 'ADMIN',
+    actionType: 'ACCESS_RESTORED',
+    targetEntity: 'stores',
+    targetId: storeId,
+    storeId,
+    details: { softwareAccessStatus: 'ACTIVE', subscriptionStatus: store.subscriptionStatus, retailerAuthStatus: store.retailerAuthStatus, restoredAt: nowIso }
+  });
+
+  normalizeStoreStatuses(store);
+  saveAdminState(st);
+
+  await persistStoreComplianceToMySQL(store);
+  if (isDbConnected && pool) {
+    try {
+      await pool.query('UPDATE store_users SET account_status = ?, updated_at = CURRENT_TIMESTAMP WHERE store_id = ?', ['APPROVED', storeId]);
+      if (linkedApp) {
+        await pool.query('UPDATE store_applications SET status = ?, document_status = ?, retailer_auth_status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP WHERE store_id = ?', ['APPROVED', 'APPROVED', store.retailerAuthStatus, actor, storeId]);
+      }
+    } catch (dbErr) {
+      console.warn('MySQL reapprove update error:', dbErr.message);
+    }
+  }
+
+  res.json({
+    success: true,
+    store: sanitizeStoreForAdmin(store, st),
+    message: `Store "${store.storeName}" reapproved and software access restored to ACTIVE.`
+  });
+});
+
+// 14e. Admin: Update Store Status (Backwards-compatible Suspend / Reactivate endpoint)
 app.post('/api/admin/stores/:storeId/status', requireAdminRole, async (req, res) => {
   const { storeId } = req.params;
   const { authorizationStatus, status, operationalStatus, reason, adminUsername } = req.body || {};
   const st = getAdminState();
-  const store = st.stores.find(s => s.storeId === storeId);
+  const store = (st.stores || []).find(s => s.storeId === storeId);
   if (!store) return res.status(404).json({ success: false, message: 'Store not found' });
+  normalizeStoreStatuses(store);
 
+  const actor = req.adminSession?.username || adminUsername || 'admin';
+  const nowIso = new Date().toISOString();
   const targetAuthStatus = authorizationStatus || status;
-  if (targetAuthStatus) store.authorizationStatus = targetAuthStatus;
-  if (operationalStatus) store.operationalStatus = operationalStatus;
-  store.updatedAt = new Date().toISOString();
 
-  // If suspended, purge active sessions immediately to terminate live access
-  if (store.authorizationStatus === 'SUSPENDED') {
-    revokeStoreSessions(storeId);
-    if (Array.isArray(st.storeSessions)) {
-      st.storeSessions = st.storeSessions.filter(s => s.storeId !== storeId);
-    }
+  if (targetAuthStatus === 'SUSPENDED') {
+    store.softwareAccessStatus = 'SUSPENDED';
+    store.authorizationStatus = 'SUSPENDED';
+    store.operationalStatus = operationalStatus || 'INACTIVE';
+    store.suspensionReason = String(reason || 'Suspended by lottery administration.').trim();
+    store.suspendedAt = nowIso;
+    store.suspendedBy = actor;
+    if (!Array.isArray(store.suspensionHistory)) store.suspensionHistory = [];
+    store.suspensionHistory.unshift({ reason: store.suspensionReason, suspendedAt: nowIso, suspendedBy: actor });
+
+    revokeStoreSessions(storeId, st);
     if (Array.isArray(st.storeUsers)) {
       st.storeUsers.forEach(u => {
         if (u.storeId === storeId) u.accountStatus = 'SUSPENDED';
       });
     }
-  } else if (store.authorizationStatus === 'APPROVED') {
+  } else if (targetAuthStatus === 'APPROVED') {
+    if (store.subscriptionStatus !== 'ACTIVE' || store.retailerAuthStatus !== 'VALID') {
+      return res.status(400).json({
+        success: false,
+        code: 'REAPPROVAL_PREREQUISITE_FAILED',
+        message: `Cannot reactivate store unless subscription is ACTIVE (${store.subscriptionStatus}) and official retailer authorization is VALID (${store.retailerAuthStatus}).`
+      });
+    }
+    store.softwareAccessStatus = 'ACTIVE';
+    store.authorizationStatus = 'APPROVED';
+    store.operationalStatus = operationalStatus || 'ACTIVE';
+    store.reapprovedAt = nowIso;
+    store.reapprovedBy = actor;
+    if (store.suspensionReason) store.lastSuspensionReason = store.suspensionReason;
+    store.suspensionReason = '';
     if (Array.isArray(st.storeUsers)) {
       st.storeUsers.forEach(u => {
         if (u.storeId === storeId) u.accountStatus = 'APPROVED';
       });
     }
+  } else {
+    if (targetAuthStatus) store.authorizationStatus = targetAuthStatus;
+    if (operationalStatus) store.operationalStatus = operationalStatus;
   }
+  store.updatedAt = nowIso;
+  normalizeStoreStatuses(store);
 
-  st.auditLogs.unshift({
-    id: `aud_${Date.now()}`,
-    adminUsername: adminUsername || 'admin',
-    actionType: `STORE_${store.authorizationStatus}`,
+  recordAuditEvent(st, {
+    adminUsername: actor,
+    actorRole: 'ADMIN',
+    actionType: targetAuthStatus === 'SUSPENDED' ? 'STORE_SUSPENDED' : (targetAuthStatus === 'APPROVED' ? 'STORE_REAPPROVED' : `STORE_${store.authorizationStatus}`),
     targetEntity: 'stores',
     targetId: storeId,
-    details: { storeName: store.storeName, reason, authorizationStatus: store.authorizationStatus, operationalStatus: store.operationalStatus },
-    createdAt: new Date().toISOString()
+    storeId,
+    details: { storeName: store.storeName, reason: reason || store.lastSuspensionReason || '', authorizationStatus: store.authorizationStatus, softwareAccessStatus: store.softwareAccessStatus }
   });
 
   saveAdminState(st);
 
-  // Sync state change to persistent MySQL
+  await persistStoreComplianceToMySQL(store);
   if (isDbConnected && pool) {
     try {
-      await pool.query(
-        'UPDATE stores SET authorization_status = ?, operational_status = ?, updated_at = CURRENT_TIMESTAMP WHERE store_id = ?',
-        [store.authorizationStatus, store.operationalStatus, storeId]
-      );
       await pool.query(
         'UPDATE store_users SET account_status = ?, updated_at = CURRENT_TIMESTAMP WHERE store_id = ?',
         [store.authorizationStatus, storeId]
@@ -2120,51 +4315,92 @@ app.post('/api/admin/stores/:storeId/status', requireAdminRole, async (req, res)
     }
   }
 
-  res.json({ success: true, store, message: `Store "${store.storeName}" status updated to ${store.authorizationStatus}.` });
+  res.json({ success: true, store: sanitizeStoreForAdmin(store, st), message: `Store "${store.storeName}" status updated to ${store.authorizationStatus}.` });
 });
 
 // Public: Store Registration / Lottery License Application
 app.post(['/api/store-applications', '/api/applications'], async (req, res) => {
   try {
     const b = req.body || {};
-    const storeName = b.storeName || b.name;
-    const applicantName = b.applicantName || b.ownerName || b.applicant_name;
-    const applicantEmail = b.applicantEmail || b.ownerEmail || b.email || '';
-    const applicantPhone = b.applicantPhone || b.ownerPhone || b.phone || '';
-    const businessTaxId = b.businessTaxId || b.taxId || `TAX-${Math.floor(10000 + Math.random() * 90000)}`;
-    const lotteryRetailerId = b.lotteryRetailerId || b.businessNumber || b.retailerNumber || `GA-${Math.floor(10000 + Math.random() * 90000)}`;
-    const address = b.address || '';
+    const storeName = String(b.storeName || b.name || '').trim();
+    const applicantName = String(b.applicantName || b.ownerName || b.applicant_name || '').trim();
+    const applicantEmail = String(b.applicantEmail || b.ownerEmail || b.email || '').trim();
+    const applicantPhone = String(b.applicantPhone || b.ownerPhone || b.phone || '').trim();
+    const businessTaxId = String(b.businessTaxId || b.taxId || '').trim() || `TAX-${Math.floor(10000 + Math.random() * 90000)}`;
+    const lotteryRetailerId = String(b.lotteryRetailerId || b.licenseNumber || b.businessNumber || b.retailerNumber || '').trim() || `GA-${Math.floor(10000 + Math.random() * 90000)}`;
+    const licenseExpiry = String(b.licenseExpiry || '').trim();
+    const address = String(b.address || '').trim();
+    const documentsUrl = String(b.documentsUrl || b.notes || '').trim();
+    const applicantNotes = String(b.applicantNotes || b.notes || documentsUrl || '').trim();
+    const archivePassword = String(b.archivePassword || b.encryptionPassword || '').trim();
+    const requestedPassword = String(b.requestedPassword || b.password || '');
     const username = b.username;
 
     if (!storeName || !applicantName) {
       return res.status(400).json({ success: false, message: 'Store Name and Applicant Name are required.' });
     }
+    if (requestedPassword && requestedPassword.length < 4) {
+      return res.status(400).json({ success: false, message: 'Desired password must be at least 4 characters.' });
+    }
 
     const st = getAdminState();
-    const cleanId = String(storeName).toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'store_' + Date.now();
-    const storeId = cleanId.startsWith('store_') ? cleanId : ('store_' + cleanId);
-    const ownerUser = (username || applicantName).toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if (!Array.isArray(st.applications)) st.applications = [];
+    if (!Array.isArray(st.stores)) st.stores = [];
+    if (!Array.isArray(st.storeUsers)) st.storeUsers = [];
+
+    const appId = Date.now();
+    const baseCleanId = storeName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || ('store_' + appId);
+    let storeId = baseCleanId.startsWith('store_') ? baseCleanId : ('store_' + baseCleanId);
+    if (st.stores.some(s => s.storeId === storeId) || st.applications.some(a => a.storeId === storeId)) {
+      storeId = `${storeId}_${String(appId).slice(-4)}`;
+    }
+
+    const baseUser = (username || storeName.split(/\s+/)[0] || applicantName).toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'store_owner';
+    let ownerUser = baseUser;
+    if (st.storeUsers.some(u => (u.username || '').toLowerCase() === ownerUser) || ownerUser === 'admin') {
+      ownerUser = `${baseUser}_${String(appId).slice(-4)}`;
+    }
+
+    const rawUploads = Array.isArray(b.licenseFiles) ? b.licenseFiles : [];
+    const licenseFiles = saveLicenseAttachments(appId, rawUploads);
+    if (rawUploads.length > 0 && licenseFiles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Uploaded files must be PNG, JPG, WebP, PDF, TXT, ZIP/7Z/RAR, or encrypted (.enc/.gpg/.pgp/.p7m) and under 15 MB each.'
+      });
+    }
+
+    const docLabels = licenseFiles.map(f => f.relativePath || f.name);
+    if (documentsUrl && /^https?:\/\//i.test(documentsUrl)) {
+      docLabels.push(documentsUrl);
+    }
 
     const newApp = {
-      id: Date.now(),
+      id: appId,
       storeId,
-      storeName: String(storeName).trim(),
-      applicantName: String(applicantName).trim(),
+      storeName,
+      applicantName,
       ownerUsername: ownerUser,
       applicantEmail,
       applicantPhone,
       businessTaxId,
       lotteryRetailerId,
+      licenseExpiry,
       address,
-      documents: ['State Lottery Certificate (Verified)', 'Retail Business License (Pending Verification)'],
+      documentsUrl: /^https?:\/\//i.test(documentsUrl) ? documentsUrl : '',
+      applicantNotes,
+      archivePassword,
+      requestedPasswordHash: requestedPassword ? hashPassword(requestedPassword) : null,
+      licenseFiles,
+      documents: docLabels,
       status: 'PENDING',
       adminNotes: '',
       reviewedBy: null,
       reviewedAt: null,
+      reviewHistory: [],
       createdAt: new Date().toISOString()
     };
 
-    if (!Array.isArray(st.applications)) st.applications = [];
     st.applications.unshift(newApp);
 
     // Save to MySQL if available
@@ -2182,20 +4418,83 @@ app.post(['/api/store-applications', '/api/applications'], async (req, res) => {
     }
 
     saveAdminState(st);
+    const { requestedPasswordHash: _hiddenHash, ...safeApp } = newApp;
     res.json({
       success: true,
-      message: `Store application for "${newApp.storeName}" submitted successfully! It is now pending administrator review.`,
-      application: newApp
+      message: `License & store application for "${newApp.storeName}" submitted! Reference ID: ${newApp.id}`,
+      application: safeApp
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, message: err.message, error: err.message });
   }
 });
 
 // 14f. Admin: Store Applications
 app.get('/api/admin/applications', requireAdminRole, (req, res) => {
   const st = getAdminState();
-  res.json({ success: true, applications: st.applications });
+  const safeApps = (st.applications || []).map(a => sanitizeApplicationForAdmin(a));
+  res.json({ success: true, applications: safeApps });
+});
+
+// 14f-2. Admin: Serve uploaded license file, folder item, encrypted container, or ZIP entry securely
+app.get('/api/admin/applications/:id/files/:storedName', requireAdminRole, (req, res) => {
+  const id = String(req.params.id || '');
+  const storedName = path.basename(String(req.params.storedName || ''));
+  const st = getAdminState();
+  const appRec = (st.applications || []).find(a => String(a.id) === id);
+  if (!appRec) return res.status(404).json({ success: false, message: 'Application not found' });
+
+  const fileMeta = (appRec.licenseFiles || []).find(f => f.storedName === storedName);
+  if (!fileMeta) return res.status(404).json({ success: false, message: 'License file not found' });
+
+  const absPath = path.join(LICENSES_DIR, storedName);
+  if (!absPath.startsWith(LICENSES_DIR) || !fs.existsSync(absPath)) {
+    return res.status(404).json({ success: false, message: 'License file missing on disk' });
+  }
+
+  // ZIP inspection mode: return entry directory cleanly
+  if (req.query.inspect === 'zip') {
+    const buf = fs.readFileSync(absPath);
+    const entries = parseZipDirectory(buf);
+    if (!entries) {
+      return res.json({ success: false, message: 'Could not read ZIP directory (may be corrupted or non-ZIP archive).' });
+    }
+    return res.json({
+      success: true,
+      entries: entries.map(({ name, ext, uncompressedSize, encrypted }) => ({
+        name,
+        ext,
+        size: uncompressedSize,
+        encrypted,
+        mimeType: MIME_BY_EXT[ext] || 'application/octet-stream'
+      }))
+    });
+  }
+
+  // Extract a single entry inside a ZIP for preview/download
+  const zipEntryName = req.query.entry ? String(req.query.entry) : '';
+  if (zipEntryName) {
+    const buf = fs.readFileSync(absPath);
+    const extracted = extractZipEntry(buf, zipEntryName);
+    if (extracted.error) {
+      return res.status(422).json({ success: false, message: extracted.error });
+    }
+    const ext = extracted.entry.ext || '';
+    const entryMime = MIME_BY_EXT[ext] || 'application/octet-stream';
+    const isPreviewable = entryMime.startsWith('image/') || entryMime === 'application/pdf' || entryMime.startsWith('text/');
+    const base = path.basename(zipEntryName).replace(/"/g, '');
+    res.setHeader('Content-Type', entryMime);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', `${isPreviewable ? 'inline' : 'attachment'}; filename="${base}"`);
+    return res.send(extracted.buffer);
+  }
+
+  const mime = fileMeta.mimeType || 'application/octet-stream';
+  const isInlineSafe = mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('text/');
+  res.setHeader('Content-Type', mime);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `${isInlineSafe ? 'inline' : 'attachment'}; filename="${fileMeta.name.replace(/"/g, '')}"`);
+  fs.createReadStream(absPath).pipe(res);
 });
 
 // 14g. Admin: Review Store Application
@@ -2211,56 +4510,100 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
     REJECT: 'REJECTED',
     MORE_INFO: 'MORE_INFO_REQUIRED'
   };
+  const reviewer = (req.adminSession && req.adminSession.username) || adminUsername || 'admin';
+  const nowIso = new Date().toISOString();
   appRec.status = statusMap[decision] || 'PENDING';
-  appRec.adminNotes = notes || '';
-  appRec.reviewedBy = adminUsername || 'admin';
-  appRec.reviewedAt = new Date().toISOString();
+  appRec.adminNotes = String(notes || '').trim();
+  appRec.reviewedBy = reviewer;
+  appRec.reviewedAt = nowIso;
+  if (!Array.isArray(appRec.reviewHistory)) appRec.reviewHistory = [];
+  appRec.reviewHistory.unshift({
+    decision: decision || 'PENDING',
+    status: appRec.status,
+    notes: appRec.adminNotes,
+    reviewedBy: reviewer,
+    reviewedAt: nowIso
+  });
 
+  let provisionedCredentials = null;
+
+  const verifyRetailerValid = req.body?.retailerAuthStatus === 'VALID' || req.body?.confirmOfficialRetailerValid === true;
   if (decision === 'APPROVE') {
-    const ownerUser = (appRec.ownerUsername || appRec.applicantName || 'owner').toLowerCase().replace(/\s+/g, '_');
+    const ownerUser = (appRec.ownerUsername || appRec.applicantName || 'owner').toLowerCase().replace(/[^a-z0-9_]/g, '_');
     const existingStore = st.stores.find(s => s.storeId === appRec.storeId);
+    appRec.documentStatus = 'APPROVED';
+    if (verifyRetailerValid) appRec.retailerAuthStatus = 'VALID';
     if (!existingStore) {
-      st.stores.push({
+      const createdStore = {
         storeId: appRec.storeId,
         storeName: appRec.storeName,
+        ownerName: appRec.applicantName || '',
         ownerUsername: ownerUser,
+        ownerEmail: appRec.applicantEmail || '',
         retailerNumber: appRec.lotteryRetailerId || `GA-${Math.floor(10000 + Math.random() * 90000)}`,
+        taxId: appRec.businessTaxId || '',
+        licenseExpiry: appRec.licenseExpiry || '',
         address: appRec.address,
         phone: appRec.applicantPhone,
         totalBoxes: 65,
+        subscriptionStatus: appRec.subscription?.status || 'ACTIVE',
+        documentStatus: 'APPROVED',
+        retailerAuthStatus: verifyRetailerValid ? 'VALID' : 'PENDING_VERIFICATION',
+        softwareAccessStatus: 'ACTIVE',
         authorizationStatus: 'APPROVED',
-        operationalStatus: 'ACTIVE'
-      });
+        operationalStatus: 'ACTIVE',
+        subscription: appRec.subscription || null,
+        tokenVersion: 1,
+        createdAt: nowIso,
+        updatedAt: nowIso
+      };
+      normalizeStoreStatuses(createdStore);
+      st.stores.push(createdStore);
     } else {
-      existingStore.authorizationStatus = 'APPROVED';
-      existingStore.operationalStatus = 'ACTIVE';
+      existingStore.documentStatus = 'APPROVED';
+      if (verifyRetailerValid) existingStore.retailerAuthStatus = 'VALID';
+      // Only unlock software access if already active or explicitly reapproved with valid retailer + sub
+      if (existingStore.softwareAccessStatus !== 'SUSPENDED') {
+        existingStore.authorizationStatus = 'APPROVED';
+        existingStore.operationalStatus = 'ACTIVE';
+        existingStore.softwareAccessStatus = 'ACTIVE';
+      }
+      if (appRec.lotteryRetailerId) existingStore.retailerNumber = appRec.lotteryRetailerId;
+      existingStore.updatedAt = nowIso;
+      normalizeStoreStatuses(existingStore);
     }
 
     // Initialize clean POS state for the new store
+    const cleanState = {
+      storeId: appRec.storeId,
+      storeName: appRec.storeName,
+      storeAddress: appRec.address || '',
+      retailerNumber: appRec.lotteryRetailerId || '',
+      totalSlots: 65,
+      shiftNumber: 1,
+      shiftStatus: 'SHIFT_NOT_STARTED',
+      slots: Array.from({ length: 65 }, (_, i) => ({
+        boxNumber: i + 1,
+        gameName: '',
+        price: 1,
+        packNumber: '',
+        startTicket: 0,
+        currentTicket: 0,
+        ticketsSold: 0,
+        status: 'EMPTY'
+      })),
+      inStockInventory: []
+    };
     const storeStateFile = getPosStateFilePath(appRec.storeId);
     if (!fs.existsSync(storeStateFile)) {
-      const cleanState = {
-        storeId: appRec.storeId,
-        storeName: appRec.storeName,
-        totalSlots: 65,
-        shiftNumber: 1,
-        shiftStatus: 'SHIFT_NOT_STARTED',
-        slots: Array.from({ length: 65 }, (_, i) => ({
-          boxNumber: i + 1,
-          gameName: '',
-          price: 1,
-          packNumber: '',
-          startTicket: 0,
-          currentTicket: 0,
-          ticketsSold: 0,
-          status: 'EMPTY'
-        })),
-        inStockInventory: []
-      };
       try {
         fs.writeFileSync(storeStateFile, JSON.stringify(cleanState, null, 2), 'utf8');
       } catch (_) { }
     }
+
+    const usedApplicantPass = Boolean(appRec.requestedPasswordHash);
+    const tempPassword = usedApplicantPass ? null : 'Store1234!';
+    const finalPasswordHash = appRec.requestedPasswordHash || hashPassword(tempPassword);
 
     // Persist to MySQL stores, store_applications, and store_pos_state tables
     if (isDbConnected && pool) {
@@ -2273,7 +4616,7 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
         );
         await pool.query(
           `UPDATE store_applications SET status = 'APPROVED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, admin_notes = ? WHERE store_id = ?`,
-          [adminUsername || 'admin', notes || '', appRec.storeId]
+          [reviewer, notes || '', appRec.storeId]
         );
         await pool.query(
           `INSERT INTO store_pos_state (store_id, state_data) VALUES (?, ?)
@@ -2281,16 +4624,14 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
           [appRec.storeId, JSON.stringify(cleanState)]
         );
 
-        // Provision/Update store_users in MySQL
         const applicantEmail = appRec.applicantEmail || '';
         const normEmail = applicantEmail.toLowerCase().trim();
-        const initialPass = hashPassword('Store1234!');
         await pool.query(
           `INSERT INTO store_users 
             (id, store_id, username, email, normalized_email, password_hash, full_name, role, account_status, is_active, approved_by, approved_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'STORE_USER', 'APPROVED', 1, ?, CURRENT_TIMESTAMP)
            ON DUPLICATE KEY UPDATE account_status = 'APPROVED', approved_by = VALUES(approved_by), approved_at = CURRENT_TIMESTAMP`,
-          [`usr_${Date.now()}`, appRec.storeId, ownerUser, applicantEmail, normEmail, initialPass, appRec.applicantName, adminUsername || 'admin']
+          [`usr_${Date.now()}`, appRec.storeId, ownerUser, applicantEmail, normEmail, finalPasswordHash, appRec.applicantName, reviewer]
         );
       } catch (dbErr) {
         console.warn('MySQL store approve error:', dbErr.message);
@@ -2301,8 +4642,9 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
     const existingU = st.storeUsers.find(u => u.storeId === appRec.storeId);
     if (existingU) {
       existingU.accountStatus = 'APPROVED';
-      existingU.approvedBy = adminUsername || 'admin';
-      existingU.approvedAt = new Date().toISOString();
+      existingU.isActive = true;
+      existingU.approvedBy = reviewer;
+      existingU.approvedAt = nowIso;
     } else {
       st.storeUsers.push({
         id: `usr_${Date.now()}`,
@@ -2310,29 +4652,38 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
         username: ownerUser,
         email: appRec.applicantEmail || '',
         normalizedEmail: (appRec.applicantEmail || '').toLowerCase().trim(),
-        passwordHash: hashPassword('Store1234!'),
+        passwordHash: finalPasswordHash,
         fullName: appRec.applicantName,
         role: 'STORE_USER',
         accountStatus: 'APPROVED',
         isActive: true,
-        approvedBy: adminUsername || 'admin',
-        approvedAt: new Date().toISOString()
+        approvedBy: reviewer,
+        approvedAt: nowIso
       });
     }
+
+    provisionedCredentials = {
+      storeId: appRec.storeId,
+      username: ownerUser,
+      email: appRec.applicantEmail || '',
+      passwordSetByApplicant: usedApplicantPass,
+      temporaryPassword: tempPassword
+    };
   }
 
   st.auditLogs.unshift({
     id: `aud_${Date.now()}`,
-    adminUsername: adminUsername || 'admin',
+    adminUsername: reviewer,
     actionType: `APPLICATION_${appRec.status}`,
     targetEntity: 'store_applications',
     targetId: String(id),
-    details: { storeName: appRec.storeName, notes },
-    createdAt: new Date().toISOString()
+    details: { storeName: appRec.storeName, notes: appRec.adminNotes },
+    createdAt: nowIso
   });
 
   saveAdminState(st);
-  res.json({ success: true, application: appRec });
+  const { requestedPasswordHash: _h, ...safeApp } = appRec;
+  res.json({ success: true, application: safeApp, credentials: provisionedCredentials });
 });
 
 // 14h. Admin: Lottery Ticket Catalog
@@ -3157,9 +5508,23 @@ app.post('/api/inventory/activate', requireStoreActive, async (req, res) => {
   }
 });
 
-// Atomic Ticket Sale Deduction (with Idempotency & Overselling Guard)
+// Atomic Ticket Sale Deduction (with Idempotency, Overselling & Official Retailer Auth Guard)
 app.post('/api/inventory/sale', requireStoreActive, async (req, res) => {
   const { storeId, packNumber, packId, quantity, sourceRefId, cashier, barcode } = req.body || {};
+  const resolvedSid = req.storeSession?.storeId || storeId || 'store_amigo';
+  const st = getAdminState();
+  const storeRec = (st.stores || []).find(s => s.storeId === resolvedSid);
+  if (storeRec) {
+    normalizeStoreStatuses(storeRec);
+    if (storeRec.retailerAuthStatus !== 'VALID') {
+      return res.status(403).json({
+        success: false,
+        code: 'RETAILER_AUTH_REQUIRED',
+        retailerAuthStatus: storeRec.retailerAuthStatus,
+        message: 'Access Denied: Official lottery retailer authorization is not VALID for this business location. Subscription gives software access, but lottery ticket sales require verified official retailer authorization.'
+      });
+    }
+  }
   try {
     const result = await inventoryService.recordTicketSale({
       storeId: storeId || 'store_amigo',
@@ -3180,6 +5545,18 @@ app.post('/api/inventory/sale', requireStoreActive, async (req, res) => {
 // Shift Opening/Closing Reconciliation with Idempotency Key
 app.post('/api/inventory/reconcile-shift', requireStoreActive, async (req, res) => {
   const { storeId, shiftId, closingScans, closedBy, posLoggedSalesByPack } = req.body || {};
+  const hasSalesInReconcile = Object.values(posLoggedSalesByPack || {}).some(v => Number(v) > 0);
+  if (hasSalesInReconcile) {
+    const authChk = await checkStoreRetailerAuthForSales(req, storeId);
+    if (!authChk.allowed) {
+      return res.status(403).json({
+        success: false,
+        code: 'RETAILER_AUTH_REQUIRED',
+        retailerAuthStatus: authChk.retailerAuthStatus,
+        message: 'Access Denied: Official lottery retailer authorization must be VALID to reconcile ticket sales.'
+      });
+    }
+  }
   try {
     const result = await inventoryService.reconcileShift({
       storeId: storeId || 'store_amigo',

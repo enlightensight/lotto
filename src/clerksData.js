@@ -85,8 +85,8 @@ export const REFERENCE_MODERN_SETTINGS_PEOPLE = [
     active: true,
     pin: '1234',
     password: '1234',
-    storeId: 'store_amigo',
-    storeName: 'Amigo Food Mart'
+    storeId: 'store_admin',
+    storeName: 'ADMIN STORE'
   },
   {
     name: 'master',
@@ -241,15 +241,14 @@ export function authenticateOrRegisterUser(username, password, state) {
       signInName: 'admin',
       role: 'SUPER_ADMIN',
       isAdmin: true,
-      storeId: 'store_amigo',
-      storeName: 'Platform Administration',
+      storeId: 'store_admin',
+      storeName: 'ADMIN STORE',
       pin: '1234',
       password: '1234'
     };
 
     const isPassValid = (adminUser.password && adminUser.password === normPass) ||
-                        (adminUser.pin && adminUser.pin === normPass) ||
-                        normPass === 'AX123456@' || normPass === '1234';
+                        (adminUser.pin && adminUser.pin === normPass);
 
     if (isPassValid) {
       adminUser.isAdmin = true;
@@ -345,10 +344,11 @@ export function getAllAuthUsers(state) {
       if (u.signInName) {
         const key = u.signInName.toLowerCase();
         const existing = map.get(key) || {};
-        const isAmigo = key === 'amigo' || key === 'admin' || key === 'master';
+        const isAdminKey = key === 'admin';
+        const isAmigo = key === 'amigo' || key === 'master';
         const cleanId = key.replace(/[^a-z0-9_]/g, '_');
-        const storeId = u.storeId || existing.storeId || (isAmigo ? 'store_amigo' : `store_${cleanId}`);
-        const storeName = u.storeName || existing.storeName || (isAmigo ? 'Amigo Food Mart' : `${key.toUpperCase()} Store`);
+        const storeId = isAdminKey ? 'store_admin' : (u.storeId || existing.storeId || (isAmigo ? 'store_amigo' : `store_${cleanId}`));
+        const storeName = isAdminKey ? 'ADMIN STORE' : (u.storeName || existing.storeName || (isAmigo ? 'Amigo Food Mart' : `${key.toUpperCase()} Store`));
         const pin = u.pin || existing.pin || '1234';
         map.set(key, { ...existing, ...u, storeId, storeName, pin });
       }

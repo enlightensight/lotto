@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { spawn, execSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -32,7 +32,10 @@ async function run() {
     }
   }
 
-  // Ensure admin credentials are known
+  // Backup live admin_state.json so test password reset never clobbers real admin credentials
+  const adminStateBackup = existsSync('server_data/admin_state.json')
+    ? readFileSync('server_data/admin_state.json', 'utf8')
+    : null;
   execSync('node scripts/manage-admin.cjs reset admin BrowserTestPass123!');
 
   const tmpProfile = mkdtempSync(join(tmpdir(), 'chrome-admin-real-'));
@@ -214,32 +217,11 @@ async function run() {
     assert(feedbackRowCount >= 1, `Store feedback table rendered records (rows: ${feedbackRowCount})`);
 
     // ------------------------------------------------------------------------
-    // Section 5: Multi-Store Reports
+    // Section 5: Multi-Store Reports (Removed from Admin UI)
     // ------------------------------------------------------------------------
-    console.log('\n--- Section 5: Multi-Store Reports ---');
-    await evalCode(`document.querySelector('[data-admin-tab="reports"]')?.click()`);
-    await sleep(800);
-
-    const salesRowCount = await evalCode(`document.getElementById('adminReportSalesTableBody')?.children.length`);
-    assert(salesRowCount >= 1, `Store sales report rendered data (rows: ${salesRowCount})`);
-
-    // Click inventory tab
-    await evalCode(`document.querySelector('[data-report-tab="inventory"]')?.click()`);
-    await sleep(400);
-    const invDisplay = await evalCode(`document.getElementById('adminReportSectionInventory')?.style.display !== 'none'`);
-    assert(invDisplay, 'Ticket inventory sub-report section toggled visible');
-
-    // Click shifts tab
-    await evalCode(`document.querySelector('[data-report-tab="shifts"]')?.click()`);
-    await sleep(400);
-    const shiftsDisplay = await evalCode(`document.getElementById('adminReportSectionShifts')?.style.display !== 'none'`);
-    assert(shiftsDisplay, 'Shift reports sub-report section toggled visible');
-
-    // Click discrepancies tab
-    await evalCode(`document.querySelector('[data-report-tab="discrepancies"]')?.click()`);
-    await sleep(400);
-    const discDisplay = await evalCode(`document.getElementById('adminReportSectionDiscrepancies')?.style.display !== 'none'`);
-    assert(discDisplay, 'Stock discrepancies sub-report section toggled visible');
+    console.log('\n--- Section 5: Verify Multi-Store Reports Removed ---');
+    const reportsTabExists = await evalCode(`document.querySelector('[data-admin-tab="reports"]') !== null`);
+    assert(!reportsTabExists, 'Multi-Store Reports tab must be removed from sidebar');
 
     // ------------------------------------------------------------------------
     // Section 6: Audit Trail
@@ -295,6 +277,9 @@ async function run() {
     }
 
   } finally {
+    if (adminStateBackup !== null) {
+      try { writeFileSync('server_data/admin_state.json', adminStateBackup, 'utf8'); } catch (_) {}
+    }
     try { p.kill(); } catch (_) {}
     try { rmSync(tmpProfile, { recursive: true, force: true }); } catch (_) {}
   }

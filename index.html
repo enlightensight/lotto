@@ -1589,6 +1589,16 @@
           </div>
 
           <div id="signInErrorAlert" class="signin-error-alert" style="display: none;" role="alert"></div>
+          <div id="signInSuspendedActions"
+            style="display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.35); font-size: 0.82rem;">
+            <div style="font-weight: 700; color: #b45309; margin-bottom: 6px;">Account Suspended — Compliance Action
+              Required</div>
+            <div id="signInSuspendedReasonDetail" style="color: #78350f; margin-bottom: 8px;"></div>
+            <button type="button" id="btnOpenResubmitDocsModal" class="btn-action-sm btn-approve"
+              style="width: 100%; justify-content: center;">
+              Submit Corrected Documents for Admin Review
+            </button>
+          </div>
 
           <button type="submit" id="btnSubmitSignIn" class="btn-signin-submit">
             Sign In
@@ -1598,6 +1608,15 @@
             <a href="#" id="linkForgotPassword" class="signin-forgot-link"
               style="color: #38bdf8; font-size: 0.86rem; font-weight: 500; text-decoration: underline; cursor: pointer;">Forgot
               password?</a>
+          </div>
+
+          <div class="signin-apply-divider"
+            style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--admin-border-subtle, rgba(148,163,184,0.22)); text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--ink-muted, #64748b); margin-bottom: 8px;">New lottery retailer?
+            </div>
+            <button type="button" id="btnOpenStoreAppModal" class="btn-signin-apply-license">
+              Send Lottery License &amp; Apply for Store POS
+            </button>
           </div>
         </form>
       </div>
@@ -1748,6 +1767,15 @@
 
     <!-- MAIN APP CONTENT AREA -->
     <div class="pos-main-container">
+      <div id="storeComplianceNoticeBar"
+        style="display: none; margin: 12px 24px 0; padding: 10px 16px; border-radius: 10px; background: #fffbeb; border: 1px solid #f59e0b; color: #78350f; font-size: 0.84rem; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div id="storeComplianceNoticeText" style="display: flex; flex-direction: column; gap: 3px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span id="storeComplianceStatusPills" style="display: flex; gap: 6px; flex-wrap: wrap;"></span>
+          <button type="button" id="btnOpenPosResubmitDocs" class="btn-action-sm btn-secondary">Update / Submit
+            Docs</button>
+        </div>
+      </div>
       <!-- VIEW: SELL COUNTER -->
       <section class="sell-counter-view" id="viewSellCounter">
         <!-- TOP STREAMLINED DASHBOARD HEADER BAR (Matching Reference Screenshot) -->
@@ -4358,11 +4386,6 @@
           <span class="admin-tab-count" id="adminCountPendingFeedbackBadge">0</span>
         </button>
 
-        <div class="admin-nav-section-label">Analytics</div>
-        <button type="button" class="admin-subnav-tab" data-admin-tab="reports">
-          <span class="nav-icon">📈</span>
-          <span class="nav-label">Multi-Store Reports</span>
-        </button>
         <button type="button" class="admin-subnav-tab" data-admin-tab="audit" style="display: none !important;"
           tabindex="-1" aria-hidden="true">
           <span class="nav-icon">📜</span>
@@ -4523,13 +4546,12 @@
               <table class="admin-data-table">
                 <thead>
                   <tr>
-                    <th>Store ID</th>
-                    <th>Store Name</th>
-                    <th>Owner</th>
-                    <th>Retailer #</th>
-                    <th>Address</th>
-                    <th>Authorization</th>
-                    <th>Status</th>
+                    <th>Store &amp; Plan</th>
+                    <th>Owner &amp; Retailer #</th>
+                    <th>Subscription</th>
+                    <th>Documents</th>
+                    <th>Retailer Auth</th>
+                    <th>Software Access</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -4588,111 +4610,6 @@
           </div>
         </div>
 
-        <!-- 7. Admin Pane: Reports Across Stores -->
-        <div class="admin-tab-pane" id="paneAdminReports" style="display: none;">
-          <div class="admin-card-surface">
-            <div class="admin-card-header" style="flex-wrap: wrap; gap: 14px;">
-              <div>
-                <h2>Multi-Store Sales &amp; Operational Reports</h2>
-                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.84rem;">Aggregated lottery sales, ticket
-                  inventory, shift settlements, and discrepancies across authorized stores.</p>
-              </div>
-              <div class="admin-reports-subnav" id="adminReportsSubnav" style="display: flex; gap: 8px;">
-                <button type="button" class="btn-action-sm btn-info active" data-report-tab="sales">Store Sales</button>
-                <button type="button" class="btn-action-sm btn-info" data-report-tab="inventory">Ticket
-                  Inventory</button>
-                <button type="button" class="btn-action-sm btn-info" data-report-tab="shifts">Shift Reports</button>
-                <button type="button" class="btn-action-sm btn-info" data-report-tab="discrepancies">Stock
-                  Discrepancies</button>
-              </div>
-            </div>
-
-            <!-- 7a. Store Sales Section -->
-            <div id="adminReportSectionSales" class="admin-report-subpane">
-              <div class="admin-table-wrapper">
-                <table class="admin-data-table">
-                  <thead>
-                    <tr>
-                      <th>Store Name</th>
-                      <th>Retailer #</th>
-                      <th>Authorization</th>
-                      <th>Active Dispensers</th>
-                      <th>Tickets Sold</th>
-                      <th>Scratcher Sales</th>
-                      <th>Payouts</th>
-                      <th>Net Balance</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminReportSalesTableBody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 7b. Ticket Inventory Section -->
-            <div id="adminReportSectionInventory" class="admin-report-subpane" style="display: none;">
-              <div class="admin-table-wrapper">
-                <table class="admin-data-table">
-                  <thead>
-                    <tr>
-                      <th>Store Name</th>
-                      <th>Counter Packs</th>
-                      <th>Safe Packs</th>
-                      <th>Storage Packs</th>
-                      <th>Total Packs</th>
-                      <th>Total Value</th>
-                      <th>Inventory Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminReportInventoryTableBody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 7c. Shift Reports Section -->
-            <div id="adminReportSectionShifts" class="admin-report-subpane" style="display: none;">
-              <div class="admin-table-wrapper">
-                <table class="admin-data-table">
-                  <thead>
-                    <tr>
-                      <th>Store Name</th>
-                      <th>Shift #</th>
-                      <th>Date</th>
-                      <th>Cashier</th>
-                      <th>Tickets Sold</th>
-                      <th>Sales Revenue</th>
-                      <th>Prize Payouts</th>
-                      <th>Counted Cash</th>
-                      <th>Over / Short</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminReportShiftsTableBody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 7d. Stock Discrepancies Section -->
-            <div id="adminReportSectionDiscrepancies" class="admin-report-subpane" style="display: none;">
-              <div class="admin-table-wrapper">
-                <table class="admin-data-table">
-                  <thead>
-                    <tr>
-                      <th>Store Name</th>
-                      <th>Shift / Date</th>
-                      <th>Cashier</th>
-                      <th>Discrepancy Type</th>
-                      <th>Variance Amount</th>
-                      <th>Audit Status</th>
-                      <th>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminReportDiscrepanciesTableBody"></tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
         <!-- 8. Admin Pane: Audit Trail -->
         <div class="admin-tab-pane" id="paneAdminAudit" style="display: none;">
           <div class="admin-card-surface">
@@ -4746,22 +4663,57 @@
     </div>
   </dialog>
 
-  <dialog id="adminReviewAppModal" class="admin-modal">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-      <h3 style="margin: 0; font-size: 1.15rem;" id="adminAppModalTitle">Review Store Application</h3>
-      <button type="button" id="closeAdminAppModalBtn"
-        style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+  <dialog id="adminReviewAppModal" class="admin-modal admin-modal-review-large">
+    <div class="admin-modal-review-header">
+      <div>
+        <h3 style="margin: 0; font-size: 1.15rem;" id="adminAppModalTitle">Review Store License Application</h3>
+        <div id="adminAppModalSubtitle" style="font-size: 0.8rem; color: var(--admin-text-muted); margin-top: 2px;">
+          Inspect store details, uploaded lottery license, and compliance notes before decision.</div>
+      </div>
+      <button type="button" id="closeAdminAppModalBtn" class="modal-close-btn"
+        aria-label="Close review modal">&times;</button>
     </div>
-    <div id="adminAppModalContent" style="font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;"></div>
-    <div class="admin-form-group">
-      <label class="admin-form-label">Review Notes / Reasons</label>
-      <textarea id="adminAppNotesInput" class="admin-form-input" rows="3"
-        placeholder="Enter notes or request details..."></textarea>
+    <div class="admin-modal-review-body">
+      <div class="admin-review-app-grid">
+        <div class="admin-review-app-details-col">
+          <div id="adminAppModalContent" style="font-size: 0.88rem; line-height: 1.5;"></div>
+          <div class="admin-form-group" style="margin-top: 14px;">
+            <label class="admin-form-label" for="adminAppNotesInput">Review Decision Notes / Request Details</label>
+            <textarea id="adminAppNotesInput" class="admin-form-input" rows="3"
+              placeholder="Enter verification notes, missing document requests, or rejection reason..."></textarea>
+          </div>
+          <label
+            style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.82rem; color: var(--admin-text-main); cursor: pointer;">
+            <input type="checkbox" id="adminAppVerifyRetailerValid">
+            <span>Official Lottery Retailer Authorization Verified (VALID for this store location)</span>
+          </label>
+        </div>
+        <div class="admin-review-app-doc-col">
+          <div id="adminAppLicenseSwitcher" class="admin-license-switcher"></div>
+          <div class="doc-viewer-container">
+            <div class="doc-viewer-toolbar">
+              <span id="adminDocViewerFileName"
+                style="font-size: 0.82rem; font-weight: 600; color: var(--admin-heading-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">License
+                Preview</span>
+              <a id="adminDocViewerDownloadBtn" href="#" target="_blank" rel="noopener noreferrer"
+                class="btn-action-sm btn-secondary" style="display: none; text-decoration: none;">Open / Download</a>
+            </div>
+            <div id="adminDocViewerViewport" class="doc-viewer-viewport">
+              <div style="color: var(--admin-text-muted); font-size: 0.86rem; text-align: center;">Select a submitted
+                license file to inspect.</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div style="display: flex; gap: 10px; justify-content: flex-end;">
-      <button type="button" class="btn-action-sm btn-info" id="btnAdminAppRequestInfo">Request More Info</button>
-      <button type="button" class="btn-action-sm btn-reject" id="btnAdminAppReject">Reject</button>
-      <button type="button" class="btn-action-sm btn-approve" id="btnAdminAppApprove">Approve Store</button>
+    <div class="admin-modal-review-footer">
+      <span id="adminAppModalFooterHint" style="font-size: 0.8rem; color: var(--admin-text-muted);">Approving creates
+        the store account and enables POS sign-in.</span>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button type="button" class="btn-action-sm btn-info" id="btnAdminAppRequestInfo">Request More Info</button>
+        <button type="button" class="btn-action-sm btn-reject" id="btnAdminAppReject">Reject</button>
+        <button type="button" class="btn-action-sm btn-approve" id="btnAdminAppApprove">Approve Store</button>
+      </div>
     </div>
   </dialog>
 
@@ -4939,61 +4891,220 @@
     </form>
   </dialog>
 
-  <!-- Self-Service Store Application Modal -->
+  <!-- Self-Service Subscription & Immediate Store Activation Modal -->
   <dialog id="modalStoreApplication" class="admin-modal store-app-modal">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div
+      style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px;">
       <div>
-        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #fff;">Apply for Store Retailer Account</h3>
-        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.82rem;">Submit your retail store details for Georgia
-          Lottery network authorization.</p>
+        <h3 style="margin: 0; font-size: 1.18rem; font-weight: 700; color: var(--admin-heading-color);">Subscribe &amp;
+          Launch Your Jackpotlo Store</h3>
+        <p style="margin: 4px 0 0; color: var(--admin-text-muted); font-size: 0.82rem;">Select a plan, complete payment,
+          create credentials, and upload documents for immediate software access.</p>
       </div>
-      <button type="button" id="closeStoreAppModalBtn"
-        style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+      <button type="button" id="closeStoreAppModalBtn" class="modal-close-btn"
+        aria-label="Close application modal">&times;</button>
     </div>
     <form id="formSubmitStoreApp">
+      <div
+        style="margin-bottom: 14px; padding: 12px; border-radius: 10px; border: 1px solid var(--admin-border-subtle, rgba(148,163,184,0.28)); background: rgba(59,130,246,0.04);">
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+          <strong style="font-size: 0.86rem; color: var(--admin-heading-color);">1. Select Subscription Plan &amp;
+            Complete Payment</strong>
+          <select id="appBillingCycle" class="admin-form-input"
+            style="width: auto; padding: 4px 8px; font-size: 0.78rem;">
+            <option value="monthly" selected>Monthly Billing</option>
+            <option value="annual">Annual Billing (2 Months Free)</option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">
+          <label
+            style="border: 1px solid var(--admin-border-subtle, rgba(148,163,184,0.35)); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px;">
+            <span><input type="radio" name="appSubscriptionPlan" id="planStarter" value="starter">
+              <strong>Starter</strong></span>
+            <span style="color: var(--admin-primary); font-weight: 700;">$49/mo</span>
+          </label>
+          <label
+            style="border: 1px solid var(--admin-primary, #3b82f6); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px; background: rgba(59,130,246,0.08);">
+            <span><input type="radio" name="appSubscriptionPlan" id="planPro" value="pro" checked> <strong>Growth
+                Pro</strong></span>
+            <span style="color: var(--admin-primary); font-weight: 700;">$99/mo</span>
+          </label>
+          <label
+            style="border: 1px solid var(--admin-border-subtle, rgba(148,163,184,0.35)); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px;">
+            <span><input type="radio" name="appSubscriptionPlan" id="planEnterprise" value="enterprise">
+              <strong>Enterprise</strong></span>
+            <span style="color: var(--admin-primary); font-weight: 700;">$179/mo</span>
+          </label>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;">
+          <input type="text" id="appInputPaymentCardLast4" class="admin-form-input" value="Card ending in 4242"
+            placeholder="Payment Method (e.g. Visa 4242)" style="font-size: 0.8rem;">
+          <label
+            style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; color: var(--admin-text-main);">
+            <input type="checkbox" id="appInputPaymentConfirm" checked>
+            <span>Authorize subscription payment</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="font-size: 0.84rem; font-weight: 700; color: var(--admin-heading-color); margin-bottom: 8px;">2.
+        Business Details, Credentials &amp; Retailer Documents</div>
       <div class="admin-form-group">
-        <label class="admin-form-label">Store / Business Name *</label>
+        <label class="admin-form-label" for="appInputStoreName">Store / Business Name *</label>
         <input type="text" id="appInputStoreName" class="admin-form-input" placeholder="e.g. Quick Stop Food Mart"
           required>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="admin-form-group">
-          <label class="admin-form-label">Applicant / Owner Name *</label>
+          <label class="admin-form-label" for="appInputOwnerName">Applicant / Owner Name *</label>
           <input type="text" id="appInputOwnerName" class="admin-form-input" placeholder="e.g. John Doe" required>
         </div>
         <div class="admin-form-group">
-          <label class="admin-form-label">Georgia Retailer ID / Tax ID</label>
-          <input type="text" id="appInputRetailerId" class="admin-form-input" placeholder="e.g. GA-88421">
+          <label class="admin-form-label" for="appInputRetailerId">Official Lottery Retailer ID *</label>
+          <input type="text" id="appInputRetailerId" class="admin-form-input" placeholder="e.g. GA-88421" required>
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="admin-form-group">
-          <label class="admin-form-label">Email Address *</label>
+          <label class="admin-form-label" for="appInputTaxId">Business Tax ID / FEIN</label>
+          <input type="text" id="appInputTaxId" class="admin-form-input" placeholder="e.g. TAX-58-1234567">
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="appInputLicenseExpiry">License Expiration Date</label>
+          <input type="date" id="appInputLicenseExpiry" class="admin-form-input">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="appInputEmail">Email Address *</label>
           <input type="email" id="appInputEmail" class="admin-form-input" placeholder="owner@store.com" required>
         </div>
         <div class="admin-form-group">
-          <label class="admin-form-label">Phone Number *</label>
+          <label class="admin-form-label" for="appInputPhone">Phone Number *</label>
           <input type="tel" id="appInputPhone" class="admin-form-input" placeholder="(478) 555-0199" required>
         </div>
       </div>
       <div class="admin-form-group">
-        <label class="admin-form-label">Physical Store Street Address *</label>
+        <label class="admin-form-label" for="appInputAddress">Physical Store Street Address *</label>
         <input type="text" id="appInputAddress" class="admin-form-input"
           placeholder="e.g. 104 Highway 96, Warner Robins, GA 31088" required>
       </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="appInputUsername">Store Login ID / Username</label>
+          <input type="text" id="appInputUsername" class="admin-form-input"
+            placeholder="Auto-generated from email if blank" autocomplete="username">
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="appInputPassword">Store Login Password *</label>
+          <input type="password" id="appInputPassword" class="admin-form-input" minlength="4"
+            placeholder="Minimum 4 characters" autocomplete="new-password">
+        </div>
+      </div>
       <div class="admin-form-group">
-        <label class="admin-form-label">Business Registration / Documents Link or Notes</label>
+        <label class="admin-form-label" for="appInputLicenseFiles">Upload Business &amp; Lottery Retailer
+          Documents</label>
+        <div id="appLicenseDropzone" class="app-license-dropzone">
+          <div style="font-size:0.82rem; color:var(--admin-text-muted); margin-bottom:10px;">
+            Drag &amp; drop files or a folder here
+          </div>
+          <button type="button" id="btnPickLicenseFiles" class="btn-action-sm btn-secondary">Choose Files</button>
+          <input type="file" id="appInputLicenseFiles"
+            accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.pdf,.txt,.csv,.zip,.7z,.rar,.tar,.gz,.enc,.gpg,.pgp,.asc,.p7m,.p7s"
+            multiple style="display:none;">
+        </div>
+        <div id="appLicenseFilesPreview" class="app-license-files-preview"></div>
+      </div>
+      <div class="admin-form-group">
+        <label class="admin-form-label" for="appInputNotes">License Link or Additional Notes</label>
         <textarea id="appInputNotes" class="admin-form-input" rows="2"
-          placeholder="e.g. https://docs.google.com/retail-license-file or notes"></textarea>
+          placeholder="Optional link, file password, or compliance notes for admin"></textarea>
       </div>
       <div id="storeAppFeedbackAlert"
-        style="display:none; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 0.85rem;"></div>
+        style="display:none; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem;"></div>
       <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
-        <button type="button" class="btn-action-sm" id="cancelStoreAppBtn"
-          style="background: rgba(255,255,255,0.1); color: #fff;">Cancel</button>
-        <button type="submit" class="btn-action-sm btn-approve" id="btnSubmitStoreApp">Submit Application</button>
+        <button type="button" class="btn-action-sm btn-secondary" id="cancelStoreAppBtn">Cancel</button>
+        <button type="submit" class="btn-action-sm btn-approve" id="btnSubmitStoreApp">Pay &amp; Activate Store
+          Access</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Modal: Customer Submit Corrected Documents (When Suspended or Updating Docs) -->
+  <dialog id="modalResubmitDocuments" class="admin-modal">
+    <div
+      style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px;">
+      <div>
+        <h3 style="margin: 0; font-size: 1.12rem; color: var(--admin-heading-color);">Submit Corrected Compliance
+          Documents</h3>
+        <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--admin-text-muted);">Submitting corrected documents
+          notifies Admin for review. Suspended accounts remain paused until Admin reapproves.</p>
+      </div>
+      <button type="button" id="closeResubDocsModalBtn" class="modal-close-btn"
+        aria-label="Close modal">&times;</button>
+    </div>
+    <div id="resubSuspensionReasonBanner"
+      style="display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.35); color: #b91c1c; font-size: 0.82rem;">
+    </div>
+    <form id="formResubmitDocuments">
+      <div id="resubCredsSection" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="resubInputIdentifier">Store Login ID or Email *</label>
+          <input type="text" id="resubInputIdentifier" class="admin-form-input" placeholder="owner@store.com">
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="resubInputPassword">Store Password *</label>
+          <input type="password" id="resubInputPassword" class="admin-form-input" placeholder="Verify password">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="resubInputRetailerId">Updated Lottery Retailer #</label>
+          <input type="text" id="resubInputRetailerId" class="admin-form-input" placeholder="e.g. GA-88421">
+        </div>
+        <div class="admin-form-group">
+          <label class="admin-form-label" for="resubInputLicenseExpiry">Updated Expiration Date</label>
+          <input type="date" id="resubInputLicenseExpiry" class="admin-form-input">
+        </div>
+      </div>
+      <div class="admin-form-group">
+        <label class="admin-form-label" for="resubInputFiles">Upload Corrected Documents</label>
+        <input type="file" id="resubInputFiles" class="admin-form-input" multiple
+          accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.zip,.enc,.gpg,.pgp,.p7m">
+        <div id="resubFilesSummary" style="font-size: 0.78rem; color: var(--admin-text-muted); margin-top: 4px;"></div>
+      </div>
+      <div class="admin-form-group">
+        <label class="admin-form-label" for="resubInputNotes">Correction Explanation for Admin</label>
+        <textarea id="resubInputNotes" class="admin-form-input" rows="2"
+          placeholder="Describe what was corrected..."></textarea>
+      </div>
+      <div id="resubFeedbackAlert"
+        style="display:none; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.82rem;"></div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button type="button" class="btn-action-sm btn-secondary" id="cancelResubDocsBtn">Cancel</button>
+        <button type="submit" class="btn-action-sm btn-approve" id="btnSubmitResubmission">Send Corrected
+          Documents</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Admin Store Control (Subscription, Docs, Retailer Auth, Suspend, Reapprove & Audit Trail) -->
+  <dialog id="adminStoreControlModal" class="admin-modal admin-review-modal">
+    <div
+      style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px;">
+      <div>
+        <h3 style="margin: 0; font-size: 1.15rem; color: var(--admin-heading-color);" id="adminStoreCtrlTitle">Store
+          Compliance &amp; Access Control</h3>
+        <div id="adminStoreCtrlSubtitle" style="font-size: 0.8rem; color: var(--admin-text-muted); margin-top: 3px;">
+        </div>
+      </div>
+      <button type="button" id="closeAdminStoreCtrlModalBtn" class="modal-close-btn"
+        aria-label="Close modal">&times;</button>
+    </div>
+    <div id="adminStoreCtrlBody"
+      style="max-height: 68vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; font-size: 0.86rem;">
+    </div>
   </dialog>
 
 
@@ -5145,7 +5256,8 @@
         <span class="icon-wrap" id="boxDetailNumBadge" style="font-size: 20px; font-weight: 800;">6</span>
         <div>
           <h2 id="box-h"><span id="boxDetailHeaderPrefix">Box </span><span id="boxDetailBoxNumText">6</span> &middot;
-            <span id="boxDetailGameName">Cross Word</span></h2>
+            <span id="boxDetailGameName">Cross Word</span>
+          </h2>
           <p id="boxDetailSubtitle">Pack 935561 &middot; $3 a ticket</p>
         </div>
         <button class="btn btn-ghost icon-btn x" id="closeBoxAdjustBtn" type="button" aria-label="Close">
@@ -6614,7 +6726,7 @@
           <!-- 3 Choice Option Cards -->
           <div class="setbox-conflict-options-row">
             <!-- Option 1: Sold out -->
-            <div class="setbox-opt-card on" id="optConflictSoldOut" data-action="soldout">
+            <div class="setbox-opt-card" id="optConflictSoldOut" data-action="soldout">
               <div class="setbox-opt-circle-icon opt-icon-soldout">✓</div>
               <div class="setbox-opt-name opt-name-soldout">Sold out</div>
               <div class="setbox-opt-description">Every ticket is gone. Close it and put the new book in box <span
@@ -6692,17 +6804,15 @@
           </div>
 
           <div class="setbox-success-summary-lines">
-            <div class="setbox-success-line" id="successLineOldBook">
-              <div class="setbox-success-line" id="successLineOldBook" style="display: none;">
-                <span class="success-badge badge-soldout" id="successOldBadge">Sold out</span>
-                <span class="success-line-text" id="successOldText">Lucky 7s closed as sold out — 42 tickets ($210.00)
-                  counted in this shift.</span>
-              </div>
-              <div class="setbox-success-line" id="successLineNewBook">
-                <span class="success-badge badge-activated" id="successNewBadge">Activated</span>
-                <span class="success-line-text" id="successNewText">$10 50X Money is now in box 14, starting at ticket
-                  000.</span>
-              </div>
+            <div class="setbox-success-line" id="successLineOldBook" style="display: none;">
+              <span class="success-badge badge-soldout" id="successOldBadge">Sold out</span>
+              <span class="success-line-text" id="successOldText">Lucky 7s closed as sold out — 42 tickets ($210.00)
+                counted in this shift.</span>
+            </div>
+            <div class="setbox-success-line" id="successLineNewBook">
+              <span class="success-badge badge-activated" id="successNewBadge">Activated</span>
+              <span class="success-line-text" id="successNewText">$10 50X Money is now in box 14, starting at ticket
+                000.</span>
             </div>
 
             <p class="setbox-success-footer-note">
@@ -6712,62 +6822,63 @@
           </div>
         </div>
 
-        <!-- Right Column: Keypad -->
-        <div class="setbox-keypad-column">
-          <div class="setbox-typing-label" id="setBoxTypingLabel">Typing in <span id="setBoxTypingTarget"
-              style="color: #2563eb; font-weight: 800;">Box #</span></div>
-          <div class="setbox-modern-keypad">
-            <div class="setbox-kp-row-top">
-              <button type="button" class="setbox-kp-btn setbox-kp-fn" data-key="clear">Clear</button>
-              <button type="button" class="setbox-kp-btn setbox-kp-fn" data-key="backspace" aria-label="Backspace">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path
-                    d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
-                  <line x1="18" y1="9" x2="12" y2="15" />
-                  <line x1="12" y1="9" x2="18" y2="15" />
-                </svg>
-              </button>
-            </div>
-            <div class="setbox-kp-grid-nums">
-              <button type="button" class="setbox-kp-btn" data-key="7">7</button>
-              <button type="button" class="setbox-kp-btn" data-key="8">8</button>
-              <button type="button" class="setbox-kp-btn" data-key="9">9</button>
-              <button type="button" class="setbox-kp-btn" data-key="4">4</button>
-              <button type="button" class="setbox-kp-btn" data-key="5">5</button>
-              <button type="button" class="setbox-kp-btn" data-key="6">6</button>
-              <button type="button" class="setbox-kp-btn" data-key="1">1</button>
-              <button type="button" class="setbox-kp-btn" data-key="2">2</button>
-              <button type="button" class="setbox-kp-btn" data-key="3">3</button>
-              <button type="button" class="setbox-kp-btn setbox-kp-zero" data-key="0">0</button>
-              <button type="button" class="setbox-kp-btn setbox-kp-enter-blue" id="btnSetBoxKpEnter"
-                data-key="enter">Enter</button>
-            </div>
+        <!-- Modal Footer Actions (All 4 States) -->
+        <div class="setbox-modal-footer">
+          <div id="setBoxFooterNormal"
+            style="display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px;">
+            <button type="button" class="setbox-btn-not-in-box" id="btnSetBoxNotInBox">Not in box</button>
+            <button type="button" class="setbox-btn-action-primary" id="btnSetBoxConfirm">+ Add to box 14</button>
           </div>
+          <div id="setBoxFooterSuccess"
+            style="display: none; width: 100%; justify-content: space-between; align-items: center; gap: 12px;">
+            <button type="button" class="setbox-btn-undo" id="btnSetBoxSuccessUndo">Undo</button>
+            <button type="button" class="setbox-btn-done-green" id="btnSetBoxSuccessDone">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Done
+            </button>
+          </div>
+          <!-- Hidden buttons for backwards compatibility with tests -->
+          <button type="button" id="btnBackToTicketDetails" style="display:none;"></button>
+          <button type="button" id="btnCancelSetBox" style="display:none;"></button>
+          <div id="setBoxQuickSuggestions" style="display:none !important;" aria-hidden="true"></div>
         </div>
       </div>
 
-      <!-- Modal Footer Actions (All 4 States) -->
-      <div class="setbox-modal-footer">
-        <div id="setBoxFooterNormal"
-          style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-          <button type="button" class="setbox-btn-not-in-box" id="btnSetBoxNotInBox">Not in box</button>
-          <button type="button" class="setbox-btn-action-primary" id="btnSetBoxConfirm">+ Add to box 14</button>
+      <!-- Right Column: Keypad -->
+      <div class="setbox-keypad-column">
+        <div class="setbox-typing-label" id="setBoxTypingLabel">Typing in <span id="setBoxTypingTarget"
+            style="color: #2563eb; font-weight: 800;">Box #</span></div>
+        <div class="setbox-modern-keypad">
+          <div class="setbox-kp-row-top">
+            <button type="button" class="setbox-kp-btn setbox-kp-fn" data-key="clear">Clear</button>
+            <button type="button" class="setbox-kp-btn setbox-kp-fn" data-key="backspace" aria-label="Backspace">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
+                <line x1="18" y1="9" x2="12" y2="15" />
+                <line x1="12" y1="9" x2="18" y2="15" />
+              </svg>
+            </button>
+          </div>
+          <div class="setbox-kp-grid-nums">
+            <button type="button" class="setbox-kp-btn" data-key="7">7</button>
+            <button type="button" class="setbox-kp-btn" data-key="8">8</button>
+            <button type="button" class="setbox-kp-btn" data-key="9">9</button>
+            <button type="button" class="setbox-kp-btn" data-key="4">4</button>
+            <button type="button" class="setbox-kp-btn" data-key="5">5</button>
+            <button type="button" class="setbox-kp-btn" data-key="6">6</button>
+            <button type="button" class="setbox-kp-btn" data-key="1">1</button>
+            <button type="button" class="setbox-kp-btn" data-key="2">2</button>
+            <button type="button" class="setbox-kp-btn" data-key="3">3</button>
+            <button type="button" class="setbox-kp-btn setbox-kp-zero" data-key="0">0</button>
+            <button type="button" class="setbox-kp-btn setbox-kp-enter-blue" id="btnSetBoxKpEnter"
+              data-key="enter">Enter</button>
+          </div>
         </div>
-        <div id="setBoxFooterSuccess"
-          style="display: none; width: 100%; justify-content: space-between; align-items: center;">
-          <button type="button" class="setbox-btn-undo" id="btnSetBoxSuccessUndo">Undo</button>
-          <button type="button" class="setbox-btn-done-green" id="btnSetBoxSuccessDone">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Done
-          </button>
-        </div>
-        <!-- Hidden buttons for backwards compatibility with tests -->
-        <button type="button" id="btnBackToTicketDetails" style="display:none;"></button>
-        <button type="button" id="btnCancelSetBox" style="display:none;"></button>
-        <div id="setBoxQuickSuggestions" style="display:none !important;" aria-hidden="true"></div>
       </div>
+    </div>
   </dialog>
 
   <!-- MODAL: Box Occupied Conflict Resolution (Empty Box vs Return Pack) -->
@@ -8287,7 +8398,8 @@
         <div class="dr-stat-divider"></div>
         <div class="dr-stat-row active-val-row"
           title="Total retail dollar value of unsold tickets currently inside all active dispenser boxes (Remaining inventory value, NOT sales)">
-          <span>Active Value</span><strong id="drStatActiveVal">$0.00</strong></div>
+          <span>Active Value</span><strong id="drStatActiveVal">$0.00</strong>
+        </div>
       </div>
 
       <!-- Activations Table -->

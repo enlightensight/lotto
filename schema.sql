@@ -624,5 +624,46 @@ CREATE TABLE IF NOT EXISTS `store_feedback` (
   INDEX `idx_feedback_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- -------------------------------------------------------
+-- 23. SUBSCRIPTION PAYMENT TRANSACTIONS (Idempotent Gateway Ledger)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `payment_transactions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `payment_ref` VARCHAR(140) UNIQUE NOT NULL,
+  `provider` VARCHAR(40) NOT NULL,
+  `provider_event_id` VARCHAR(140) NULL,
+  `store_id` VARCHAR(60) NULL,
+  `plan_id` VARCHAR(40) NOT NULL,
+  `billing_cycle` VARCHAR(20) NOT NULL DEFAULT 'monthly',
+  `amount_cents` INT NOT NULL,
+  `currency` VARCHAR(10) NOT NULL DEFAULT 'usd',
+  `payment_status` VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+  `consumed` TINYINT(1) NOT NULL DEFAULT 0,
+  `consumed_at` VARCHAR(40) NULL,
+  `raw_payload` LONGTEXT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_pay_store` (`store_id`),
+  INDEX `idx_pay_status` (`payment_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- 24. PLATFORM COMPLIANCE AUDIT LOGS
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `admin_audit_logs` (
+  `id` VARCHAR(80) PRIMARY KEY,
+  `admin_username` VARCHAR(80) NOT NULL,
+  `actor_role` VARCHAR(40) NOT NULL DEFAULT 'ADMIN',
+  `action_type` VARCHAR(80) NOT NULL,
+  `target_entity` VARCHAR(60) NOT NULL,
+  `target_id` VARCHAR(80) NOT NULL,
+  `store_id` VARCHAR(60) NULL,
+  `details_json` TEXT NULL,
+  `created_at` VARCHAR(40) NOT NULL,
+  INDEX `idx_audit_store` (`store_id`),
+  INDEX `idx_audit_action` (`action_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 
 
