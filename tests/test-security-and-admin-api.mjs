@@ -5,9 +5,17 @@
 import assert from 'assert';
 import http from 'http';
 import crypto from 'crypto';
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 const BASE_URL = 'http://localhost:3001';
+const ADMIN_STATE_FILE = 'server_data/admin_state.json';
+const adminStateBackup = existsSync(ADMIN_STATE_FILE) ? readFileSync(ADMIN_STATE_FILE, 'utf8') : null;
+function restoreAdminStateBackup() {
+  if (adminStateBackup !== null) {
+    try { writeFileSync(ADMIN_STATE_FILE, adminStateBackup, 'utf8'); } catch (_) { }
+  }
+}
+process.on('exit', restoreAdminStateBackup);
 
 let passed = 0;
 let failed = 0;
@@ -24,7 +32,7 @@ async function request(method, path, body = null, headers = {}) {
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         let json = null;
-        try { json = JSON.parse(data); } catch (_) {}
+        try { json = JSON.parse(data); } catch (_) { }
         resolve({ status: res.statusCode, headers: res.headers, body: json || data });
       });
     });

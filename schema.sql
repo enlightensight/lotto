@@ -237,9 +237,9 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
   `last_login_at` TIMESTAMP NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Seed default platform admin if not exists (username: admin, pin: 1234)
+-- Seed default platform admin if not exists (username: admin)
 INSERT IGNORE INTO `admin_users` (`id`, `username`, `password_hash`, `full_name`, `email`, `role`, `is_active`)
-VALUES ('adm_001', 'admin', '1234', 'System Administrator', 'admin@jackpotlo.com', 'SUPER_ADMIN', 1);
+VALUES ('adm_001', 'admin', 'pbkdf2$sha256$600000$cd6c3d5a6825bacb8c9672eeaf7a17ca$e45c734488db7a6652d42f5cd061edcc7b492e924262a209624c7f8aeae266cc', 'Platform Administrator', 'amigofoodmart2300@gmail.com', 'SUPER_ADMIN', 1);
 
 CREATE TABLE IF NOT EXISTS `store_pos_state` (
   `store_id` VARCHAR(60) PRIMARY KEY,

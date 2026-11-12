@@ -652,7 +652,6 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
       const notesText = document.getElementById('appInputNotes')?.value?.trim();
       const selectedPlan = document.querySelector('input[name="appSubscriptionPlan"]:checked')?.value || 'pro';
       const billingCycle = document.getElementById('appBillingCycle')?.value || 'monthly';
-      const paymentMethodLabel = document.getElementById('appInputPaymentCardLast4')?.value?.trim() || 'Card •••• 4242';
       const paymentMethodLabel = document.getElementById('appInputPaymentCardLast4')?.value?.trim() || 'Stripe Checkout';
       const paymentConfirmed = document.getElementById('appInputPaymentConfirm')?.checked !== false;
 
@@ -665,7 +664,6 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
       if (submitBtn) submitBtn.disabled = true;
 
       try {
-        // If user sets a password and confirms subscription payment, activate subscription & software access immediately!
         // Request a server-verified payment session before activating paid subscription & immediate store access
         if (requestedPassword && requestedPassword.length >= 4) {
           if (!paymentConfirmed) {
@@ -690,7 +688,6 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
             planId: selectedPlan,
             billingCycle,
             paymentMethodLabel,
-            paymentConfirmed: true,
             paymentSessionId,
             storeName,
             applicantName: ownerName,

@@ -593,6 +593,46 @@ async function migrateCleanData(db) {
       }
     }
 
+    // 6b. Ensure default admin & core store accounts exist in MySQL with PBKDF2-hashed credentials
+    try {
+      const defHashes = getDefaultSeedHashes();
+      await db.query(
+        `INSERT IGNORE INTO stores (store_id, store_name, owner_username, retailer_number, address, phone, total_boxes, authorization_status, operational_status, subscription_status, document_status, retailer_auth_status, software_access_status)
+         VALUES
+           ('store_amigo', 'AMIGO FOOD MART', 'amigo', 'GA-89412', '2300 MOODY RD WARNER ROBINS, GA, 31088', '(478) 923-4567', 65, 'APPROVED', 'ACTIVE', 'ACTIVE', 'APPROVED', 'VALID', 'ACTIVE'),
+           ('store_downtown', 'DOWNTOWN QUICK MART', 'downtown_owner', 'GA-94103', '104 N COMMERCIAL BLVD, WARNER ROBINS, GA, 31088', '(478) 953-8821', 60, 'APPROVED', 'ACTIVE', 'ACTIVE', 'APPROVED', 'VALID', 'ACTIVE'),
+           ('store_anish', 'ANISH STORE', 'anish', 'GA-88510', 'Warner Robins, GA', '(478) 555-0188', 65, 'APPROVED', 'ACTIVE', 'ACTIVE', 'APPROVED', 'VALID', 'ACTIVE')`
+      );
+
+      const [admRows] = await db.query("SELECT id, username, email, password_hash FROM admin_users WHERE LOWER(username) = 'admin' LIMIT 1");
+      if (admRows.length === 0) {
+        await db.query(
+          `INSERT INTO admin_users (id, username, password_hash, full_name, email, role, is_active)
+           VALUES ('adm_001', 'admin', ?, 'Platform Administrator', 'amigofoodmart2300@gmail.com', 'SUPER_ADMIN', 1)`,
+          [defHashes.admin]
+        );
+      } else {
+        const row = admRows[0];
+        // Upgrade legacy insecure '1234' schema seed so admin login matches provisioned PBKDF2 credentials
+        if (verifyPassword('1234', row.password_hash)) {
+          await db.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [defHashes.admin, row.id]);
+        }
+        if (!row.email || row.email.toLowerCase() === 'admin@jackpotlo.com') {
+          await db.query("UPDATE admin_users SET email = 'amigofoodmart2300@gmail.com' WHERE id = ?", [row.id]);
+        }
+      }
+
+      await db.query(
+        `INSERT IGNORE INTO store_users (id, store_id, username, email, normalized_email, password_hash, full_name, role, account_status, is_active, approved_by, approved_at)
+         VALUES
+           ('usr_amigo_1', 'store_amigo', 'amigo', 'amigofoodmart2300@gmail.com', 'amigofoodmart2300@gmail.com', ?, 'Amigo Food Mart', 'STORE_USER', 'APPROVED', 1, 'SYSTEM_SEED', CURRENT_TIMESTAMP),
+           ('usr_anish_1', 'store_anish', 'anish', 'anish', 'anish', ?, 'Anish Store', 'STORE_USER', 'APPROVED', 1, 'SYSTEM_SEED', CURRENT_TIMESTAMP)`,
+        [defHashes.amigo, defHashes.anish]
+      );
+    } catch (seedErr) {
+      console.warn('⚠️ [MySQL Migration] Default account seed notice:', seedErr.message);
+    }
+
     // 7. Sync active dispensers from pos_state (ONLY loaded active boxes)
     const [pState] = await db.query('SELECT state_data FROM pos_state WHERE id = 1');
     if (pState.length > 0 && pState[0].state_data) {
@@ -719,27 +759,27 @@ app.get(['/health', '/api/health'], async (req, res) => {
 
 // 1. Health & Connection Status Check
 app.get('/api/db-status', async (req, res) => {
-    if (!pool || !isDbInitialized) {
-      return res.json({ connected: false, initializing: Boolean(pool), message: pool ? 'MySQL schema migration & hydration in progress...' : 'MySQL Pool is not initialized.', error: dbLastError });
-    }
-    try {
-      const [rows] = await pool.query('SELECT 1 + 1 AS solution');
-      isDbConnected = true;
-      dbLastError = null;
-      res.json({
-        connected: true,
-        initialized: true,
-        database: dbConfig.database,
-        host: dbConfig.host,
-        port: dbConfig.port,
-        status: 'Online & Synced'
-      });
-    } catch (err) {
-      isDbConnected = false;
-      dbLastError = err.message;
-      res.status(500).json({ connected: false, error: err.message });
-    }
-  });
+  if (!pool || !isDbInitialized) {
+    return res.json({ connected: false, initializing: Boolean(pool), message: pool ? 'MySQL schema migration & hydration in progress...' : 'MySQL Pool is not initialized.', error: dbLastError });
+  }
+  try {
+    const [rows] = await pool.query('SELECT 1 + 1 AS solution');
+    isDbConnected = true;
+    dbLastError = null;
+    res.json({
+      connected: true,
+      initialized: true,
+      database: dbConfig.database,
+      host: dbConfig.host,
+      port: dbConfig.port,
+      status: 'Online & Synced'
+    });
+  } catch (err) {
+    isDbConnected = false;
+    dbLastError = err.message;
+    res.status(500).json({ connected: false, error: err.message });
+  }
+});
 
 // 2. Save Daily Report (Saves Parent + Itemized Active Box Sales with Date)
 app.post('/api/save-day-report', requireStoreActive, async (req, res) => {
@@ -1608,6 +1648,18 @@ function needsPasswordRehash(storedHash) {
   return true;
 }
 
+let cachedDefaultSeedHashes = null;
+function getDefaultSeedHashes() {
+  if (!cachedDefaultSeedHashes) {
+    cachedDefaultSeedHashes = {
+      admin: hashPassword('aj123456@'),
+      amigo: hashPassword('0000'),
+      anish: hashPassword('AX123456@')
+    };
+  }
+  return cachedDefaultSeedHashes;
+}
+
 // =============================================================================
 // JSON Web Token (JWT RFC 7519) Authentication Engine
 // =============================================================================
@@ -2151,9 +2203,11 @@ function getAdminState() {
     { gameId: '1770', gameName: '500X The Money', gameCode: '1770', price: 50.00, packSize: 20, packValue: 1000.00, isActive: true }
   ];
 
+  const defHashes = getDefaultSeedHashes();
   const defaultStores = [
     { storeId: 'store_amigo', storeName: 'AMIGO FOOD MART', ownerUsername: 'amigo', retailerNumber: 'GA-89412', address: '2300 MOODY RD WARNER ROBINS, GA, 31088', phone: '(478) 923-4567', totalBoxes: 65, authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' },
-    { storeId: 'store_downtown', storeName: 'DOWNTOWN QUICK MART', ownerUsername: 'downtown_owner', retailerNumber: 'GA-94103', address: '104 N COMMERCIAL BLVD, WARNER ROBINS, GA, 31088', phone: '(478) 953-8821', totalBoxes: 60, authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' }
+    { storeId: 'store_downtown', storeName: 'DOWNTOWN QUICK MART', ownerUsername: 'downtown_owner', retailerNumber: 'GA-94103', address: '104 N COMMERCIAL BLVD, WARNER ROBINS, GA, 31088', phone: '(478) 953-8821', totalBoxes: 60, authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' },
+    { storeId: 'store_anish', storeName: 'ANISH STORE', ownerUsername: 'anish', retailerNumber: 'GA-88510', address: 'Warner Robins, GA', phone: '(478) 555-0188', totalBoxes: 65, authorizationStatus: 'APPROVED', operationalStatus: 'ACTIVE' }
   ];
 
   const defaultApps = [
@@ -2175,7 +2229,7 @@ function getAdminState() {
   ];
 
   const defaultAdmins = [
-    { id: 'adm_001', username: 'admin', password_hash: '1234', full_name: 'Platform Administrator', email: 'admin@jackpotlo.com', role: 'SUPER_ADMIN', is_active: 1, created_at: new Date().toISOString() }
+    { id: 'adm_001', username: 'admin', password_hash: defHashes.admin, full_name: 'Platform Administrator', email: 'amigofoodmart2300@gmail.com', role: 'SUPER_ADMIN', is_active: 1, created_at: new Date().toISOString() }
   ];
 
   let st = {
@@ -2275,12 +2329,25 @@ function getAdminState() {
     try {
       st.storeUsers = [
         {
-          id: 'usr_amigo_primary',
+          id: 'usr_amigo_1',
           storeId: 'store_amigo',
           username: 'amigo',
           email: 'amigofoodmart2300@gmail.com',
           normalizedEmail: 'amigofoodmart2300@gmail.com',
+          passwordHash: defHashes.amigo,
           fullName: 'Amigo Food Mart',
+          role: 'STORE_USER',
+          accountStatus: 'APPROVED',
+          isActive: true
+        },
+        {
+          id: 'usr_anish_1',
+          storeId: 'store_anish',
+          username: 'anish',
+          email: 'anish',
+          normalizedEmail: 'anish',
+          passwordHash: defHashes.anish,
+          fullName: 'Anish Store',
           role: 'STORE_USER',
           accountStatus: 'APPROVED',
           isActive: true
@@ -2461,9 +2528,9 @@ app.post('/api/auth/login', async (req, res) => {
     const normIdentifier = rawIdentifier.toLowerCase();
     const st = getAdminState();
 
-    // 1. Retrieve candidate records for this identifier (supports ID, username, storeId, or email)
-    let matchedAdmin = null;
-    let matchedStoreUser = null;
+    // 1. Retrieve ALL candidate records for this identifier (supports ID, username, storeId, or email)
+    const adminCandidates = [];
+    const storeCandidates = [];
 
     if (isDbConnected && pool) {
       try {
@@ -2471,7 +2538,7 @@ app.post('/api/auth/login', async (req, res) => {
           'SELECT * FROM admin_users WHERE (LOWER(email) = ? OR LOWER(username) = ? OR LOWER(id) = ?) AND is_active = 1',
           [normIdentifier, normIdentifier, normIdentifier]
         );
-        if (adminRows.length > 0) matchedAdmin = adminRows[0];
+        if (adminRows.length > 0) adminCandidates.push(...adminRows);
       } catch (_) { }
 
       try {
@@ -2479,50 +2546,62 @@ app.post('/api/auth/login', async (req, res) => {
           'SELECT * FROM store_users WHERE (LOWER(email) = ? OR LOWER(username) = ? OR LOWER(normalized_email) = ? OR LOWER(id) = ? OR LOWER(store_id) = ?) AND is_active = 1',
           [normIdentifier, normIdentifier, normIdentifier, normIdentifier, normIdentifier]
         );
-        if (storeRows.length > 0) matchedStoreUser = storeRows[0];
+        if (storeRows.length > 0) storeCandidates.push(...storeRows);
       } catch (_) { }
     }
 
-    // In-memory state fallbacks (matching MySQL lookup fields including storeId / store_id)
-    if (!matchedAdmin && Array.isArray(st.admins)) {
-      matchedAdmin = st.admins.find(a =>
-        ((a.email || '').toLowerCase().trim() === normIdentifier ||
-          (a.username || '').toLowerCase().trim() === normIdentifier ||
-          (a.id || '').toLowerCase().trim() === normIdentifier) &&
-        a.is_active !== false
-      );
+    // In-memory state fallbacks (merged without dropping DB candidates)
+    if (Array.isArray(st.admins)) {
+        for (const a of st.admins) {
+          const isMatch = (
+            (a.email || '').toLowerCase().trim() === normIdentifier ||
+            (a.username || '').toLowerCase().trim() === normIdentifier ||
+(a.id || '').toLowerCase().trim() === normIdentifier
+        ) && a.is_active !== false;
+if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (a.username || '').toLowerCase())) {
+  adminCandidates.push(a);
+}
+      }
     }
-    if (!matchedStoreUser && Array.isArray(st.storeUsers)) {
-      matchedStoreUser = st.storeUsers.find(u =>
-        ((u.email || '').toLowerCase().trim() === normIdentifier ||
-          (u.username || '').toLowerCase().trim() === normIdentifier ||
-          (u.normalizedEmail || '').toLowerCase().trim() === normIdentifier ||
-          (u.id || '').toLowerCase().trim() === normIdentifier ||
-          (u.storeId || u.store_id || '').toLowerCase().trim() === normIdentifier) &&
-        u.isActive !== false
-      );
+    if (Array.isArray(st.storeUsers)) {
+    for (const u of st.storeUsers) {
+      const isMatch = (
+        (u.email || '').toLowerCase().trim() === normIdentifier ||
+        (u.username || '').toLowerCase().trim() === normIdentifier ||
+        (u.normalizedEmail || '').toLowerCase().trim() === normIdentifier ||
+        (u.id || '').toLowerCase().trim() === normIdentifier ||
+      (u.storeId || u.store_id || '').toLowerCase().trim() === normIdentifier
+        ) && u.isActive !== false;
+      if (isMatch && !storeCandidates.some(c => c.id === u.id || ((c.store_id || c.storeId) === (u.storeId || u.store_id) && (c.username || '').toLowerCase() === (u.username || '').toLowerCase()))) {
+        storeCandidates.push(u);
+      }
     }
+  }
 
-    // 2. Verify submitted password strictly against stored PBKDF2 hashes
-    let isAdminMatch = matchedAdmin ? verifyPassword(rawPassword, matchedAdmin.password_hash) : false;
+  // 2. Verify submitted password strictly against stored PBKDF2 hashes across matching candidates
+  let matchedAdmin = adminCandidates.find(a => verifyPassword(rawPassword, a.password_hash)) || null;
+  let isAdminMatch = Boolean(matchedAdmin);
 
-    let isStoreMatch = false;
-    if (matchedStoreUser) {
-      const sHash = matchedStoreUser.password_hash || matchedStoreUser.passwordHash;
+  let matchedStoreUser = null;
+  let isStoreMatch = false;
+    for (const candidate of storeCandidates) {
+      const sHash = candidate.password_hash || candidate.passwordHash;
       if (verifyPassword(rawPassword, sHash)) {
+        matchedStoreUser = candidate;
         isStoreMatch = true;
         if (needsPasswordRehash(sHash)) {
           const upgraded = hashPassword(rawPassword);
-          matchedStoreUser.password_hash = upgraded;
-          matchedStoreUser.passwordHash = upgraded;
-          matchedStoreUser.updatedAt = new Date().toISOString();
+          candidate.password_hash = upgraded;
+          candidate.passwordHash = upgraded;
+          candidate.updatedAt = new Date().toISOString();
           saveAdminState(st);
           if (isDbConnected && pool) {
             try {
-              await pool.query('UPDATE store_users SET password_hash = ? WHERE id = ?', [upgraded, matchedStoreUser.id]);
+              await pool.query('UPDATE store_users SET password_hash = ? WHERE id = ?', [upgraded, candidate.id]);
             } catch (_) { }
           }
         }
+        break;
       }
     }
 
