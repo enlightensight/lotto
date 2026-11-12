@@ -1,3 +1,4 @@
 /api/*  https://jackpotlo-api.enzonic.dev/api/:splat  200!
+/app/*  /app/index.html                               200
+/admin/*  /app/index.html                             200
 /*      /index.html                                   200
-

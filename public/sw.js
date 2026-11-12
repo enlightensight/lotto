@@ -2,8 +2,10 @@
 // Jackpotlo Pro - Production Service Worker (PWA & Offline SPA Resilience)
 // ============================================================================
 
-const CACHE_NAME = 'jackpotlo-pro-v9';
-const PRECACHE_SHELL = ['/', '/index.html', '/manifest.json'];
+const CACHE_NAME = 'lottotrack-pro-v10';
+const PRECACHE_SHELL = ['/', '/app/', '/manifest.json'];
+// Two HTML shells: the POS under /app (and /admin), the marketing + sign-in site everywhere else
+const shellKeyFor = pathname => (/^\/(app|admin)(\/|$)/.test(pathname) ? '/app/' : '/');
 
 // 1. Install Event: Precache the SPA app shell and activate immediately
 self.addEventListener('install', event => {
@@ -88,13 +90,13 @@ self.addEventListener('fetch', event => {
           // If we received a valid 200 response, clone and update /index.html cache
           if (response && response.status === 200) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(c => c.put('/index.html', clone)).catch(() => {});
+            caches.open(CACHE_NAME).then(c => c.put(shellKeyFor(url.pathname), clone)).catch(() => {});
           }
           return response;
         })
         .catch(async () => {
           // Offline / network failure fallback: serve cached SPA shell
-          const cachedIndex = (await caches.match('/index.html')) || (await caches.match('/'));
+          const cachedIndex = await caches.match(shellKeyFor(url.pathname));
           if (cachedIndex) return cachedIndex;
 
           // Safe minimal fallback HTML response if cache is empty (NEVER undefined!)

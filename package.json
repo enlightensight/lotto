@@ -13,6 +13,7 @@
     "admin:manage": "node scripts/manage-admin.cjs"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
     "vite": "^5.4.14"
   },
   "dependencies": {
@@ -22,6 +23,9 @@
     "jsbarcode": "^3.12.3",
     "multer": "^2.5.0",
     "mysql2": "^3.24.4",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
   }
 }

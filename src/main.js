@@ -14660,6 +14660,11 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
     // Fullscreen Sign In Screen Controls (Matching Reference UI Specification)
     function showSignInScreen() {
+      // Sign-in lives on the LottoTrack Pro site (/signin); the legacy in-app screen is kept only for ?bypass_login test runs
+      if (!window.location.search.includes('bypass_login')) {
+        window.location.replace('/signin');
+        return;
+      }
       const viewSignIn = document.getElementById('viewSignIn');
       const posLayout = document.querySelector('.pos-app-layout');
       if (!viewSignIn) return;
@@ -14821,7 +14826,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       const passInp = document.getElementById('inputSignInPass');
       if (passInp) passInp.value = '';
       if (window.location.hash) {
-        try { history.replaceState(null, '', '/'); } catch (_) { window.location.hash = ''; }
+        try { history.replaceState(null, '', window.location.pathname); } catch (_) { window.location.hash = ''; }
       }
       showSignInScreen();
     }
@@ -15118,7 +15123,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         posLayout.classList.remove('hidden-layout');
       }
       if (window.location.hash.startsWith('#admin')) {
-        try { history.replaceState(null, '', '/'); } catch (_) { window.location.hash = ''; }
+        try { history.replaceState(null, '', window.location.pathname); } catch (_) { window.location.hash = ''; }
       }
 
       setCurrentStoreId(targetStoreId);

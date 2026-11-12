@@ -403,7 +403,7 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
     }
     showSellCounterView();
     window.location.hash = '';
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', window.location.pathname);
     showToast('Switched to Admin Store POS counter view.', 'info');
   };
   document.getElementById('btnAdminSwitchToStore')?.addEventListener('click', handleSwitchToPos);
@@ -414,7 +414,7 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
     sfx.keypad?.();
     showSellCounterView();
     window.location.hash = '';
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', window.location.pathname);
     showToast('Returned to Store POS counter view.', 'info');
   });
 
@@ -913,7 +913,7 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
       localStorage.removeItem('lotto_admin_token');
       localStorage.removeItem('lotto_store_token');
       localStorage.removeItem('lotto_current_store_id');
-      window.location.href = '/';
+      window.location.href = '/signin';
     });
 
     // Quick jump from overview
