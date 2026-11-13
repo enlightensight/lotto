@@ -2353,12 +2353,7 @@ function renderDispenserRack() {
     const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
     const isLastScanned = state.lastScannedSlot === slot.boxNumber;
 
-    // During End Shift scanning, dispenser boxes stay empty/hidden.
-    // When cashier scans the closing ticket of a box, THAT box activates on the rack with its sales count!
-    // Pending activation boxes are also shown so cashier can tap "Activate" to start the 2-step setup!
-    if (isScanning && !slot.scannedInEndShift && !slot.needsActivation) {
-      return;
-    }
+
 
     const card = document.createElement('div');
 
@@ -2407,13 +2402,11 @@ function renderDispenserRack() {
     } else if (isScanning && slot.scannedInEndShift) {
       displaySoldNumber = calculateSlotSoldTickets(slot);
     } else if (state.shiftStatus === 'IN_PROGRESS') {
-      displaySoldNumber = packCumulativeSold;
+      displaySoldNumber = calculateSlotSoldTickets(slot);
     } else if (state.shiftStatus === 'SHIFT_ENDED') {
-      displaySoldNumber = slot.scannedInEndShift ? (slot.ticketsSold || calculateSlotSoldTickets(slot)) : packCumulativeSold;
-    } else if (slot.ticketsSold > 0) {
-      displaySoldNumber = packCumulativeSold;
+      displaySoldNumber = slot.scannedInEndShift ? (slot.ticketsSold !== undefined ? slot.ticketsSold : calculateSlotSoldTickets(slot)) : calculateSlotSoldTickets(slot);
     } else {
-      displaySoldNumber = packCumulativeSold;
+      displaySoldNumber = calculateSlotSoldTickets(slot);
     }
 
     card.innerHTML = `
@@ -2514,34 +2507,84 @@ function renderSlotsRibbon() {
   if (!slotsRibbon) return;
   slotsRibbon.innerHTML = '';
 
+  const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
+  const activeSlots = (state.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber);
+  const scannedSlots = activeSlots.filter(s => s.scannedInEndShift);
+  const pendingCount = Math.max(0, activeSlots.length - scannedSlots.length);
+
+  // Header is strictly 'All 65 boxes' (no badge / red message)
+  const mapTitle = allBoxesMap?.querySelector('.all-boxes-map-title');
+  const mapLegend = allBoxesMap?.querySelector('.all-boxes-map-legend');
+  if (mapTitle) {
+    mapTitle.textContent = 'All 65 boxes';
+  }
+
+  if (isScanning) {
+    if (mapLegend) {
+      mapLegend.innerHTML = `
+        <div class="map-legend-item">
+          <span class="legend-swatch scanned"></span>
+          <span class="legend-label-text"><strong>${scannedSlots.length}</strong> Scanned</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-swatch pending-scan"></span>
+          <span class="legend-label-text"><strong>${pendingCount}</strong> Left to scan</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-swatch empty"></span>
+          <span class="legend-label-text">Empty</span>
+        </div>
+      `;
+    }
+  } else {
+    if (mapLegend) {
+      mapLegend.innerHTML = `
+        <div class="map-legend-item">
+          <span class="legend-swatch selling"></span>
+          <span class="legend-swatch older" style="display:none;"></span>
+          <span class="legend-label-text">Active book</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-swatch empty"></span>
+          <span class="legend-label-text">Empty &mdash; tap to activate a book</span>
+        </div>
+      `;
+    }
+  }
+
   state.slots.forEach(slot => {
     const cell = document.createElement('div');
-    const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
     const isBoxEmpty = slot.status !== 'ACTIVE' || !slot.packNumber;
-
-    const isSelected = Boolean(state.shiftStatus === 'SCANNING_END_SHIFT' && state.lastScannedSlot === slot.boxNumber);
+    const isSelected = Boolean(isScanning && state.lastScannedSlot === slot.boxNumber);
     const daysActive = slot.daysActive || 0;
 
     if (!isBoxEmpty) {
-      if (isSelected) {
-        cell.className = 'ribbon-cell selected-slot';
-      } else if (daysActive >= 7) {
-        cell.className = 'ribbon-cell older-slot';
+      if (isScanning) {
+        if (slot.scannedInEndShift) {
+          cell.className = `ribbon-cell scanned-slot ${isSelected ? 'selected-slot' : ''}`;
+        } else {
+          cell.className = `ribbon-cell pending-scan-slot ${isSelected ? 'selected-slot' : ''}`;
+        }
       } else {
-        cell.className = 'ribbon-cell active-slot';
+        if (isSelected) {
+          cell.className = 'ribbon-cell selected-slot';
+        } else if (daysActive >= 7) {
+          cell.className = 'ribbon-cell older-slot';
+        } else {
+          cell.className = 'ribbon-cell active-slot';
+        }
       }
     } else {
       cell.className = `ribbon-cell empty-slot ${isSelected ? 'selected-slot' : ''}`;
+      if (isScanning && slot.boxNumber === 16 && isBoxEmpty && !isSelected) {
+        cell.classList.add('dashed-focus-slot');
+      }
     }
 
-    // Special dashed focus border (matching Box 16 in reference screenshot when scanning)
-    if (state.shiftStatus === 'SCANNING_END_SHIFT' && slot.boxNumber === 16 && isBoxEmpty && !isSelected) {
-      cell.classList.add('dashed-focus-slot');
-    }
-
+    // Pure number only, NO tick sign ✓
     cell.textContent = slot.boxNumber;
     cell.dataset.box = slot.boxNumber;
-    cell.title = `Box #${slot.boxNumber}: ${!isBoxEmpty ? `${slot.gameName || 'Active'} ($${slot.price || 0})` : 'Empty (Tap to load pack)'}`;
+    cell.title = `Box #${slot.boxNumber}: ${!isBoxEmpty ? `${slot.gameName || 'Active'} (${slot.price || 0})` : 'Empty (Tap to load pack)'}`;
 
     cell.addEventListener('click', () => {
       if (isBoxEmpty) {
@@ -13051,9 +13094,13 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       // 5. If in End Shift scanning mode, cancel and revert to in-progress
       if (state.shiftStatus === 'SCANNING_END_SHIFT') {
         state.shiftStatus = 'IN_PROGRESS';
+        if (Array.isArray(state.slots)) {
+          state.slots.forEach(s => { s.scannedInEndShift = false; });
+        }
         saveState(state);
         renderHeaderAndMetrics();
         renderDispenserRack();
+        renderSlotsRibbon();
         const isDaily = state.settings?.operationMode !== 'SHIFTS';
         showToast(isDaily ? 'End Day cancelled. Resuming day in progress.' : 'End Shift cancelled. Resuming shift in progress.', 'info');
         return;

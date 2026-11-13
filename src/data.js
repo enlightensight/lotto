@@ -1327,6 +1327,41 @@ export function parseLotteryBarcode(raw, customGames = []) {
           }
 
           // Auto-sanitize and repair slots from original scannedBarcodes records
+          const targetTotal = parsed.totalSlots || 65;
+          if (!Array.isArray(parsed.slots)) {
+            parsed.slots = [];
+          }
+          const existingByNum = new Map();
+          parsed.slots.forEach(s => {
+            if (s && s.boxNumber) existingByNum.set(Number(s.boxNumber), s);
+          });
+          const completeSlots = [];
+          for (let b = 1; b <= targetTotal; b++) {
+            if (existingByNum.has(b)) {
+              completeSlots.push(existingByNum.get(b));
+            } else {
+              completeSlots.push({
+                boxNumber: b,
+                status: 'EMPTY',
+                gameId: null,
+                gameName: null,
+                price: null,
+                packNumber: null,
+                packSize: null,
+                startTicket: 0,
+                currentTicket: 0,
+                ticketsInBox: 0,
+                scannedBarcodes: [],
+                soldBarcodes: [],
+                activatedThisShift: false,
+                daysActive: 0,
+                scannedInEndShift: false
+              });
+            }
+          }
+          parsed.slots = completeSlots;
+          parsed.totalSlots = targetTotal;
+
           if (parsed.slots && Array.isArray(parsed.slots)) {
             parsed.slots.forEach(s => {
               // Remove human-readable header display strings that leaked into scannedBarcodes

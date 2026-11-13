@@ -2407,8 +2407,7 @@ html, body {
 }
 
 .card-all-boxes-map .slots-ribbon-grid .ribbon-cell.active-slot,
-.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.older-slot,
-.card-all-boxes-map .slots-ribbon-grid .ribbon-cell:not(.empty-slot) {
+.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.older-slot {
   background: #15803d !important;
   color: #ffffff !important;
   border: none !important;

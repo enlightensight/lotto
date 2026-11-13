@@ -6475,12 +6475,84 @@ dialog#cashierModal {
 
 /* 3. Mini-Map All 65 Boxes: Active books are solid rich green #15803d with white numbers */
 .card-all-boxes-map .slots-ribbon-grid .ribbon-cell.active-slot,
-.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.older-slot,
-.card-all-boxes-map .slots-ribbon-grid .ribbon-cell:not(.empty-slot) {
+.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.older-slot {
   background: #15803d !important;
   color: #ffffff !important;
   border: none !important;
   font-weight: 700 !important;
+}
+
+/* End Shift Scanning states: Scanned vs Left to Scan */
+.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.scanned-slot,
+.ribbon-cell.scanned-slot {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border: 1px solid #15803d !important;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.35) !important;
+  font-weight: 700 !important;
+}
+
+.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.pending-scan-slot,
+.ribbon-cell.pending-scan-slot {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  border: 1px solid #b45309 !important;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.35) !important;
+  font-weight: 700 !important;
+}
+
+.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.pending-scan-slot:hover {
+  background: #b45309 !important;
+  transform: translateY(-1px);
+}
+
+.card-all-boxes-map .slots-ribbon-grid .ribbon-cell.selected-slot {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 1px !important;
+  z-index: 3 !important;
+}
+
+.legend-swatch.scanned {
+  width: 13px !important;
+  height: 13px !important;
+  background-color: #16a34a !important;
+  border-radius: 3px !important;
+  display: inline-block !important;
+}
+
+.legend-swatch.pending-scan {
+  width: 13px !important;
+  height: 13px !important;
+  background-color: #d97706 !important;
+  border-radius: 3px !important;
+  display: inline-block !important;
+}
+
+.map-scan-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.map-scan-badge.map-scan-pending {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.map-scan-badge.map-scan-done {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.ribbon-check {
+  font-size: 10px !important;
+  margin-right: 2px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  line-height: 1 !important;
 }
 
 .card-all-boxes-map .slots-ribbon-grid .ribbon-cell.empty-slot {
@@ -6562,8 +6634,37 @@ dialog#cashierModal {
   font-weight: 800 !important;
 }
 
+[data-theme="dark"] .card-all-boxes-map .slots-ribbon-grid .ribbon-cell.scanned-slot,
 [data-theme="dark"] .ribbon-cell.scanned-slot {
   background: #10b981 !important;
   color: #ffffff !important;
+  border-color: #059669 !important;
   font-weight: 700 !important;
+}
+
+[data-theme="dark"] .card-all-boxes-map .slots-ribbon-grid .ribbon-cell.pending-scan-slot,
+[data-theme="dark"] .ribbon-cell.pending-scan-slot {
+  background: #f59e0b !important;
+  color: #1c1917 !important;
+  border-color: #d97706 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="dark"] .legend-swatch.scanned {
+  background-color: #10b981 !important;
+}
+
+[data-theme="dark"] .legend-swatch.pending-scan {
+  background-color: #f59e0b !important;
+}
+
+[data-theme="dark"] .map-scan-badge.map-scan-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+[data-theme="dark"] .map-scan-badge.map-scan-done {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
 }
