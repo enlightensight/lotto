@@ -1391,6 +1391,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
                     if ((s.startTicket === 0 || s.startTicket === null || s.startTicket === undefined) && p.ticketNumber !== null && p.ticketNumber !== undefined) {
                       s.startTicket = p.ticketNumber;
                       s.currentTicket = p.ticketNumber;
+                      if (!(s.packCumulativeSoldBase > 0) && !(s.packCumulativeSold > 0) && !(s.previousShiftSold > 0) && (s.packStartTicket === 0 || s.packStartTicket === null || s.packStartTicket === undefined)) {
+                        s.packStartTicket = p.ticketNumber;
+                      }
                     }
                     const sec = p.securityCode || (firstValid && firstValid.securityCode);
                     if (sec && (!s.startSecurityCode || s.startSecurityCode === '000')) {
@@ -1406,6 +1409,15 @@ export function parseLotteryBarcode(raw, customGames = []) {
               if (s.status === 'ACTIVE' && s.packNumber) {
                 if ((s.startTicket === undefined || s.startTicket === null || s.startTicket === 0) && typeof s.currentTicket === 'number' && s.currentTicket > 0) {
                   s.startTicket = s.currentTicket;
+                }
+                if (
+                  s.startTicket > 0 &&
+                  (s.packStartTicket === undefined || s.packStartTicket === null || s.packStartTicket === 0) &&
+                  !(s.packCumulativeSoldBase > 0) &&
+                  !(s.packCumulativeSold > 0) &&
+                  !(s.previousShiftSold > 0)
+                ) {
+                  s.packStartTicket = s.startTicket;
                 }
               }
 

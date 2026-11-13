@@ -7,7 +7,7 @@
     "dev": "vite",
     "server": "node server.js",
     "start": "node server.js",
-    "build": "vite build && node -e \"fs.copyFileSync('public/sw.js', 'dist/sw.js')\"",
+    "build": "vite build && node -e \"fs.copyFileSync('public/sw.js', 'dist/sw.js'); fs.cpSync('landing', 'dist/landing', { recursive: true });\"",
     "preview": "vite preview",
     "admin:reset": "node scripts/manage-admin.cjs reset",
     "admin:manage": "node scripts/manage-admin.cjs"
