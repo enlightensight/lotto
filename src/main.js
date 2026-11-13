@@ -15235,7 +15235,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         storeSub.textContent = assigned.storeName;
       } else {
         const disp = cleanVal.charAt(0).toUpperCase() + cleanVal.slice(1);
-        storeSub.textContent = 'Jackpotlo Portal';
+        storeSub.textContent = 'LottoTrack Pro';
       }
     }
     window.updateSignInStoreSubtitle = updateSignInStoreSubtitle;

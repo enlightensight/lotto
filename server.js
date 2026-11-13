@@ -4179,16 +4179,16 @@ async function sendEmail({ to, subject, html }) {
 function emailLayout(title, bodyHtml) {
   return `<!doctype html><html><body style="margin:0;background:#f5f5f5;font-family:Arial,Helvetica,sans-serif;color:#0a0a0a">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden;border-top:4px solid #FFC21A">
-<tr><td style="background:#0a0a0a;padding:18px 24px;color:#ffffff;font-size:18px;font-weight:800">
-<span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;background:#262626;color:#FFC21A;border-radius:6px;font-weight:900;margin-right:8px">&#10003;</span>LottoTrack <span style="background:#FFC21A;color:#0a0a0a;font-size:11px;padding:2px 6px;border-radius:4px;vertical-align:3px">PRO</span></td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden;border-top:4px solid #1D4ED8">
+<tr><td style="background:#0B1B3F;padding:18px 24px;color:#ffffff;font-size:18px;font-weight:800">
+<span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;background:#1D4ED8;color:#ffffff;border-radius:6px;font-weight:900;margin-right:8px">&#10003;</span>LottoTrack <span style="background:#ffffff;color:#0B1B3F;font-size:11px;padding:2px 6px;border-radius:4px;vertical-align:3px">PRO</span></td></tr>
 <tr><td style="padding:28px 24px 8px"><h1 style="margin:0 0 12px;font-size:22px">${title}</h1>${bodyHtml}</td></tr>
 <tr><td style="padding:16px 24px 24px;font-size:12px;color:#737373">LottoTrack Pro, retail lottery POS and shift tracking.</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
 const emailButton = (href, label) =>
-  `<p style="margin:24px 0"><a href="${href}" style="background:#FFC21A;color:#0a0a0a;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">${label}</a></p>`;
+  `<p style="margin:24px 0"><a href="${href}" style="background:#1D4ED8;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px;display:inline-block">${label}</a></p>`;
 
 function sendWelcomeEmail({ email, storeName, licenseKey }) {
   return sendEmail({
@@ -4197,7 +4197,7 @@ function sendWelcomeEmail({ email, storeName, licenseKey }) {
     html: emailLayout('Welcome to LottoTrack Pro', `
 <p style="font-size:15px;line-height:1.6">Thanks for your purchase. <strong>${escapeHtml(storeName)}</strong> is licensed to use LottoTrack Pro.</p>
 <p style="font-size:13px;color:#525252;margin:20px 0 6px">Your license key</p>
-<p style="font-family:Consolas,Menlo,monospace;font-size:18px;font-weight:700;background:#0a0a0a;color:#FFC21A;padding:12px 16px;border-radius:8px;margin:0">${escapeHtml(licenseKey)}</p>
+<p style="font-family:Consolas,Menlo,monospace;font-size:18px;font-weight:700;background:#0B1B3F;color:#93C5FD;padding:12px 16px;border-radius:8px;margin:0">${escapeHtml(licenseKey)}</p>
 ${emailButton(`${PUBLIC_SITE_URL}/signin`, 'Sign in to LottoTrack Pro')}
 <p style="font-size:13px;color:#525252;line-height:1.6">Sign in with this email address (${escapeHtml(email)}) and the password you chose. Keep this email for your records.</p>`)
   });

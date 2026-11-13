@@ -2,6 +2,20 @@
 <html lang="en">
 
 <head>
+  <!-- Sign-in lives on the site (/signin): leave before paint without a session, never flash the legacy sign-in screen -->
+  <script>
+    (function () {
+      if (location.search.indexOf('bypass_login') > -1) return;
+      var sess = null, out = false;
+      try {
+        sess = sessionStorage.getItem('lotto_session_user') || localStorage.getItem('lotto_session_user');
+        out = sessionStorage.getItem('lotto_signed_out') === 'true' || localStorage.getItem('lotto_signed_out') === 'true';
+      } catch (e) { }
+      if (!sess || out) { location.replace('/signin'); return; }
+      document.documentElement.classList.add('ltp-has-session');
+    })();
+  </script>
+  <style>.ltp-has-session #viewSignIn { display: none !important; }</style>
   <!-- POS Security: Disable Source Inspection & Developer Shortcuts -->
   <script>
     (function () {
@@ -1558,7 +1572,7 @@
     <div class="signin-right-panel">
       <div class="signin-form-box">
         <h2 class="signin-form-title">Sign in</h2>
-        <div class="signin-store-subtitle" id="signInStoreSubtitle">Jackpotlo Portal</div>
+        <div class="signin-store-subtitle" id="signInStoreSubtitle">LottoTrack Pro</div>
 
         <form id="signInMainForm" autocomplete="on">
           <div class="signin-field-group">
@@ -4334,14 +4348,11 @@
     <!-- Enterprise Admin Sidebar (Persistent Left Column, 260px) -->
     <aside class="admin-sidebar" id="adminSidebar">
       <div class="admin-sidebar-header">
-        <div class="admin-brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
+        <div class="admin-brand-icon" style="background:transparent !important; box-shadow:none !important;">
+          <img src="/favicon.svg" width="34" height="34" alt="" aria-hidden="true">
         </div>
         <div class="admin-brand-text">
-          <span class="admin-brand-title">Jackpotlo</span>
+          <span class="admin-brand-title">LottoTrack Pro</span>
           <span class="admin-brand-badge">Platform Root</span>
         </div>
       </div>
@@ -4403,7 +4414,7 @@
           <button type="button" class="admin-mobile-toggle-btn" id="adminMobileToggleBtn"
             title="Toggle Navigation Sidebar" aria-label="Toggle Navigation Sidebar">☰</button>
           <div class="admin-breadcrumb-cluster">
-            <span class="crumb-lead">Jackpotlo Platform</span>
+            <span class="crumb-lead">LottoTrack Pro Platform</span>
             <span class="crumb-divider">/</span>
             <span class="crumb-active" id="adminActiveSectionTitle">Dashboard</span>
           </div>
@@ -4881,7 +4892,7 @@
       style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px;">
       <div>
         <h3 style="margin: 0; font-size: 1.18rem; font-weight: 700; color: var(--admin-heading-color);">Subscribe &amp;
-          Launch Your Jackpotlo Store</h3>
+          Launch Your LottoTrack Pro Store</h3>
         <p style="margin: 4px 0 0; color: var(--admin-text-muted); font-size: 0.82rem;">Select a plan, complete payment,
           create credentials, and upload documents for immediate software access.</p>
       </div>

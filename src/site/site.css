@@ -3,11 +3,12 @@
    Builds on landing.css tokens; monochrome ink + one functional red for errors.
    ========================================================================== */
 :root {
-  --brand-gold: #FFC21A; /* brand accent: logo, PRO tag, dark-panel highlights only (never text on white) */
+  --brand-blue: #1D4ED8; /* brand: logo tile, buttons, badges (white text) */
+  --brand-blue-light: #60A5FA; /* brand on navy surfaces: highlights, prices, focus */
   --error: #B42318;
   --error-subtle: #FEF3F2;
-  --ink-panel: #0A0A0A;
-  --ink-panel-raised: #171717;
+  --ink-panel: #0B1B3F;
+  --ink-panel-raised: #142A5C;
   --ink-panel-line: rgba(255, 255, 255, 0.12);
   --ink-panel-text: rgba(255, 255, 255, 0.72);
 }
@@ -28,10 +29,10 @@ body { background-color: var(--bg); }
 .ltp-wordmark-pro {
   margin-left: 0.375rem; padding: 0.25rem 0.4rem;
   font-size: 0.625rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1;
-  background: var(--ink-panel); color: var(--brand-gold); border-radius: 4px;
+  background: var(--brand-blue); color: #fff; border-radius: 4px;
 }
 .ltp-wordmark.is-inverse { color: #fff; }
-.ltp-wordmark.is-inverse .ltp-wordmark-pro { background: var(--brand-gold); color: var(--ink-panel); }
+.ltp-wordmark.is-inverse .ltp-wordmark-pro { background: #fff; color: var(--ink-panel); }
 
 /* ---------- Buttons ---------- */
 .btn-block { width: 100%; }
@@ -93,7 +94,7 @@ body { background-color: var(--bg); }
 }
 .auth-step-num {
   flex-shrink: 0; width: 2rem; height: 2rem; border-radius: var(--radius-full);
-  display: grid; place-items: center; font-size: 0.875rem; font-weight: 700; background: var(--brand-gold); color: var(--ink-panel);
+  display: grid; place-items: center; font-size: 0.875rem; font-weight: 700; background: var(--brand-blue); color: #fff;
 }
 .auth-step-title { display: block; font-weight: 700; font-size: 0.9375rem; }
 .auth-step-text { display: block; font-size: 0.8125rem; color: var(--ink-panel-text); margin-top: 0.125rem; }
@@ -182,30 +183,30 @@ body { background-color: var(--bg); }
 }
 
 /* ==========================================================================
-   Yellow & black brand layer
-   Gold (#FFC21A) is used as a fill or on ink — never as text on white (contrast).
+   Blue brand layer
+   Solid blue fills carry white text; light blue is only used on navy surfaces (contrast).
    ========================================================================== */
-:root { --brand-gold-hover: #F2B200; --brand-gold-tint: #FFF6D6; }
-::selection { background: var(--brand-gold); color: var(--ink-panel); }
+:root { --brand-blue-hover: #1E40AF; --brand-blue-tint: #EFF6FF; }
+::selection { background: var(--brand-blue); color: #fff; }
 
 /* Buttons: gold primary everywhere */
-.btn-primary { background-color: var(--brand-gold); border-color: var(--brand-gold); color: var(--ink-panel); }
-.btn-primary:hover { background-color: var(--brand-gold-hover); border-color: var(--brand-gold-hover); }
-.btn-primary:disabled { background-color: #E8D9A8; border-color: #E8D9A8; color: #6B6B6B; }
+.btn-primary { background-color: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+.btn-primary:hover { background-color: var(--brand-blue-hover); border-color: var(--brand-blue-hover); }
+.btn-primary:disabled { background-color: #A9BFF0; border-color: #A9BFF0; color: #fff; }
 .btn-secondary { border-color: var(--ink); }
 
 /* Header: gold rule under the bar */
-.site-header { border-bottom: 3px solid var(--brand-gold); }
+.site-header { border-bottom: 3px solid var(--brand-blue); }
 
 /* Eyebrows get a gold bar */
 .eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--ink); }
-.eyebrow::before { content: ''; width: 1.25rem; height: 3px; background: var(--brand-gold); border-radius: 2px; }
+.eyebrow::before { content: ''; width: 1.25rem; height: 3px; background: var(--brand-blue); border-radius: 2px; }
 
 /* Hero: black band, white type, gold highlight */
 .hero-section { background-color: var(--ink-panel); color: #fff; padding-top: clamp(2.5rem, 5vw, 4.5rem); padding-bottom: clamp(2.5rem, 5vw, 4.5rem); }
-.hero-section .eyebrow { color: var(--brand-gold); }
+.hero-section .eyebrow { color: var(--brand-blue-light); }
 .hero-section .hero-h1 { color: #fff; }
-.hero-highlight { color: var(--brand-gold); }
+.hero-highlight { color: var(--brand-blue-light); }
 .hero-section .hero-text { color: rgba(255, 255, 255, 0.75); }
 .hero-section .hero-small-line { color: rgba(255, 255, 255, 0.6); }
 .hero-section .btn-secondary { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.4); }
@@ -214,59 +215,59 @@ body { background-color: var(--bg); }
 .hero-visual-pair .rack-caption { color: rgba(255, 255, 255, 0.6); }
 
 /* Numbered markers */
-.problem-marker { background: var(--brand-gold); color: var(--ink-panel); padding: 0.2rem 0.45rem; border-radius: 4px; line-height: 1.2; }
-.how-step-card { border-top: 4px solid var(--brand-gold); }
+.problem-marker { background: var(--brand-blue); color: #fff; padding: 0.2rem 0.45rem; border-radius: 4px; line-height: 1.2; }
+.how-step-card { border-top: 4px solid var(--brand-blue); }
 .how-step-badge {
   width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border-radius: var(--radius-full);
-  background: var(--ink-panel); color: var(--brand-gold); font-size: 1.25rem;
+  background: var(--ink-panel); color: var(--brand-blue-light); font-size: 1.25rem;
 }
-.workflow-step-index { display: inline-block; background: var(--ink-panel); color: var(--brand-gold); padding: 0.25rem 0.55rem; border-radius: 4px; }
-.closing-statement { border-top: 3px solid var(--brand-gold); }
-.perspective-role-title { border-bottom: 3px solid var(--brand-gold); }
-.compact-feature-item { border-left: 4px solid var(--brand-gold); }
+.workflow-step-index { display: inline-block; background: var(--ink-panel); color: var(--brand-blue-light); padding: 0.25rem 0.55rem; border-radius: 4px; }
+.closing-statement { border-top: 3px solid var(--brand-blue); }
+.perspective-role-title { border-bottom: 3px solid var(--brand-blue); }
+.compact-feature-item { border-left: 4px solid var(--brand-blue); }
 
 /* Reconciliation + corrections */
 .reconciliation-flow-bar { background: var(--ink-panel); border-color: var(--ink-panel); }
 .reconciliation-flow-bar .math-label { color: rgba(255, 255, 255, 0.6); }
 .reconciliation-flow-bar .math-value { color: #fff; }
-.reconciliation-flow-bar .math-value.expected, .reconciliation-flow-bar .math-value.positive:last-child { color: var(--brand-gold); }
-.outcome-card.is-balanced { border-color: var(--brand-gold); background: var(--brand-gold-tint); }
-.correction-badge-action { background: var(--brand-gold); border-color: var(--brand-gold); color: var(--ink-panel); }
+.reconciliation-flow-bar .math-value.expected, .reconciliation-flow-bar .math-value.positive:last-child { color: var(--brand-blue-light); }
+.outcome-card.is-balanced { border-color: var(--brand-blue); background: var(--brand-blue-tint); }
+.correction-badge-action { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
 
 /* FAQ */
 .faq-summary::after { color: var(--ink); font-weight: 700; }
-.faq-item[open] { box-shadow: inset 4px 0 0 var(--brand-gold); }
+.faq-item[open] { box-shadow: inset 4px 0 0 var(--brand-blue); }
 
 /* Pricing card: gold on ink */
-.price-card { border-top: 4px solid var(--brand-gold); }
-.price-amount { color: var(--brand-gold); }
-.price-card-tag { border-color: var(--brand-gold); color: var(--brand-gold); }
-.price-features li::before, .auth-checklist li::before { color: var(--brand-gold); }
-.price-footnote a { text-decoration-color: var(--brand-gold); }
+.price-card { border-top: 4px solid var(--brand-blue); }
+.price-amount { color: var(--brand-blue-light); }
+.price-card-tag { border-color: var(--brand-blue-light); color: var(--brand-blue-light); }
+.price-features li::before, .auth-checklist li::before { color: var(--brand-blue-light); }
+.price-footnote a { text-decoration-color: var(--brand-blue); }
 
 /* Footer: black */
-.site-footer { background: var(--ink-panel); border-top: 4px solid var(--brand-gold); color: #fff; }
+.site-footer { background: var(--ink-panel); border-top: 4px solid var(--brand-blue); color: #fff; }
 .site-footer .footer-brand-desc { color: rgba(255, 255, 255, 0.6); margin-top: 0.75rem; }
 .site-footer .footer-link { color: rgba(255, 255, 255, 0.75); }
-.site-footer .footer-link:hover { color: var(--brand-gold); }
+.site-footer .footer-link:hover { color: var(--brand-blue-light); }
 
 /* Auth pages */
-.auth-aside { border-right: 4px solid var(--brand-gold); }
-.auth-aside-amount { color: var(--brand-gold); }
-.auth-card { border-top: 4px solid var(--brand-gold); }
-.auth-switch a, .auth-link-btn { text-decoration-color: var(--brand-gold); text-decoration-thickness: 2px; }
-.signup-steps li.is-current .signup-step-dot { background: var(--ink-panel); color: var(--brand-gold); }
-.signup-steps li.is-done .signup-step-dot { background: var(--brand-gold); border-color: var(--brand-gold); color: var(--ink-panel); }
-.license-box { border-left: 4px solid var(--brand-gold); }
-.license-key { color: var(--brand-gold); }
-.order-total { border-top: 2px solid var(--brand-gold); }
-.form-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(255, 194, 26, 0.55); }
+.auth-aside { border-right: 4px solid var(--brand-blue); }
+.auth-aside-amount { color: var(--brand-blue-light); }
+.auth-card { border-top: 4px solid var(--brand-blue); }
+.auth-switch a, .auth-link-btn { text-decoration-color: var(--brand-blue); text-decoration-thickness: 2px; }
+.signup-steps li.is-current .signup-step-dot { background: var(--ink-panel); color: var(--brand-blue-light); }
+.signup-steps li.is-done .signup-step-dot { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+.license-box { border-left: 4px solid var(--brand-blue); }
+.license-key { color: var(--brand-blue-light); }
+.order-total { border-top: 2px solid var(--brand-blue); }
+.form-input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.25); }
 
 /* Focus rings: gold on dark surfaces */
-.hero-section :focus-visible, .site-footer :focus-visible, .price-card :focus-visible, .auth-aside :focus-visible { outline-color: var(--brand-gold); }
+.hero-section :focus-visible, .site-footer :focus-visible, .price-card :focus-visible, .auth-aside :focus-visible { outline-color: var(--brand-blue-light); }
 
 @media (max-width: 900px) {
-  .auth-aside { border-right: 0; border-bottom: 4px solid var(--brand-gold); }
+  .auth-aside { border-right: 0; border-bottom: 4px solid var(--brand-blue); }
 }
 
 .forgot-form { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
