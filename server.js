@@ -4161,34 +4161,25 @@ const RESET_RESEND_COOLDOWN_MS = 60 * 1000;
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function sendEmail({ to, subject, html }) {
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_FROM_EMAIL;
-  const senderName = process.env.BREVO_SENDER_NAME || process.env.MAIL_FROM_NAME || 'LottoTrack Pro';
-
-  if (!process.env.BREVO_API_KEY || !senderEmail) {
-    console.warn(`Email not sent (BREVO_API_KEY / BREVO_SENDER_EMAIL missing): "${subject}" to ${to}`);
+  if (!process.env.BREVO_API_KEY || !process.env.MAIL_FROM_EMAIL) {
+    console.warn(`Email not sent (BREVO_API_KEY / MAIL_FROM_EMAIL missing): "${subject}" to ${to}`);
     return false;
   }
-  try {
-    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        sender: { email: senderEmail, name: senderName },
-        to: [{ email: to }],
-        subject,
-        htmlContent: html
-      }),
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!resp.ok) {
-      console.warn('Brevo send error:', resp.status, (await resp.text()).slice(0, 300));
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.warn('Brevo network/timeout error:', err.message);
+  const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      sender: { email: process.env.MAIL_FROM_EMAIL, name: process.env.MAIL_FROM_NAME || 'LottoTrack Pro' },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html
+    })
+  });
+  if (!resp.ok) {
+    console.warn('Brevo send error:', resp.status, (await resp.text()).slice(0, 300));
     return false;
   }
+  return true;
 }
 
 function emailLayout(title, bodyHtml) {
