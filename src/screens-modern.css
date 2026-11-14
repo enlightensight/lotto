@@ -459,7 +459,8 @@
 /* Modern Edit Book Modal Dialog Styles */
 #modalEditInventoryBook::backdrop {
   background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 [data-theme="dark"] #modalEditInventoryBook {
@@ -503,7 +504,8 @@ dialog {
 
 dialog::backdrop {
   background: rgba(15, 23, 42, 0.6) !important;
-  backdrop-filter: blur(4px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* -------------------------------------------------------------

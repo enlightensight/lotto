@@ -855,9 +855,19 @@
   color: #ef4444 !important;
 }
 
-/* Hide bottom toast notification container completely on dashboard */
-#toastContainer {
-  display: none !important;
-  visibility: hidden !important;
+/* Top-right toast notification container for dashboard and POS views */
+#toastContainer,
+.toast-container {
+  display: flex !important;
+  visibility: visible !important;
+  position: fixed !important;
+  top: 20px !important;
+  right: 24px !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 2147483647 !important;
+  flex-direction: column !important;
+  gap: 8px !important;
   pointer-events: none !important;
+  max-width: min(420px, calc(100vw - 32px)) !important;
 }

@@ -291,7 +291,6 @@
 .banner.warn{background:var(--warn-soft);color:var(--warn)}
 .banner.ok{background:var(--money-soft);color:var(--money)}
 .banner b{display:block}
-.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:12px;background:var(--ink);color:var(--surface);padding:12px 14px 12px 16px;border-radius:var(--r-md);box-shadow:var(--sh-lg);font-weight:600;font-size:15px;animation:toastIn .28s var(--ease) both;max-width:calc(100% - 32px)}
 .toast .ti{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--money);color:#fff;flex:none}
 .toast.info .ti{background:var(--brand)}
 .toast.warn .ti{background:var(--warn)}
@@ -592,7 +591,8 @@ dialog.lt-modal-dialog {
 
 dialog.lt-modal-dialog::backdrop {
   background: rgba(17, 22, 30, 0.45) !important;
-  backdrop-filter: blur(2px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .modal-scrim-wrap {

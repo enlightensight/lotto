@@ -373,6 +373,7 @@ async function migrateCleanData(db) {
     await ensureColumn(db, 'store_inventory', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
     await ensureColumn(db, 'daily_reports', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
     await ensureColumn(db, 'shift_reports', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
+    await ensureColumn(db, 'ticket_scans_log', 'store_id', "VARCHAR(60) NOT NULL DEFAULT 'store_amigo'");
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS \`store_pos_state\` (
@@ -809,24 +810,26 @@ app.post('/api/save-day-report', requireStoreActive, async (req, res) => {
     const net = (parseNum(d.totalSales, 0) || (parseNum(d.totalScratcherSales, 0) + parseNum(d.onlineSales, 0))) -
       (parseNum(d.totalCashes, 0) || (parseNum(d.cashes, 0) + parseNum(d.onlineCashes, 0)));
 
+    const targetStoreId = d.storeId || req.authorizedStoreId || (req.storeSession && req.storeSession.storeId) || 'store_amigo';
     const query = `
       INSERT INTO daily_reports (
-        report_date, report_time, cashier, store_name, total_scratcher_sales,
-        online_sales, cashes, total_sales, net_balance, boxes_data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        report_date, report_time, user_id, store_name, total_scratcher_sales,
+        online_sales, cashes, total_sales, net_balance, boxes_data, store_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await pool.query(query, [
       reportDate,
       reportTime,
-      d.userId || 'master',
+      d.userId || d.cashier || 'master',
       d.storeName || 'AMIGO FOOD MART',
       parseNum(d.totalScratcherSales, 0),
       parseNum(d.onlineSales, 0),
       parseNum(d.cashes, 0) + parseNum(d.onlineCashes, 0),
       parseNum(d.totalSales, 0),
       net,
-      JSON.stringify(d.boxes || [])
+      JSON.stringify(d.boxes || []),
+      targetStoreId
     ]);
 
     const reportId = result.insertId;
@@ -930,12 +933,13 @@ app.post('/api/save-shift-report', requireStoreActive, async (req, res) => {
     const overShort = actualCash - expectedCash;
     const shiftDate = h.endedAt ? String(h.endedAt).slice(0, 10) : (h.startedAt ? String(h.startedAt).slice(0, 10) : new Date().toLocaleDateString('en-US'));
 
+    const targetStoreId = h.storeId || req.authorizedStoreId || (req.storeSession && req.storeSession.storeId) || 'store_amigo';
     const query = `
       INSERT INTO shift_reports (
-        shift_number, shift_date, cashier, tickets_sold, total_sales,
+        shift_number, shift_date, cashier, total_tickets_sold, total_sales_revenue,
         cashes, drawer_float, actual_cash_counted, expected_cash,
-        drawer_over_short, slots_snapshot
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        drawer_over_short, slots_snapshot, store_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await pool.query(query, [
@@ -949,7 +953,8 @@ app.post('/api/save-shift-report', requireStoreActive, async (req, res) => {
       actualCash,
       expectedCash,
       overShort,
-      JSON.stringify(h.slots || [])
+      JSON.stringify(h.slots || []),
+      targetStoreId
     ]);
 
     const shiftId = result.insertId;
@@ -1315,14 +1320,14 @@ app.post('/api/sync-pos-state', requireStoreActive, async (req, res) => {
            ON DUPLICATE KEY UPDATE state_data = VALUES(state_data), updated_at = CURRENT_TIMESTAMP`,
           [storeId, stateJson]
         );
-        if (storeId === 'store_amigo') {
+        if (storeId === 'store_amigo' || !storeId) {
           await pool.query(
             `INSERT INTO pos_state (id, state_data) VALUES (1, ?)
              ON DUPLICATE KEY UPDATE state_data = VALUES(state_data)`,
             [stateJson]
           );
-          await syncStateToNormalizedTables(stateObj, pool);
         }
+        await syncStateToNormalizedTables(stateObj, pool);
       } catch (dbErr) {
         console.warn('MySQL state sync warning:', dbErr.message);
       }
@@ -1520,14 +1525,15 @@ app.post('/api/log-scan', requireStoreActive, async (req, res) => {
       try {
         await pool.query(
           `INSERT INTO ticket_scans_log (
-            date, time, barcode, box_number, game_name, pack_number,
-            ticket_number, ticket_price, cashier
+            barcode, box_number, game_name, pack_number,
+            ticket_number, ticket_price, cashier, shift_number, store_id
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            dateStr, timeStr, s.barcode || 'UNKNOWN', s.boxNumber || 0,
+            s.barcode || 'UNKNOWN', s.boxNumber || 0,
             s.gameName || 'Scratch Off', s.packNumber || '---',
             parseIntSafe(s.ticketNumber, 0), parseNum(s.price, 0),
-            s.cashier || 'master'
+            s.cashier || 'master', parseIntSafe(s.shiftNumber, 1),
+            storeId || 'store_amigo'
           ]
         );
       } catch (dbErr) {
@@ -4155,25 +4161,34 @@ const RESET_RESEND_COOLDOWN_MS = 60 * 1000;
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function sendEmail({ to, subject, html }) {
-  if (!process.env.BREVO_API_KEY || !process.env.MAIL_FROM_EMAIL) {
-    console.warn(`Email not sent (BREVO_API_KEY / MAIL_FROM_EMAIL missing): "${subject}" to ${to}`);
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_FROM_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || process.env.MAIL_FROM_NAME || 'LottoTrack Pro';
+
+  if (!process.env.BREVO_API_KEY || !senderEmail) {
+    console.warn(`Email not sent (BREVO_API_KEY / BREVO_SENDER_EMAIL missing): "${subject}" to ${to}`);
     return false;
   }
-  const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({
-      sender: { email: process.env.MAIL_FROM_EMAIL, name: process.env.MAIL_FROM_NAME || 'LottoTrack Pro' },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html
-    })
-  });
-  if (!resp.ok) {
-    console.warn('Brevo send error:', resp.status, (await resp.text()).slice(0, 300));
+  try {
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { email: senderEmail, name: senderName },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html
+      }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!resp.ok) {
+      console.warn('Brevo send error:', resp.status, (await resp.text()).slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Brevo network/timeout error:', err.message);
     return false;
   }
-  return true;
 }
 
 function emailLayout(title, bodyHtml) {

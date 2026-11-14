@@ -394,13 +394,13 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
     const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, inferredDetails?.packSize);
     const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-    const packClean = fullPack.replace(/^0+/, '') || fullPack;
+    const packClean = packNumber.replace(/^0+/, '') || packNumber;
 
     return {
       isValid: true,
       gameNumber,
       basePackNumber: packNumber,
-      packNumber: fullPack,
+      packNumber: packNumber,
       packClean,
       packCombined: fullPack,
       ticketNumber,
@@ -441,13 +441,13 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
     const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, inferredDetails?.packSize);
     const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-    const packClean = fullPack.replace(/^0+/, '') || fullPack;
+    const packClean = packNumber.replace(/^0+/, '') || packNumber;
 
     return {
       isValid: true,
       gameNumber,
       basePackNumber: packNumber,
-      packNumber: fullPack,
+      packNumber: packNumber,
       packClean,
       packCombined: fullPack,
       ticketNumber,
@@ -507,13 +507,13 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
     const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, inferredDetails?.packSize);
     const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-    const packClean = fullPack.replace(/^0+/, '') || fullPack;
+    const packClean = packNumber.replace(/^0+/, '') || packNumber;
 
     return {
       isValid: true,
       gameNumber,
       basePackNumber: packNumber,
-      packNumber: fullPack,
+      packNumber: packNumber,
       packClean,
       packCombined: fullPack,
       ticketNumber,
@@ -654,12 +654,12 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
     const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, inferredDetails?.packSize);
     const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-    const packClean = fullPack.replace(/^0+/, '') || fullPack;
+    const packClean = packNumber.replace(/^0+/, '') || packNumber;
     return {
       isValid: true,
       gameNumber,
       basePackNumber: packNumber,
-      packNumber: fullPack,
+      packNumber: packNumber,
       packClean,
       packCombined: fullPack,
       ticketNumber,
@@ -788,12 +788,12 @@ export function parseLotteryBarcode(raw, customGames = []) {
       const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, matched?.packSize || inferredDetails?.packSize);
 
       const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-      const packClean = fullPack.replace(/^0+/, '') || fullPack;
+      const packClean = packNumber.replace(/^0+/, '') || packNumber;
       return {
         isValid: true,
         gameNumber,
         basePackNumber: packNumber,
-        packNumber: fullPack,
+        packNumber: packNumber,
         packClean,
         packCombined: fullPack,
         ticketNumber,
@@ -917,12 +917,12 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
         const sec = securityCode || computeLotterySeriesCode(gameNumber, ticketNumber, customGames, matched?.packSize || inferredDetails?.packSize);
         const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-        const packClean = fullPack.replace(/^0+/, '') || fullPack;
+        const packClean = packNumber.replace(/^0+/, '') || packNumber;
         return {
           isValid: true,
           gameNumber,
           basePackNumber: packNumber,
-          packNumber: fullPack,
+          packNumber: packNumber,
           packClean,
           packCombined: fullPack,
           ticketNumber,
@@ -1040,13 +1040,13 @@ export function parseLotteryBarcode(raw, customGames = []) {
           const packNumber = digits.slice(4, 10); // 6-digit pack
           const checkCode = digits.slice(10, 11);
           const fullPack = checkCode ? `${packNumber}-${checkCode}` : packNumber;
-          const packClean = fullPack.replace(/^0+/, '') || fullPack;
+          const packClean = packNumber.replace(/^0+/, '') || packNumber;
           return {
             isValid: true,
             isPackBarcode: true,
             gameNumber,
             basePackNumber: packNumber,
-            packNumber: fullPack,
+            packNumber: packNumber,
             packClean,
             packCombined: fullPack,
             ticketNumber: null,
@@ -1098,47 +1098,14 @@ export function parseLotteryBarcode(raw, customGames = []) {
         };
       }
 
-      // 7 digits: Pack number only
-      if (digits.length === 7) {
-        const packNumber = digits.slice(0, 6);
-        const checkCode = digits.slice(6, 7);
-        const fullPack = `${packNumber}-${checkCode}`;
-        const packClean = fullPack.replace(/^0+/, '') || fullPack;
+      // Barcodes with fewer than 10 digits are incomplete / truncated scanner input
+      // (e.g. "8370380" from "83703806701701744")
+      if (digits.length < 10) {
         return {
-          isValid: true,
-          isPackBarcode: true,
-          gameNumber: null,
-          basePackNumber: packNumber,
-          packNumber: fullPack,
-          packClean,
-          packCombined: fullPack,
-          ticketNumber: null,
-          ticketString: null,
-          checkCode,
-          standardBarcode: digits,
-          canonicalId: `PACK-${packNumber}`,
-          fullId: `PACK-${packNumber}-${checkCode}`,
-          displayBarcode: `Pack ${packNumber}-${checkCode}`,
-          raw
-        };
-      }
-
-      // 6 digits: Plain pack number
-      if (digits.length === 6) {
-        return {
-          isValid: true,
-          isPackBarcode: true,
-          gameNumber: null,
-          packNumber: digits,
-          packClean: digits.replace(/^0+/, '') || digits,
-          packCombined: digits,
-          ticketNumber: null,
-          ticketString: null,
-          checkCode: null,
-          standardBarcode: digits,
-          canonicalId: `PACK-${digits}`,
-          fullId: `PACK-${digits}`,
-          displayBarcode: `Pack ${digits}`,
+          isValid: false,
+          isIncomplete: true,
+          isNonLotteryBarcode: true,
+          error: 'Incomplete barcode — please rescan.',
           raw
         };
       }
@@ -1202,17 +1169,17 @@ export function parseLotteryBarcode(raw, customGames = []) {
       // 4-segment: Game-Pack-Check-Ticket (e.g. "1908-001890-2-038")
       const fourMatch = s.match(/^(\d{3,5})[-_/\s.:]+(\d{5,8})[-_/\s.:]+(\d{1,2})[-_/\s.:]+(\d{1,4})/);
       if (fourMatch) {
-        return (fourMatch[2] + fourMatch[3]).replace(/^0+/, '');
+        return fourMatch[2].replace(/^0+/, '');
       }
       const parts = s.split(/[-_\s]+/);
       if (parts.length >= 2 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
-        // Pack-Check format: "001890-2" (6+ digit pack, 1-2 digit check)
+        // Pack-Check format: "001890-2" (6+ digit pack, 1-2 digit check) -> extract 6-digit physical pack
         if (parts[0].length >= 5 && parts[1].length <= 2) {
-          return (parts[0] + parts[1]).replace(/^0+/, '');
+          return parts[0].replace(/^0+/, '');
         }
-        // Game-Pack-Check: "1908-001890-2" -> take pack+check
+        // Game-Pack-Check: "1908-001890-2" -> extract 6-digit physical pack
         if (parts.length >= 3 && /^\d{1,2}$/.test(parts[2])) {
-          return (parts[1] + parts[2]).replace(/^0+/, '');
+          return parts[1].replace(/^0+/, '');
         }
         // Game-Pack: "1648-018378"
         if (parts[0].length <= 5 && parts[1].length >= 4) {
@@ -1220,27 +1187,58 @@ export function parseLotteryBarcode(raw, customGames = []) {
         }
       }
       const rawDigits = s.replace(/[^0-9]/g, '');
-      // Continuous barcodes: digits[4..10] = pack, digits[10] = check digit
+      // Continuous barcodes: digits[4..10] = 6-digit physical pack number
       if (rawDigits.length >= 14) {
-        return rawDigits.slice(4, 11).replace(/^0+/, '');
+        return rawDigits.slice(4, 10).replace(/^0+/, '');
       } else if (rawDigits.length === 11) {
-        return rawDigits.slice(4, 11).replace(/^0+/, '');
+        return rawDigits.slice(4, 10).replace(/^0+/, '');
       } else if (rawDigits.length === 10) {
         return rawDigits.slice(4, 10).replace(/^0+/, '');
       }
       return rawDigits.replace(/^0+/, '') || rawDigits;
     }
 
+    export function getBasePackNumber(pack) {
+      if (!pack) return '';
+      const s = String(pack).trim();
+      if (s.includes('-')) {
+        const parts = s.split('-').map(p => p.trim());
+        if (parts.length === 2 && parts[0].length >= 5 && parts[1].length <= 2) {
+          return parts[0].replace(/^0+/, '') || parts[0];
+        }
+        if (parts.length >= 3 && parts[1].length >= 5 && parts[2].length <= 2) {
+          return parts[1].replace(/^0+/, '') || parts[1];
+        }
+        if (parts.length === 2 && parts[0].length <= 5 && parts[1].length >= 4) {
+          return parts[1].replace(/^0+/, '') || parts[1];
+        }
+      }
+      const digits = s.replace(/[^0-9]/g, '');
+      if (digits.length >= 14) {
+        return digits.slice(4, 10).replace(/^0+/, '') || digits.slice(4, 10);
+      }
+      if (digits.length === 11 || digits.length === 10) {
+        return digits.slice(4, 10).replace(/^0+/, '') || digits.slice(4, 10);
+      }
+      if (digits.length === 7) {
+        return digits.slice(0, 6).replace(/^0+/, '') || digits.slice(0, 6);
+      }
+      return digits.replace(/^0+/, '') || digits;
+    }
+
     /**
-     * High-precision pack number matching. Normalization now includes check digits,
-     * so exact match distinguishes packs with different check digits.
+     * High-precision pack number matching across tickets of the same physical pack.
+     * Matches exact normalized pack strings or identical physical base packs (excluding position check digits).
      */
     export function isPackNumberMatch(packA, packB) {
       if (!packA || !packB) return false;
       const normA = normalizePackNumber(packA);
       const normB = normalizePackNumber(packB);
-      if (!normA || !normB) return false;
-      return normA === normB;
+      if (normA && normB && normA === normB) return true;
+      const baseA = getBasePackNumber(packA);
+      const baseB = getBasePackNumber(packB);
+      if (baseA && baseB && baseA === baseB) return true;
+      return false;
     }
 
     export function findGameByBarcode(rawCode, customGames = []) {
@@ -1364,6 +1362,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
           if (parsed.slots && Array.isArray(parsed.slots)) {
             parsed.slots.forEach(s => {
+              if (parsed.shiftStatus === 'IN_PROGRESS' && s.scannedInEndShift) {
+                s.scannedInEndShift = false;
+              }
               // Remove human-readable header display strings that leaked into scannedBarcodes
               if (Array.isArray(s.scannedBarcodes)) {
                 s.scannedBarcodes = s.scannedBarcodes.filter(b => {

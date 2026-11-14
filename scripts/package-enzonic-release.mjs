@@ -100,8 +100,14 @@ syncSrcDir(path.join(LOTTO_DIR, 'src'), path.join(DEPLOY_DIR, 'src'));
 console.log('  ✓ Synchronized: src/ tree');
 syncSrcDir(path.join(LOTTO_DIR, 'public'), path.join(DEPLOY_DIR, 'public'));
 console.log('  ✓ Synchronized: public/ tree');
-syncSrcDir(path.join(LOTTO_DIR, 'landing'), path.join(DEPLOY_DIR, 'landing'));
-console.log('  ✓ Synchronized: landing/ tree');
+if (fs.existsSync(path.join(LOTTO_DIR, 'app'))) {
+  syncSrcDir(path.join(LOTTO_DIR, 'app'), path.join(DEPLOY_DIR, 'app'));
+  console.log('  ✓ Synchronized: app/ tree');
+}
+if (fs.existsSync(path.join(LOTTO_DIR, 'landing'))) {
+  syncSrcDir(path.join(LOTTO_DIR, 'landing'), path.join(DEPLOY_DIR, 'landing'));
+  console.log('  ✓ Synchronized: landing/ tree');
+}
 
 // -----------------------------------------------------------------------------
 // STEP 3: Production Frontend Build in jackpotlo-deploy
@@ -136,7 +142,7 @@ for (const file of SYNC_FILES) {
 }
 
 // Staging directories with strict exclusion filters
-const STAGED_DIRS = ['dist', 'src', 'public', 'landing', 'scripts'];
+const STAGED_DIRS = ['dist', 'src', 'public', 'app', 'landing', 'scripts'];
 
 function copyDirWithExclusions(src, dest, relPath = '') {
   fs.mkdirSync(dest, { recursive: true });

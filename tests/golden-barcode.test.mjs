@@ -43,7 +43,7 @@ console.log('====================================================\n');
 // 1. EXTRACT AND TEST parseBoxBarcode FROM src/main.js
 // ----------------------------------------------------------------------------
 const mainJsContent = fs.readFileSync(path.resolve('src/main.js'), 'utf8');
-const boxParserMatch = mainJsContent.match(/function parseBoxBarcode\(barcode\)\s*\{[\s\S]*?\n\}/);
+const boxParserMatch = mainJsContent.match(/function parseBoxBarcode\(barcode\) \{[\s\S]*?\n  \}/);
 assert(boxParserMatch, 'parseBoxBarcode must exist in src/main.js');
 
 // Dynamically evaluate the exact live parseBoxBarcode function
