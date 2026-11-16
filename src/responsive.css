@@ -2116,25 +2116,30 @@ html, body {
 }
 
 .dashboard-last-scan-card {
-  min-width: 320px !important;
-  max-width: 480px !important;
-  min-height: 130px !important;
-  height: auto !important;
+  min-width: 220px !important;
+  max-width: 380px !important;
+  min-height: 98px !important;
+  height: 98px !important;
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  padding: 10px 18px !important;
+  padding: 8px 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
   box-sizing: border-box !important;
+  overflow: hidden !important;
+  flex: 0 0 320px !important;
 }
 
 .last-scan-text-group {
   display: flex !important;
   flex-direction: column !important;
   gap: 2px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
 }
 
 .last-scan-micro-label {
@@ -2143,35 +2148,46 @@ html, body {
   color: #64748b !important;
   letter-spacing: 0.05em !important;
   text-transform: uppercase !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .last-scan-game-title {
-  font-size: 18px !important;
+  font-size: 17px !important;
   font-weight: 800 !important;
   color: #0f172a !important;
   line-height: 1.15 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .last-scan-box-ticket {
   font-size: 12.5px !important;
   color: #64748b !important;
   font-weight: 500 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .last-scan-num-badge {
-  width: 52px !important;
-  height: 52px !important;
-  background: #ffffff !important;
-  border: 1.5px solid #e2e8f0 !important;
-  border-radius: 8px !important;
+  width: auto !important;
+  min-width: 40px !important;
+  height: auto !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+  box-shadow: none !important;
+  padding: 0 2px !important;
 }
 
 .last-scan-big-number {
-  font-size: 32px !important;
+  font-size: 36px !important;
   font-weight: 900 !important;
   color: #0f172a !important;
   line-height: 1 !important;
@@ -2740,8 +2756,9 @@ html, body {
 }
 
 [data-theme="dark"] .last-scan-num-badge {
-  background: #20242B !important;
-  border-color: #2E3440 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .last-scan-big-number {

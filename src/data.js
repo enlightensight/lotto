@@ -3,6 +3,9 @@ import { syncPOSStateToDB, clearPOSStateOnDB } from './dbSync.js';
 
 const STORAGE_KEY = 'lotto_track_pos_data_v3';
 
+import { normalizeLotteryJurisdiction } from './scel.js';
+export { normalizeLotteryJurisdiction };
+
 export const DEFAULT_STORES = [
   {
     id: 'store_admin',
@@ -11,7 +14,8 @@ export const DEFAULT_STORES = [
     retailerNumber: 'GA-ADM01',
     phone: '(478) 555-0100',
     totalBoxes: 65,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    lotteryJurisdiction: 'GA'
   },
   {
     id: 'store_amigo',
@@ -20,7 +24,8 @@ export const DEFAULT_STORES = [
     retailerNumber: 'GA-89412',
     phone: '(478) 923-4567',
     totalBoxes: 65,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    lotteryJurisdiction: 'GA'
   },
   {
     id: 'store_downtown',
@@ -29,7 +34,8 @@ export const DEFAULT_STORES = [
     retailerNumber: 'GA-94103',
     phone: '(478) 953-8821',
     totalBoxes: 60,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    lotteryJurisdiction: 'GA'
   },
   {
     id: 'store_anish',
@@ -38,9 +44,17 @@ export const DEFAULT_STORES = [
     retailerNumber: 'GA-ANISH01',
     phone: '(478) 555-0199',
     totalBoxes: 65,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    lotteryJurisdiction: 'GA'
   }
 ];
+
+export function getStoreJurisdiction(storeId = null) {
+  const sid = storeId || getCurrentStoreId();
+  const stores = getStoresList();
+  const store = (stores || []).find(s => s.id === sid);
+  return normalizeLotteryJurisdiction(store?.lotteryJurisdiction);
+}
 
 export function getStoresList() {
   try {
@@ -1494,6 +1508,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
             if (parsed.cashierName === 'master') parsed.cashierName = 'Platform Administrator';
           }
 
+          const storeMeta = (getStoresList() || []).find(s => s.id === storeId);
+          parsed.lotteryJurisdiction = normalizeLotteryJurisdiction(storeMeta?.lotteryJurisdiction || parsed.lotteryJurisdiction);
+
           return parsed;
         }
       } catch (e) {
@@ -1598,6 +1615,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
         storeName,
         storeAddress,
         retailerNumber,
+        lotteryJurisdiction: normalizeLotteryJurisdiction(existingState?.lotteryJurisdiction),
         registerName,
         shiftNumber: 1,
         cashierName,

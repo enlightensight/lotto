@@ -20489,7 +20489,8 @@ dialog#shiftReportModal::backdrop {
 }
 
 .control-left-column {
-  flex: 1 !important;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
   display: grid !important;
   grid-template-columns: auto 1fr 96px !important;
   grid-template-rows: 44px 44px !important;
@@ -20748,19 +20749,22 @@ dialog#shiftReportModal::backdrop {
 
 /* Right Column: LAST SCAN Card */
 .dashboard-last-scan-card {
-  min-height: 130px !important;
-  height: auto !important;
+  min-height: 98px !important;
+  height: 98px !important;
   box-sizing: border-box !important;
   background: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  padding: 10px 18px !important;
+  padding: 8px 18px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 28px !important;
-  min-width: 0;
+  gap: 16px !important;
+  flex: 0 0 320px !important;
+  max-width: 380px !important;
+  min-width: 220px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+  overflow: hidden !important;
 }
 
 [data-theme="dark"] .dashboard-last-scan-card {
@@ -20772,6 +20776,9 @@ dialog#shiftReportModal::backdrop {
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
 }
 
 .last-scan-micro-label {
@@ -20781,13 +20788,19 @@ dialog#shiftReportModal::backdrop {
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
   margin-bottom: 2px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .last-scan-game-title {
-  font-size: 21px !important;
+  font-size: 19px !important;
   font-weight: 800 !important;
   color: #0f172a !important;
   line-height: 1.15 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 [data-theme="dark"] .last-scan-game-title {
@@ -20799,35 +20812,69 @@ dialog#shiftReportModal::backdrop {
   color: #64748b !important;
   font-weight: 500 !important;
   margin-top: 2px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .last-scan-num-badge {
-  background: #ffffff !important;
-  border-radius: 10px !important;
-  width: 68px !important;
-  height: 68px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  width: auto !important;
+  min-width: 44px !important;
+  height: auto !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
   flex-shrink: 0 !important;
+  padding: 0 2px !important;
 }
 
 [data-theme="dark"] .last-scan-num-badge {
-  background: #1e293b !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .last-scan-big-number {
-  font-size: 48px !important;
+  font-size: 44px !important;
   font-weight: 800 !important;
   color: #0f172a !important;
   line-height: 1 !important;
   font-family: 'Figtree', sans-serif !important;
+  text-align: center !important;
 }
 
 [data-theme="dark"] .last-scan-big-number {
   color: #f8fafc !important;
+}
+
+.dashboard-last-scan-card.alert-yellow {
+  background: #fffbeb !important;
+  border: 1.5px solid #f59e0b !important;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.15) !important;
+}
+
+.dashboard-last-scan-card.alert-yellow .last-scan-micro-label {
+  color: #b45309 !important;
+}
+
+.dashboard-last-scan-card.alert-yellow .last-scan-game-title {
+  color: #b45309 !important;
+  font-size: 18px !important;
+}
+
+.dashboard-last-scan-card.alert-yellow .last-scan-box-ticket {
+  color: #92400e !important;
+  font-weight: 600 !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+}
+
+.dashboard-last-scan-card.alert-yellow .last-scan-big-number {
+  color: #dc2626 !important;
 }
 
 /* 3. KPI Bar (6 Royal Blue Cards in a single row) */

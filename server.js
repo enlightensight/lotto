@@ -9,6 +9,7 @@ import https from 'https';
 import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import * as inventoryService from './inventoryService.js';
+import { normalizeLotteryJurisdiction } from './src/scel.js';
 
 dotenv.config();
 
@@ -441,7 +442,8 @@ async function migrateCleanData(db) {
       ['reapproved_by', 'VARCHAR(60) NULL'],
       ['reapproval_notes', 'TEXT NULL'],
       ['last_suspension_reason', 'TEXT NULL'],
-      ['subscription_json', 'TEXT NULL']
+      ['subscription_json', 'TEXT NULL'],
+      ['lottery_jurisdiction', "VARCHAR(10) NOT NULL DEFAULT 'GA'"]
     ];
     for (const [col, def] of storeMigrations) {
       await ensureColumn(db, 'stores', col, def);
@@ -1858,6 +1860,7 @@ function applyStoreDbRow(target, row) {
       out.subscription = typeof row.subscription_json === 'string' ? JSON.parse(row.subscription_json) : row.subscription_json;
     } catch (_) { }
   }
+  out.lotteryJurisdiction = normalizeLotteryJurisdiction(row.lottery_jurisdiction || out.lotteryJurisdiction);
   return normalizeStoreStatuses(out);
 }
 
@@ -1873,8 +1876,8 @@ async function persistStoreComplianceToMySQL(store) {
         subscription_status, document_status, retailer_auth_status, software_access_status,
         subscription_plan, subscription_billing_cycle, subscription_amount_paid, payment_ref, payment_provider, paid_at,
         token_version, suspension_reason, suspended_at, suspended_by,
-        reapproved_at, reapproved_by, reapproval_notes, last_suspension_reason, subscription_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        reapproved_at, reapproved_by, reapproval_notes, last_suspension_reason, subscription_json, lottery_jurisdiction
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         store_name = VALUES(store_name),
         owner_username = VALUES(owner_username),
@@ -1906,6 +1909,7 @@ async function persistStoreComplianceToMySQL(store) {
         reapproval_notes = VALUES(reapproval_notes),
         last_suspension_reason = VALUES(last_suspension_reason),
         subscription_json = VALUES(subscription_json),
+        lottery_jurisdiction = VALUES(lottery_jurisdiction),
         updated_at = CURRENT_TIMESTAMP`,
       [
         store.storeId,
@@ -1939,7 +1943,8 @@ async function persistStoreComplianceToMySQL(store) {
         store.reapprovedBy || null,
         store.reapprovalNotes || null,
         store.lastSuspensionReason || null,
-        subJson
+        subJson,
+        normalizeLotteryJurisdiction(store.lotteryJurisdiction)
       ]
     );
   } catch (dbErr) {
@@ -2025,6 +2030,7 @@ function sanitizeStoreForAdmin(store, st = null) {
     }
     safeStore.auditCount = (st.auditLogs || []).filter(l => l.targetId === store.storeId || l.storeId === store.storeId).length;
   }
+  safeStore.lotteryJurisdiction = normalizeLotteryJurisdiction(store.lotteryJurisdiction);
   return safeStore;
 }
 
@@ -2693,6 +2699,7 @@ if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (
         mode: 'ADMIN',
         storeId: 'store_admin',
         storeName: 'ADMIN STORE',
+        lotteryJurisdiction: 'GA',
         role: matchedAdmin.role || 'SUPER_ADMIN',
         isAdmin: true,
         redirect: '/admin',
@@ -2706,7 +2713,8 @@ if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (
           role: matchedAdmin.role || 'SUPER_ADMIN',
           email: matchedAdmin.email,
           storeId: 'store_admin',
-          storeName: 'ADMIN STORE'
+          storeName: 'ADMIN STORE',
+          lotteryJurisdiction: 'GA'
         }
       });
     }
@@ -2828,6 +2836,8 @@ if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (
         canSellLottery: true
       };
 
+      const jurisdiction = normalizeLotteryJurisdiction(storeRec?.lotteryJurisdiction);
+
       return res.json({
         success: true,
         mode: 'STORE',
@@ -2842,6 +2852,7 @@ if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (
         storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`),
         storeAddress: storeRec?.address || '',
         retailerNumber: storeRec?.retailerNumber || '',
+        lotteryJurisdiction: jurisdiction,
         statuses,
         subscription: storeRec?.subscription || null,
         suspensionReason: '',
@@ -2855,6 +2866,7 @@ if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (
           storeName: storeRec ? storeRec.storeName : (targetStoreId === 'store_amigo' ? 'Amigo Food Mart' : `${matchedStoreUser.full_name || matchedStoreUser.username || 'Store'} Mart`),
           storeAddress: storeRec?.address || '',
           retailerNumber: storeRec?.retailerNumber || '',
+          lotteryJurisdiction: jurisdiction,
           ...statuses
         }
       });
@@ -3579,6 +3591,7 @@ app.post('/api/subscriptions/checkout-and-register', async (req, res) => {
       softwareAccessStatus: 'ACTIVE',
       authorizationStatus: 'APPROVED',
       operationalStatus: 'ACTIVE',
+      lotteryJurisdiction: normalizeLotteryJurisdiction(req.body?.lotteryJurisdiction || 'GA'),
       subscription: subscriptionInfo,
       tokenVersion: 1,
       suspensionReason: '',
@@ -4046,6 +4059,7 @@ async function finalizeLifetimePurchase(paymentRef) {
     documentStatus: 'APPROVED',
     retailerAuthStatus: 'VALID',
     softwareAccessStatus: 'ACTIVE',
+    lotteryJurisdiction: 'GA',
     subscription: subscriptionInfo,
     license,
     tokenVersion: 1,
@@ -4326,6 +4340,7 @@ app.get('/api/store/account-status', requireStoreActive, (req, res) => {
     storeId: store.storeId,
     storeName: store.storeName,
     retailerNumber: store.retailerNumber,
+    lotteryJurisdiction: normalizeLotteryJurisdiction(store.lotteryJurisdiction),
     statuses: {
       subscriptionStatus: store.subscriptionStatus,
       documentStatus: store.documentStatus,
@@ -5134,6 +5149,7 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
         softwareAccessStatus: 'ACTIVE',
         authorizationStatus: 'APPROVED',
         operationalStatus: 'ACTIVE',
+        lotteryJurisdiction: normalizeLotteryJurisdiction(appRec.lotteryJurisdiction || 'GA'),
         subscription: appRec.subscription || null,
         tokenVersion: 1,
         createdAt: nowIso,
