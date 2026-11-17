@@ -5,7 +5,7 @@
 
 import assert from 'assert';
 import http from 'http';
-import { normalizeLotteryJurisdiction } from '../src/scel.js';
+import { normalizeLotteryJurisdiction, resolveJurisdictionUpdate } from '../src/scel.js';
 import { DEFAULT_STORES, getStoreJurisdiction } from '../src/data.js';
 
 let passed = 0;
@@ -253,6 +253,58 @@ if (!isServerRunning) {
     }
   });
 }
+
+// ----------------------------------------------------------------------------
+// Test Group 7: Protection Against Accidental Jurisdiction Overwrite (Phase 3.1)
+// ----------------------------------------------------------------------------
+console.log('\n--- Test Group 7: Protection Against Accidental Jurisdiction Overwrite (Phase 3.1) ---');
+
+it('7.1: Existing SC store + omitted jurisdiction (undefined) = remains SC', () => {
+  const result = resolveJurisdictionUpdate('SC', undefined, false);
+  assert.strictEqual(result, 'SC', 'Existing SC store must remain SC when jurisdiction is omitted');
+});
+
+it('7.2: Existing GA store + omitted jurisdiction (undefined) = remains GA', () => {
+  const result = resolveJurisdictionUpdate('GA', undefined, false);
+  assert.strictEqual(result, 'GA', 'Existing GA store must remain GA when jurisdiction is omitted');
+});
+
+it('7.3: Existing GA store + explicit SC = becomes SC', () => {
+  const result1 = resolveJurisdictionUpdate('GA', 'SC', false);
+  assert.strictEqual(result1, 'SC', 'Existing GA store must become SC on explicit SC update');
+  const result2 = resolveJurisdictionUpdate('GA', 'scel', false);
+  assert.strictEqual(result2, 'SC', 'Existing GA store must become SC on explicit SCEL update');
+});
+
+it('7.4: Existing SC store + explicit GA = becomes GA', () => {
+  const result = resolveJurisdictionUpdate('SC', 'GA', false);
+  assert.strictEqual(result, 'GA', 'Existing SC store must become GA on explicit GA update');
+});
+
+it('7.5: New store + omitted jurisdiction = defaults to GA', () => {
+  const result = resolveJurisdictionUpdate(null, undefined, true);
+  assert.strictEqual(result, 'GA', 'New store creation must default to GA when omitted');
+});
+
+it('7.6: Invalid explicit value cannot overwrite an existing valid SC or GA jurisdiction', () => {
+  // Existing SC store must not be overwritten by unsupported/invalid values
+  assert.strictEqual(resolveJurisdictionUpdate('SC', 'NC', false), 'SC', 'Invalid "NC" must not overwrite SC');
+  assert.strictEqual(resolveJurisdictionUpdate('SC', 'FL', false), 'SC', 'Invalid "FL" must not overwrite SC');
+  assert.strictEqual(resolveJurisdictionUpdate('SC', 'INVALID', false), 'SC', 'Invalid string must not overwrite SC');
+  assert.strictEqual(resolveJurisdictionUpdate('SC', null, false), 'SC', 'null must not overwrite SC');
+  assert.strictEqual(resolveJurisdictionUpdate('SC', '', false), 'SC', 'empty string must not overwrite SC');
+  assert.strictEqual(resolveJurisdictionUpdate('SC', 1234, false), 'SC', 'numeric input must not overwrite SC');
+
+  // Existing GA store must not be corrupted by invalid values
+  assert.strictEqual(resolveJurisdictionUpdate('GA', 'NC', false), 'GA', 'Invalid "NC" must not corrupt GA');
+  assert.strictEqual(resolveJurisdictionUpdate('GA', null, false), 'GA', 'null must not corrupt GA');
+  assert.strictEqual(resolveJurisdictionUpdate('GA', '', false), 'GA', 'empty string must not corrupt GA');
+});
+
+it('7.7: New store + explicit SC = creates with SC', () => {
+  const result = resolveJurisdictionUpdate(null, 'SC', true);
+  assert.strictEqual(result, 'SC', 'New store with explicit SC must be created with SC');
+});
 
 // ----------------------------------------------------------------------------
 // Summary

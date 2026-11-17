@@ -10,12 +10,19 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 const BASE_URL = 'http://localhost:3001';
 const ADMIN_STATE_FILE = 'server_data/admin_state.json';
 const adminStateBackup = existsSync(ADMIN_STATE_FILE) ? readFileSync(ADMIN_STATE_FILE, 'utf8') : null;
-function restoreAdminStateBackup() {
+let serverProcess = null;
+
+function cleanup() {
   if (adminStateBackup !== null) {
     try { writeFileSync(ADMIN_STATE_FILE, adminStateBackup, 'utf8'); } catch (_) { }
   }
+  if (serverProcess) {
+    try { serverProcess.kill(); } catch (_) { }
+  }
 }
-process.on('exit', restoreAdminStateBackup);
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
 
 let passed = 0;
 let failed = 0;
@@ -59,6 +66,21 @@ console.log('\n====================================================');
 console.log('   JACKPOTLO SECURITY & ADMIN API VERIFICATION      ');
 console.log('====================================================\n');
 
+// Ensure local server is responsive; auto-start if not running
+try {
+  await request('GET', '/api/health');
+} catch (_) {
+  const { spawn } = await import('child_process');
+  serverProcess = spawn('node', ['server.js'], { stdio: 'ignore' });
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    try {
+      const ping = await request('GET', '/api/health');
+      if (ping.status) break;
+    } catch (_) {}
+  }
+}
+
 // Reset admin password to known secure test password using CLI script
 import { execSync } from 'child_process';
 execSync('node scripts/manage-admin.cjs reset admin TestAdminPass123!');
@@ -81,9 +103,21 @@ await it('Logs in successfully with valid new password and returns cryptographic
   assert.strictEqual(res.status, 200);
   assert.strictEqual(res.body.success, true);
   assert.strictEqual(res.body.isAdmin, true);
-  assert.ok(res.body.token);
-  assert.ok(res.body.token.startsWith('adm_'));
+  assert.ok(res.body.token, 'Response must include token');
+
+  // Verify token is a valid, cryptographically signed RFC 7519 JWT
+  const tokenParts = res.body.token.split('.');
+  assert.strictEqual(tokenParts.length, 3, 'Token must have 3 dot-separated JWT segments (header.payload.signature)');
   assert.ok(res.body.token.length >= 64, 'Token must be cryptographically long (>= 64 chars)');
+
+  const header = JSON.parse(Buffer.from(tokenParts[0], 'base64url').toString('utf8'));
+  assert.strictEqual(header.alg, 'HS256', 'JWT algorithm must be HS256');
+  assert.strictEqual(header.typ, 'JWT', 'JWT type must be JWT');
+
+  const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64url').toString('utf8'));
+  assert.strictEqual(payload.sub, 'admin', 'JWT subject must match admin username');
+  assert.strictEqual(payload.isAdmin, true, 'JWT payload must mark isAdmin true');
+
   validAdminToken = res.body.token;
 });
 
@@ -97,7 +131,8 @@ await it('Rejects forged token with "adm_token_" prefix (returns 403 Forbidden)'
     'adm_token_fake_12345',
     'adm_token_SUPER_ADMIN',
     'adm_token_1234',
-    'adm_00000000000000000000000000000000'
+    'adm_00000000000000000000000000000000',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlX2FkbWluIn0.invalidsignature'
   ];
   for (const fake of forgedTokens) {
     const res = await request('GET', '/api/admin/overview', null, { 'x-admin-token': fake });
@@ -346,6 +381,13 @@ await it('Supports legacy 10,000-round sha512 hash and auto-upgrades to 600,000-
 });
 
 await it('CLI management tool creates admin with 600,000-round hash and resets securely', async () => {
+  // Ensure clitest does not exist before creating
+  try {
+    const preSt = JSON.parse(readFileSync('server_data/admin_state.json', 'utf8'));
+    preSt.admins = (preSt.admins || []).filter(a => a.username !== 'clitest');
+    writeFileSync('server_data/admin_state.json', JSON.stringify(preSt, null, 2), 'utf8');
+  } catch (_) {}
+
   // 1. Create admin via CLI
   execSync('node scripts/manage-admin.cjs create clitest SecCliPass889! "CLI Officer" "cliofficer@jackpotlo.com"');
   let st = JSON.parse(readFileSync('server_data/admin_state.json', 'utf8'));
@@ -380,8 +422,11 @@ console.log(`   TEST RESULTS: Passed: ${passed}, Failed: ${failed}`);
 console.log('====================================================\n');
 
 if (failed > 0) {
+  cleanup();
   process.exit(1);
 } else {
   console.log('🎉 ALL SECURITY & ADMIN API TESTS PASSED PERFECTLY!\n');
+  cleanup();
+  process.exit(0);
 }
 

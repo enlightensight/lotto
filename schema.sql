@@ -664,6 +664,18 @@ CREATE TABLE IF NOT EXISTS `admin_audit_logs` (
   INDEX `idx_audit_action` (`action_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- -------------------------------------------------------
+-- 25. PERSISTENT REVOKED ADMIN TOKENS (SCEL Phase 3.3)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `revoked_admin_tokens` (
+  `jti` VARCHAR(80) PRIMARY KEY,
+  `token_hash` VARCHAR(64) NOT NULL,
+  `expires_at` TIMESTAMP NOT NULL,
+  `revoked_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_revoked_exp` (`expires_at`),
+  INDEX `idx_token_hash` (`token_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 
 

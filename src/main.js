@@ -14,6 +14,7 @@ import { initDatabaseSync, checkMySQLStatus, getAuthHeaders, saveShiftReportToDB
 import { openDaySettlementModal, openPastDaysModal } from './settlementHistoryModals.js';
 import { initAdminDashboardScreen, initManageTicketsScreen } from './adminUiHandlers.js';
 import { checkStoreCanSell, getLocalAdminState, saveLocalAdminState } from './adminStoreSync.js';
+import { findScelGame } from './scel.js';
 
 const BUILD_ID = '2026-10-22-phase0';
 if (typeof document !== 'undefined' && document.documentElement) {
@@ -485,7 +486,7 @@ function slotMatchesGameNumber(slot, gameNumber) {
   if (slot.scannedBarcodes && slot.scannedBarcodes.length > 0) {
     for (const b of slot.scannedBarcodes) {
       const bStr = typeof b === 'string' ? b : b.barcode;
-      const bParsed = parseLotteryBarcode(bStr, state.customGames);
+      const bParsed = parseLotteryBarcode(bStr, state.customGames, state.lotteryJurisdiction);
       if (bParsed && bParsed.gameNumber) {
         return String(bParsed.gameNumber).trim() === gNumStr;
       }
@@ -837,6 +838,46 @@ export function toTitleCaseGameName(name) {
 // 3. Clean up any duplicated dollar signs or prices in game names (e.g. "$1 $1 5X MONEY" -> "5X MONEY")
 function sanitizeAndMigrateSlots() {
   let modified = false;
+
+  const stores = getStoresList();
+  const currentSid = getCurrentStoreId();
+  const currentStore = stores.find(s => s.id === currentSid) || DEFAULT_STORES.find(s => s.id === currentSid);
+  const configuredBoxes = currentStore?.totalBoxes || 65;
+  if (!state.totalSlots || state.totalSlots < configuredBoxes) {
+    state.totalSlots = configuredBoxes;
+    modified = true;
+  }
+  if (!Array.isArray(state.slots)) {
+    state.slots = [];
+    modified = true;
+  }
+  if (state.slots.length < state.totalSlots) {
+    const existingNums = new Set(state.slots.map(s => Number(s.boxNumber)));
+    for (let b = 1; b <= state.totalSlots; b++) {
+      if (!existingNums.has(b)) {
+        state.slots.push({
+          boxNumber: b,
+          status: 'EMPTY',
+          gameId: null,
+          gameName: null,
+          price: null,
+          packNumber: null,
+          packSize: null,
+          startTicket: 0,
+          currentTicket: 0,
+          ticketsInBox: 0,
+          scannedBarcodes: [],
+          soldBarcodes: [],
+          activatedThisShift: false,
+          daysActive: 0,
+          scannedInEndShift: false
+        });
+        modified = true;
+      }
+    }
+    state.slots.sort((a, b) => Number(a.boxNumber) - Number(b.boxNumber));
+  }
+
   state.slots.forEach(slot => {
     if (slot.gameName) {
       const cleaned = cleanGameTitle(slot.gameName);
@@ -1022,6 +1063,12 @@ const RB_FOCUS = {
 function lookupRbGame(gid) {
   if (!gid) return null;
   const str = String(gid).trim();
+  if (state.lotteryJurisdiction === 'SC') {
+    const scGame = findScelGame(str);
+    if (scGame) return { name: cleanGameTitle(scGame.name), price: scGame.price, packSize: scGame.packSize };
+    if (state.customGames && state.customGames[str]) return state.customGames[str];
+    return null;
+  }
   if (RB_DESIGN_GAMES[str]) return RB_DESIGN_GAMES[str];
   if (state.customGames && state.customGames[str]) return state.customGames[str];
   if (Array.isArray(window.LOTTO_GAMES_DATABASE)) {
@@ -1126,7 +1173,7 @@ function renderReceiveBookModal() {
   }
 
   const packVal = rbDefaultPackValue(priceN);
-  const size = rbSizeFor(priceN, packVal);
+  const size = known?.packSize || rbSizeFor(priceN, packVal);
   if (packValueAmount) packValueAmount.textContent = priceN > 0 ? `$${packVal}` : '—';
   if (packValueEq) {
     packValueEq.textContent = priceN > 0 ? `$${packVal} ÷ $${priceN} = ${size} tickets in this pack` : 'Pick a ticket price — the pack value is set for you';
@@ -1171,18 +1218,31 @@ function renderReceiveBookModal() {
 function rbFillFromBarcode(raw) {
   const clean = String(raw || '').trim();
   if (!clean) return;
-  const m = clean.replace(/\s/g, '').match(/^(\d{4})-?(\d{6,7})-?(\d{3})?/);
   let gid = '', pack = '', pos = '000';
-  if (m) {
-    gid = m[1];
-    pack = m[2];
-    pos = m[3] ? m[3].padStart(3, '0') : '000';
+  if (state.lotteryJurisdiction === 'SC') {
+    const cgList = Array.isArray(state.customGames)
+      ? state.customGames
+      : (state.customGames && typeof state.customGames === 'object' ? Object.values(state.customGames) : []);
+    const parsed = parseLotteryBarcode(clean, cgList, state.lotteryJurisdiction);
+    if (!parsed || !parsed.isValid) {
+      return;
+    }
+    gid = parsed.gameNumber || '';
+    pack = parsed.packNumber || '';
+    pos = (parsed.ticketString || '000').padStart(3, '0');
   } else {
-    const parsed = parseLotteryBarcode(clean, state.customGames);
-    if (parsed) {
-      gid = parsed.gameNumber || '';
-      pack = parsed.packNumber || '';
-      pos = (parsed.ticketString || '000').padStart(3, '0');
+    const m = clean.replace(/\s/g, '').match(/^(\d{4})-?(\d{6,7})-?(\d{3})?/);
+    if (m) {
+      gid = m[1];
+      pack = m[2];
+      pos = m[3] ? m[3].padStart(3, '0') : '000';
+    } else {
+      const parsed = parseLotteryBarcode(clean, state.customGames, state.lotteryJurisdiction);
+      if (parsed) {
+        gid = parsed.gameNumber || '';
+        pack = parsed.packNumber || '';
+        pos = (parsed.ticketString || '000').padStart(3, '0');
+      }
     }
   }
   if (gid) rbState.gid = gid;
@@ -1357,8 +1417,9 @@ function setupReceiveBookModernModal() {
     const pos = rbState.pos || '000';
     const name = rbState.name.trim();
     const priceN = parseFloat(rbState.price) || 0;
+    const known = lookupRbGame(gid);
     const packVal = rbDefaultPackValue(priceN);
-    const packSize = rbSizeFor(priceN, packVal);
+    const packSize = known?.packSize || rbSizeFor(priceN, packVal);
 
     if (!/^\d{4}$/.test(gid) || !/^\d{6,7}$/.test(pack) || !(priceN > 0) || !name) {
       sfx.alert();
@@ -2522,6 +2583,16 @@ function renderSlotsRibbon() {
   if (allBoxesMap) allBoxesMap.style.display = 'block';
 
   if (!slotsRibbon) return;
+
+  const stores = getStoresList();
+  const currentSid = getCurrentStoreId();
+  const currentStore = stores.find(s => s.id === currentSid) || DEFAULT_STORES.find(s => s.id === currentSid);
+  const configuredBoxes = currentStore?.totalBoxes || 65;
+  if (!state.totalSlots || state.totalSlots < configuredBoxes || !Array.isArray(state.slots) || state.slots.length < configuredBoxes) {
+    sanitizeAndMigrateSlots();
+    saveState(state);
+  }
+
   slotsRibbon.innerHTML = '';
 
   const isScanning = state.shiftStatus === 'SCANNING_END_SHIFT';
@@ -2529,11 +2600,12 @@ function renderSlotsRibbon() {
   const scannedSlots = activeSlots.filter(s => s.scannedInEndShift);
   const pendingCount = Math.max(0, activeSlots.length - scannedSlots.length);
 
-  // Header is strictly 'All 65 boxes' (no badge / red message)
+  // Header is strictly 'All 65 boxes' (or configured store boxes)
   const mapTitle = allBoxesMap?.querySelector('.all-boxes-map-title');
   const mapLegend = allBoxesMap?.querySelector('.all-boxes-map-legend');
+  const totalBoxCount = state.totalSlots || configuredBoxes;
   if (mapTitle) {
-    mapTitle.textContent = 'All 65 boxes';
+    mapTitle.textContent = `All ${totalBoxCount} boxes`;
   }
 
   if (isScanning) {
@@ -3118,7 +3190,7 @@ function openBoxAdjustModal(slot) {
     rmPosInput.oninput = () => {
       let val = rmPosInput.value.replace(/\D/g, '');
       if (val.length > 3) {
-        const parsed = parseLotteryBarcode(val);
+        const parsed = parseLotteryBarcode(val, state.customGames, state.lotteryJurisdiction);
         if (parsed && parsed.isValid && typeof parsed.ticketNumber === 'number') {
           val = String(parsed.ticketNumber).padStart(3, '0');
         } else {
@@ -5961,11 +6033,11 @@ function quickSellTicket(slot, barcodeScanned = null, skipIncrement = false, exp
   }
   state.lastScannedSlot = slot.boxNumber;
   bringBoxToVisibleRack(slot.boxNumber);
-  const parsedBarcode = barcodeScanned ? parseLotteryBarcode(barcodeScanned, state.customGames) : null;
+  const parsedBarcode = barcodeScanned ? parseLotteryBarcode(barcodeScanned, state.customGames, state.lotteryJurisdiction) : null;
   const effectiveSec = (parsedBarcode && parsedBarcode.securityCode) || slot.securityCode || '000';
   const secSuffix = effectiveSec ? `(${effectiveSec})` : '';
   const displayBarcode = barcodeScanned
-    ? formatLotteryBarcode(barcodeScanned, state.customGames, effectiveSec)
+    ? formatLotteryBarcode(barcodeScanned, state.customGames, effectiveSec, state.lotteryJurisdiction)
     : (slot.packNumber ? `${slot.barcodePrefix || slot.gameId || '1417'}-${slot.packNumber}-${String(slot.currentTicket).padStart(3, '0')} (${effectiveSec})` : `BOX-${slot.boxNumber}`);
   const bcPrefix = `[${displayBarcode}] `;
   const padLen = (slot.packSize || 100) >= 100 ? 3 : 2;
@@ -6177,10 +6249,13 @@ function executeTrimRack() {
     }
   });
 
-  const targetSlots = Math.max(20, highestActiveBox);
+  const stores = getStoresList();
+  const currentStore = stores.find(s => s.id === state.storeId) || DEFAULT_STORES.find(s => s.id === state.storeId);
+  const configuredBoxes = currentStore?.totalBoxes || 65;
+  const targetSlots = Math.max(configuredBoxes, highestActiveBox);
   if (state.totalSlots <= targetSlots) {
     sfx.alert();
-    showToast(`Rack is already trimmed to ${targetSlots} boxes (preserving all active boxes).`, 'info');
+    showToast(`Rack is already at ${targetSlots} boxes (preserving store capacity and active boxes).`, 'info');
     return;
   }
 
@@ -6557,13 +6632,59 @@ function openEndShiftConfirmation() {
   if (modal) modal.showModal();
 }
 
+let _isGeneratingEndShiftReport = false;
+
+function parseExplicitCurrencyInput(val, fallback = 0) {
+  if (val === null || val === undefined) return fallback;
+  const trimmed = String(val).trim();
+  if (trimmed === '') return fallback;
+  const num = parseFloat(trimmed);
+  return isNaN(num) ? fallback : num;
+}
+
+export function executeEndShiftFinalReportWorkflow() {
+  if (_isGeneratingEndShiftReport) return;
+  _isGeneratingEndShiftReport = true;
+
+  const btn = document.getElementById('confConfirmBtn');
+  if (btn) btn.disabled = true;
+
+  // 1. Capture Step 2 manual reconciliation inputs (strictly preserving explicit 0 values)
+  const rawOnline = document.getElementById('inputManualOnlineSales')?.value ?? document.getElementById('confTerminalOnline')?.value ?? document.getElementById('terminalInputOnline')?.value;
+  const rawOnlineCashes = document.getElementById('confTerminalOnlineCashes')?.value ?? document.getElementById('terminalInputOc')?.value;
+  const rawCashes = document.getElementById('confTerminalCashes')?.value ?? document.getElementById('terminalInputCashes')?.value;
+
+  state.onlineSales = parseExplicitCurrencyInput(rawOnline, (state.manualOnlineSales !== undefined && state.manualOnlineSales !== null) ? Number(state.manualOnlineSales) : 0);
+  state.onlineCashes = parseExplicitCurrencyInput(rawOnlineCashes, 0);
+  state.cashes = parseExplicitCurrencyInput(rawCashes, 0);
+
+  // 2. Close confirmation modal before displaying animation
+  const modal = document.getElementById('endShiftConfirmModal');
+  if (modal && modal.open) modal.close();
+
+  // 3. Select jurisdiction-specific report message
+  const reportSubtext = (state.lotteryJurisdiction === 'SC')
+    ? 'Generating South Carolina Lottery Report...'
+    : 'Generating Georgia Lottery Report...';
+
+  // 4. Display calculating animation; execute report generation only on completion
+  showCalculatingSpinner('Calculating', reportSubtext, () => {
+    try {
+      confirmEndShift();
+    } finally {
+      _isGeneratingEndShiftReport = false;
+      if (btn) btn.disabled = false;
+    }
+  }, 1200);
+}
+
 function confirmEndShift() {
   const rawOnline = document.getElementById('inputManualOnlineSales')?.value ?? document.getElementById('confTerminalOnline')?.value ?? document.getElementById('terminalInputOnline')?.value;
   const rawOnlineCashes = document.getElementById('confTerminalOnlineCashes')?.value ?? document.getElementById('terminalInputOc')?.value;
   const rawCashes = document.getElementById('confTerminalCashes')?.value ?? document.getElementById('terminalInputCashes')?.value;
-  state.onlineSales = parseFloat(rawOnline) || (state.manualOnlineSales || 0);
-  state.onlineCashes = parseFloat(rawOnlineCashes) || 0;
-  state.cashes = parseFloat(rawCashes) || 0;
+  state.onlineSales = parseExplicitCurrencyInput(rawOnline, (state.onlineSales !== undefined && state.onlineSales !== null) ? state.onlineSales : (state.manualOnlineSales || 0));
+  state.onlineCashes = parseExplicitCurrencyInput(rawOnlineCashes, state.onlineCashes || 0);
+  state.cashes = parseExplicitCurrencyInput(rawCashes, state.cashes || 0);
 
   // Transition shiftStatus to SHIFT_ENDED
   state.shiftStatus = 'SHIFT_ENDED';
@@ -6781,7 +6902,12 @@ function renderShiftClosedReportPreview() {
   // Render 2-Page dispenser boxes table with pink/red sold row highlights (Matching Reference Image 1)
   const tbody1 = document.getElementById('repDocTableBody1') || document.getElementById('repDocTableBody');
   const tbody2 = document.getElementById('repDocTableBody2');
-  const totalSlots = state.totalSlots || 65;
+  const configuredBoxes = currentStore?.totalBoxes || 65;
+  if (!state.totalSlots || state.totalSlots < configuredBoxes || !Array.isArray(state.slots) || state.slots.length < configuredBoxes) {
+    sanitizeAndMigrateSlots();
+    saveState(state);
+  }
+  const totalSlots = state.totalSlots || configuredBoxes;
   const splitPoint = 30; // Boxes 1 to 30 on Page 1, Boxes 31+ on Page 2
 
   function buildReportRow(box, slot) {
@@ -7877,7 +8003,7 @@ function renderInventoryTable() {
       return true;
     }
     if (query.length >= 8) {
-      const parsedQuery = parseLotteryBarcode(query, state.customGames);
+      const parsedQuery = parseLotteryBarcode(query, state.customGames, state.lotteryJurisdiction);
       if (parsedQuery && parsedQuery.packNumber && isPackNumberMatch(pk, parsedQuery.packNumber)) {
         return true;
       }
@@ -8070,6 +8196,7 @@ let pendingSetBoxBarcode = null;
 let pendingSetBoxGame = null;
 let pendingSetBoxSecurityCode = null;
 let pendingSetBoxDisplayBarcode = null;
+let pendingSetBoxJurisdiction = null;
 let isTransitioningSetBoxStep = false;
 
 function isBarcodeAlreadyScanned(barcode) {
@@ -8077,7 +8204,7 @@ function isBarcodeAlreadyScanned(barcode) {
   const clean = String(barcode).trim();
   if (!clean) return false;
 
-  const parsed = parseLotteryBarcode(barcode, state.customGames);
+  const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
   const targetCanonical = parsed?.canonicalId;
   const targetStandard = parsed?.standardBarcode;
   const targetPack = parsed?.packCombined || parsed?.packNumber;
@@ -8096,7 +8223,7 @@ function isBarcodeAlreadyScanned(barcode) {
         if (rawStr === clean) return true;
         if (targetStandard && rawStr === targetStandard) return true;
         if (targetCanonical) {
-          const bParsed = parseLotteryBarcode(rawStr, state.customGames);
+          const bParsed = parseLotteryBarcode(rawStr, state.customGames, state.lotteryJurisdiction);
           if (bParsed) {
             if (bParsed.canonicalId === targetCanonical) return true;
             if (targetStandard && bParsed.standardBarcode === targetStandard) return true;
@@ -8135,7 +8262,7 @@ function isBarcodeAlreadyScanned(barcode) {
 function findScannedBarcodeInfo(barcode) {
   if (!barcode) return null;
   const clean = String(barcode).trim();
-  const parsed = parseLotteryBarcode(barcode, state.customGames);
+  const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
   const targetCanonical = parsed?.canonicalId;
   const targetStandard = parsed?.standardBarcode;
   const targetPack = parsed?.packCombined || parsed?.packNumber;
@@ -8154,7 +8281,7 @@ function findScannedBarcodeInfo(barcode) {
         if (rawStr === clean) return true;
         if (targetStandard && rawStr === targetStandard) return true;
         if (targetCanonical) {
-          const bParsed = parseLotteryBarcode(rawStr, state.customGames);
+          const bParsed = parseLotteryBarcode(rawStr, state.customGames, state.lotteryJurisdiction);
           if (bParsed) {
             if (bParsed.canonicalId === targetCanonical) return true;
             if (targetStandard && bParsed.standardBarcode === targetStandard) return true;
@@ -8252,7 +8379,7 @@ export function findInStockPack(parsed, barcode) {
 export function openSetBoxForInStockPack(inStockPack, parsed = null, barcode = null) {
   if (!inStockPack) return;
   const rawBarcode = barcode || inStockPack.barcode || inStockPack.originalBarcode || '';
-  const parsedTicket = parsed || (rawBarcode ? parseLotteryBarcode(rawBarcode, state.customGames) : null);
+  const parsedTicket = parsed || (rawBarcode ? parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction) : null);
   const cleanPack = inStockPack.packNumber || inStockPack.pack || (parsedTicket ? (parsedTicket.packCombined || parsedTicket.packNumber) : '');
 
   // Guard: If this pack is ALREADY active in a dispenser box, focus that box
@@ -8276,8 +8403,8 @@ export function openSetBoxForInStockPack(inStockPack, parsed = null, barcode = n
   const effectiveBarcode = (parsedTicket && parsedTicket.standardBarcode)
     ? parsedTicket.standardBarcode
     : (rawBarcode || cleanPack);
-  const cleanName = cleanGameTitle(inStockPack.gameName || inStockPack.game || (parsedTicket ? findGameByBarcode(rawBarcode, state.customGames)?.name : null) || 'Scratch-Off Game');
-  const chosenPrice = Number(inStockPack.price) || (parsedTicket ? (findGameByBarcode(rawBarcode, state.customGames)?.price || 1) : 1);
+  const cleanName = cleanGameTitle(inStockPack.gameName || inStockPack.game || (parsedTicket ? findGameByBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction)?.name : null) || 'Scratch-Off Game');
+  const chosenPrice = Number(inStockPack.price) || (parsedTicket ? (findGameByBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction)?.price || 1) : 1);
   const std = getStandardPackDetails(chosenPrice);
   const packSize = Number(inStockPack.packSizeNum) || parseInt(inStockPack.packSize, 10) || std.packSize || 100;
   const packValue = packSize * chosenPrice;
@@ -8290,7 +8417,8 @@ export function openSetBoxForInStockPack(inStockPack, parsed = null, barcode = n
   pendingSetBoxBarcode = effectiveBarcode;
   pendingNewTicketBarcode = effectiveBarcode;
   pendingSetBoxSecurityCode = secCode;
-  pendingSetBoxDisplayBarcode = formatLotteryBarcode(rawBarcode || effectiveBarcode, state.customGames, secCode);
+  pendingSetBoxDisplayBarcode = formatLotteryBarcode(rawBarcode || effectiveBarcode, state.customGames, secCode, state.lotteryJurisdiction);
+  pendingSetBoxJurisdiction = inStockPack.jurisdiction || parsedTicket?.jurisdiction || null;
 
   openSetBoxModal(effectiveBarcode);
   sfx.beep();
@@ -8301,8 +8429,8 @@ export function autoAddInStockPackToDispenser(inStockPack, parsed = null, barcod
   if (!inStockPack) return;
 
   const chosenPack = String(inStockPack.packNumber || (parsed ? (parsed.packCombined || parsed.packNumber) : ''));
-  const cleanName = cleanGameTitle(inStockPack.gameName || (parsed ? findGameByBarcode(barcode, state.customGames)?.name : null) || 'Scratch-Off Game');
-  const chosenPrice = Number(inStockPack.price) || (parsed ? (findGameByBarcode(barcode, state.customGames)?.price || 1) : 1);
+  const cleanName = cleanGameTitle(inStockPack.gameName || (parsed ? findGameByBarcode(barcode, state.customGames, state.lotteryJurisdiction)?.name : null) || 'Scratch-Off Game');
+  const chosenPrice = Number(inStockPack.price) || (parsed ? (findGameByBarcode(barcode, state.customGames, state.lotteryJurisdiction)?.price || 1) : 1);
   const std = getStandardPackDetails(chosenPrice);
   const packSize = Number(inStockPack.packSizeNum) || parseInt(inStockPack.packSize, 10) || std.packSize || 100;
 
@@ -8540,7 +8668,7 @@ export function handleTicketBarcodeScan(rawBarcode, source = 'main') {
     return;
   }
 
-  const parsed = parseLotteryBarcode(barcode, state.customGames);
+  const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
   if (!parsed || !parsed.isValid || parsed.isRetailProduct || parsed.isNonLotteryBarcode) {
     sfx.alert();
     const msg = (parsed && parsed.isRetailProduct)
@@ -8640,7 +8768,10 @@ function updatePricePillsSelection(price) {
   // Dynamically recalculate accurate 3-digit series code from barcode & pack size!
   const targetBarcode = pendingSetBoxBarcode || setTicketDetailsModal?.dataset.barcode;
   if (targetBarcode) {
-    const parsedCurrent = parseLotteryBarcode(targetBarcode, state.customGames);
+    const parsedCurrent = parseLotteryBarcode(targetBarcode, state.customGames, state.lotteryJurisdiction);
+    if (parsedCurrent?.jurisdiction === 'SC' || state.lotteryJurisdiction === 'SC') {
+      return;
+    }
     const gamePrefix = parsedCurrent?.gameNumber || '';
     const tixNum = (parsedCurrent?.ticketNumber !== null && parsedCurrent?.ticketNumber !== undefined) ? parsedCurrent.ticketNumber : 0;
     const hasExplicitSec = parsedCurrent?.hasExplicitSecurityCode;
@@ -8658,7 +8789,7 @@ function updatePricePillsSelection(price) {
     if (metaFirstTicket) {
       metaFirstTicket.textContent = `${displayTicketNum} (${accurateSec})`;
     }
-    const formatted = formatLotteryBarcode(targetBarcode, state.customGames, accurateSec);
+    const formatted = formatLotteryBarcode(targetBarcode, state.customGames, accurateSec, state.lotteryJurisdiction);
     pendingSetBoxDisplayBarcode = formatted;
     if (barcodeDisplay) {
       barcodeDisplay.textContent = formatted;
@@ -8671,7 +8802,7 @@ function updatePricePillsSelection(price) {
 // -------------------------------------------------------------
 function openSetTicketDetailsModal(barcode, standardCode = null) {
   if (!barcode) return;
-  const parsed = parseLotteryBarcode(barcode, state.customGames);
+  const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
   if (!parsed || !parsed.isValid || parsed.isRetailProduct || parsed.isNonLotteryBarcode) {
     sfx.alert();
     showToast(`❌ [${barcode}] is not a valid scratch-off lottery ticket.`, 'error');
@@ -8724,8 +8855,8 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
 
   // Use accurate normalized standard 14-digit lottery barcode (e.g. "14170670170009")
   const standardBarcode = (parsed && parsed.standardBarcode) ? parsed.standardBarcode : (standardCode || barcode);
-  pendingSetBoxBarcode = standardBarcode;
-  pendingNewTicketBarcode = standardBarcode;
+  pendingSetBoxBarcode = (parsed?.jurisdiction === 'SC') ? barcode : standardBarcode;
+  pendingNewTicketBarcode = (parsed?.jurisdiction === 'SC') ? barcode : standardBarcode;
 
   const barcodeDisplay = document.getElementById('setTicketBarcodeDisplay');
   const nameInput = document.getElementById('setBoxGameNameInput');
@@ -8739,7 +8870,9 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
   const metaFirstTicket = document.getElementById('setTicketMetaFirstTicket');
 
   // Auto-detect game and barcode details
-  const matchedGame = findGameByBarcode(standardBarcode, state.customGames) || findGameByBarcode(barcode, state.customGames);
+  const matchedGame = (parsed?.jurisdiction === 'SC' && (parsed.game || findScelGame(parsed.gameNumber)))
+    ? (parsed.game || findScelGame(parsed.gameNumber))
+    : (findGameByBarcode(standardBarcode, state.customGames, state.lotteryJurisdiction) || findGameByBarcode(barcode, state.customGames, state.lotteryJurisdiction));
   pendingSetBoxGame = matchedGame;
 
   let initialName = '';
@@ -8774,15 +8907,22 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
     }
   }
 
+  const isSC = state.lotteryJurisdiction === 'SC' || parsed?.jurisdiction === 'SC';
   const std = getStandardPackDetails(initialPrice);
-  const effectivePackSize = matchedGame?.packSize || parsed?.inferredDetails?.packSize || std.packSize;
+  const effectivePackSize = (matchedGame && matchedGame.packSize !== undefined)
+    ? matchedGame.packSize
+    : (isSC ? null : (parsed?.inferredDetails?.packSize || std.packSize));
 
-  const initialSec = (parsed && parsed.hasExplicitSecurityCode && parsed.securityCode)
-    ? parsed.securityCode
-    : (parsed?.securityCode || computeLotterySeriesCode(parsed?.gameNumber || (matchedGame ? matchedGame.barcodePrefix : ''), parsed?.ticketNumber, state.customGames, effectivePackSize));
+  const initialSec = isSC
+    ? null
+    : ((parsed && parsed.hasExplicitSecurityCode && parsed.securityCode)
+      ? parsed.securityCode
+      : (parsed?.securityCode || computeLotterySeriesCode(parsed?.gameNumber || (matchedGame ? matchedGame.barcodePrefix : ''), parsed?.ticketNumber, state.customGames, effectivePackSize)));
   pendingSetBoxSecurityCode = initialSec;
 
-  let displayBarcode = (parsed && parsed.displayBarcode) ? parsed.displayBarcode : formatLotteryBarcode(barcode, state.customGames, initialSec);
+  let displayBarcode = (parsed && parsed.displayBarcode)
+    ? parsed.displayBarcode
+    : formatLotteryBarcode(barcode, state.customGames, initialSec, state.lotteryJurisdiction);
   pendingSetBoxDisplayBarcode = displayBarcode;
 
   const eyebrowEl = document.getElementById('setTicketStepEyebrow');
@@ -8810,11 +8950,13 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
       : '000');
 
   const refreshPinDisplay = () => {
-    const currentSec = pendingSetBoxSecurityCode || '000';
+    const currentSec = pendingSetBoxSecurityCode || (isSC ? null : '000');
     if (metaFirstTicket) {
-      metaFirstTicket.textContent = `${displayTicketNum} (${currentSec})`;
+      metaFirstTicket.textContent = (isSC && !currentSec)
+        ? displayTicketNum
+        : `${displayTicketNum} (${currentSec})`;
     }
-    const updatedFormatted = formatLotteryBarcode(barcode, state.customGames, currentSec);
+    const updatedFormatted = formatLotteryBarcode(barcode, state.customGames, currentSec, state.lotteryJurisdiction);
     displayBarcode = updatedFormatted;
     pendingSetBoxDisplayBarcode = updatedFormatted;
     if (barcodeDisplay) barcodeDisplay.textContent = updatedFormatted;
@@ -8834,21 +8976,39 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
   };
 
   if (metaGameNum) metaGameNum.textContent = parsed?.gameNumber || (matchedGame ? matchedGame.barcodePrefix : '—');
-  if (metaPackNum) metaPackNum.textContent = displayPack;
+  if (metaPackNum) {
+    metaPackNum.textContent = (isSC && parsed?.checkCode)
+      ? `${displayPack} (Check: ${parsed.checkCode})`
+      : displayPack;
+  }
   if (metaFirstTicket) {
-    metaFirstTicket.textContent = `${displayTicketNum} (${initialSec})`;
-    metaFirstTicket.title = 'Click to edit or add series/bracket PIN code';
-    metaFirstTicket.onclick = editPinHandler;
+    metaFirstTicket.textContent = (isSC && !initialSec)
+      ? displayTicketNum
+      : `${displayTicketNum} (${initialSec || '000'})`;
+    metaFirstTicket.title = isSC ? 'First ticket number' : 'Click to edit or add series/bracket PIN code';
+    if (!isSC) {
+      metaFirstTicket.onclick = editPinHandler;
+    }
   }
   if (barcodeDisplay) {
     barcodeDisplay.textContent = displayBarcode;
-    barcodeDisplay.style.cursor = 'pointer';
-    barcodeDisplay.title = 'Click to edit series/bracket PIN code';
-    barcodeDisplay.onclick = editPinHandler;
+    if (!isSC) {
+      barcodeDisplay.style.cursor = 'pointer';
+      barcodeDisplay.title = 'Click to edit series/bracket PIN code';
+      barcodeDisplay.onclick = editPinHandler;
+    } else {
+      barcodeDisplay.style.cursor = 'default';
+      barcodeDisplay.title = '';
+      barcodeDisplay.onclick = null;
+    }
   }
   const btnEditPin = document.getElementById('btnEditTicketPin');
   if (btnEditPin) {
-    btnEditPin.onclick = editPinHandler;
+    if (isSC) {
+      btnEditPin.style.display = 'none';
+    } else {
+      btnEditPin.onclick = editPinHandler;
+    }
   }
 
   pendingChosenName = initialName;
@@ -8858,18 +9018,25 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
     nameInput.value = initialName;
   }
   updatePricePillsSelection(initialPrice);
-  if (effectivePackSize && effectivePackSize !== std.packSize) {
-    const tixInput = document.getElementById('setBoxPackTicketsInput');
-    const valInput = document.getElementById('setBoxPackValueInput');
+  const tixInput = document.getElementById('setBoxPackTicketsInput');
+  const valInput = document.getElementById('setBoxPackValueInput');
+  if (isSC && effectivePackSize === null) {
+    if (tixInput) tixInput.value = '';
+    if (valInput) valInput.value = '';
+    pendingChosenPackSize = null;
+    pendingChosenPackValue = null;
+  } else if (effectivePackSize && (effectivePackSize !== std.packSize || isSC)) {
     if (tixInput) tixInput.value = effectivePackSize;
     if (valInput) valInput.value = `$${(effectivePackSize * initialPrice).toFixed(2)}`;
     pendingChosenPackSize = effectivePackSize;
     pendingChosenPackValue = effectivePackSize * initialPrice;
   }
 
+  pendingSetBoxJurisdiction = parsed?.jurisdiction || (isSC ? 'SC' : 'GA');
+
   sfx.beep();
   if (setTicketDetailsModal) {
-    setTicketDetailsModal.dataset.barcode = standardBarcode;
+    setTicketDetailsModal.dataset.barcode = (parsed?.jurisdiction === 'SC') ? barcode : standardBarcode;
     if (!setTicketDetailsModal.open) {
       setTicketDetailsModal.showModal();
     }
@@ -8901,8 +9068,13 @@ export function saveTicketDetailsToInStock() {
   const customPrice = parseFloat(priceInput?.value);
   const chosenPrice = (!isNaN(customPrice) && customPrice > 0) ? customPrice : (pillPrice || 1);
 
+  const isSC = state.lotteryJurisdiction === 'SC';
   const std = getStandardPackDetails(chosenPrice);
-  const chosenPackSize = parseInt(tixInput?.value, 10) || std.packSize || 100;
+  const rawTixVal = tixInput?.value?.trim();
+  const hasExplicitPackSize = Boolean(rawTixVal && !isNaN(parseInt(rawTixVal, 10)) && parseInt(rawTixVal, 10) > 0);
+  const chosenPackSize = hasExplicitPackSize
+    ? parseInt(rawTixVal, 10)
+    : (isSC ? (pendingSetBoxGame?.packSize ?? null) : (std.packSize || 100));
 
   const barcode = pendingSetBoxBarcode || setTicketDetailsModal?.dataset.barcode || pendingNewTicketBarcode;
   if (!barcode) {
@@ -8910,7 +9082,7 @@ export function saveTicketDetailsToInStock() {
     return;
   }
 
-  const parsed = parseLotteryBarcode(barcode, state.customGames);
+  const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
   const cleanPack = (parsed && (parsed.packNumber || parsed.packCombined))
     ? (parsed.packNumber || parsed.packCombined)
     : (String(barcode).replace(/[^0-9]/g, '').slice(-6) || '000000');
@@ -8929,6 +9101,7 @@ export function saveTicketDetailsToInStock() {
     state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
   }
   const existingIdx = state.inStockInventory.findIndex(p => isPackNumberMatch(p.packNumber, cleanPack));
+  const resolvedJurisdiction = pendingSetBoxJurisdiction || (parsed?.jurisdiction === 'SC' || isSC ? 'SC' : 'GA');
   const stockItem = {
     id: 'stock_' + Date.now(),
     barcode: (parsed && parsed.standardBarcode) ? parsed.standardBarcode : barcode,
@@ -8940,14 +9113,19 @@ export function saveTicketDetailsToInStock() {
     game: cleanName,
     packNumber: String(cleanPack),
     pack: String(cleanPack),
+    basePackNumber: parsed?.basePackNumber || cleanPack,
+    checkDigit: (parsed && (parsed.checkCode || parsed.checkDigit)) ? (parsed.checkCode || parsed.checkDigit) : (resolvedJurisdiction === 'SC' ? '6' : null),
+    packCombined: (resolvedJurisdiction === 'SC' && (parsed?.checkCode || parsed?.checkDigit)) ? `${parsed.basePackNumber || cleanPack}-${parsed.checkCode || parsed.checkDigit}` : String(cleanPack),
     price: Number(chosenPrice) || 1,
-    packSize: `${chosenPackSize} tickets`,
-    packSizeNum: Number(chosenPackSize) || 100,
+    packSize: (chosenPackSize !== null && chosenPackSize !== undefined) ? `${chosenPackSize} tickets` : 'Unverified',
+    packSizeNum: (chosenPackSize !== null && chosenPackSize !== undefined) ? Number(chosenPackSize) : null,
     status: 'IN_STOCK',
     statusLabel: 'In stock',
     statusBadgeClass: 'badge-in-stock',
     boxNumber: null,
     position: pos,
+    jurisdiction: resolvedJurisdiction,
+    displayBarcode: pendingSetBoxDisplayBarcode || parsed?.displayBarcode,
     receivedDate: 'Today'
   };
 
@@ -8968,6 +9146,8 @@ export function saveTicketDetailsToInStock() {
     packSize: Number(chosenPackSize) || 100,
     bookValue: (Number(chosenPackSize) || 100) * (Number(chosenPrice) || 1),
     status: 'STORED',
+    jurisdiction: resolvedJurisdiction,
+    checkDigit: (parsed && (parsed.checkCode || parsed.checkDigit)) ? (parsed.checkCode || parsed.checkDigit) : null,
     scannedAt: new Date().toISOString()
   };
   if (invIdx !== -1) {
@@ -9312,7 +9492,7 @@ export function checkAndRenderSetBoxConflict(boxNum) {
 
   // Check if box is occupied by a different active pack
   const rawCandidate = pendingSetBoxBarcode || setBoxModal?.dataset.barcode || setTicketDetailsModal?.dataset.barcode || pendingNewTicketBarcode;
-  const parsedCandidate = parseLotteryBarcode(rawCandidate, state.customGames);
+  const parsedCandidate = parseLotteryBarcode(rawCandidate, state.customGames, state.lotteryJurisdiction);
   const candidatePack = parsedCandidate?.packCombined || parsedCandidate?.packNumber || (rawCandidate ? String(rawCandidate).replace(/[^0-9]/g, '').slice(-6) : null);
   const targetSlot = (state.slots || []).find(s => Number(s.boxNumber) === num);
   const isSamePack = targetSlot && isPackNumberMatch(targetSlot.packNumber, candidatePack) &&
@@ -9509,7 +9689,7 @@ function openSetBoxModal(barcode) {
     setBoxModal.dataset.packSize = String(pendingChosenPackSize || 100);
   }
 
-  const parsed = parseLotteryBarcode(barcode, state.customGames);
+  const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
   const cleanPack = (parsed && (parsed.packNumber || parsed.packCombined)) ? (parsed.packNumber || parsed.packCombined) : (barcode ? String(barcode).replace(/[^0-9]/g, '').slice(-6) : '---');
 
   // Fill Step 2 Ticket Summary
@@ -9526,7 +9706,7 @@ function openSetBoxModal(barcode) {
   const s2Count = document.getElementById('step2TicketsCountDisplay');
   if (s2Count) s2Count.textContent = `${pendingChosenPackSize || 30} tickets · starts at ticket 000`;
   const displayBarcodeText = pendingSetBoxDisplayBarcode
-    || formatLotteryBarcode(barcode, state.customGames, pendingSetBoxSecurityCode || '000');
+    || formatLotteryBarcode(barcode, state.customGames, pendingSetBoxSecurityCode || (state.lotteryJurisdiction === 'SC' ? null : '000'), state.lotteryJurisdiction);
   if (s2Barcode) s2Barcode.textContent = `Barcode #${displayBarcodeText}`;
 
   // Guard: If this pack is already active in a dispenser box, DO NOT open choose box!
@@ -10020,7 +10200,7 @@ function confirmSetBoxForTicket(isFromEnterKey = false) {
 
     // Check if target box is already occupied by a different active game/pack
     const targetSlot = (state.slots || []).find(s => Number(s.boxNumber) === Number(boxNum));
-    const parsedCandidate = parseLotteryBarcode(barcode, state.customGames);
+    const parsedCandidate = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
     const candidatePack = parsedCandidate?.packCombined || parsedCandidate?.packNumber || (barcode ? String(barcode).replace(/[^0-9]/g, '').slice(-6) : null);
     const isSamePack = targetSlot && isPackNumberMatch(targetSlot.packNumber, candidatePack) &&
       (!parsedCandidate?.gameNumber || slotMatchesGameNumber(targetSlot, parsedCandidate.gameNumber));
@@ -10147,7 +10327,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       return false;
     }
 
-    const parsedEarly = parseLotteryBarcode(barcode, state.customGames);
+    const parsedEarly = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
     const targetPack = parsedEarly?.packCombined || parsedEarly?.packNumber || (barcode ? String(barcode).replace(/[^0-9]/g, '').slice(-6) : null);
     const existingActiveBox = (state.slots || []).find(s => {
       if (s.status !== 'ACTIVE' || !s.packNumber || Number(s.boxNumber) === Number(boxNum)) return false;
@@ -10221,14 +10401,14 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     if (!slot.scannedBarcodes) slot.scannedBarcodes = [];
 
     // Determine game, name, price, and pack size
-    const game = detectedGame || findGameByBarcode(barcode, state.customGames) || SAMPLE_GAMES[0];
+    const game = detectedGame || findGameByBarcode(barcode, state.customGames, state.lotteryJurisdiction) || SAMPLE_GAMES[0];
     const finalPrice = (customPrice !== null && !isNaN(customPrice) && customPrice > 0) ? customPrice : (game.price || 1);
     const finalName = customName ? cleanGameTitle(customName) : cleanGameTitle(game.name || 'Scratch-Off Game');
     const std = getStandardPackDetails(finalPrice);
     const packSize = (customPackSize && customPackSize > 0) ? customPackSize : std.packSize;
 
     // Parse ticket number and pack number using robust lottery barcode parser
-    const parsed = parseLotteryBarcode(barcode, state.customGames);
+    const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
 
     // Register in state.customGames if this is a custom game
     let matchedCustomGame = (state.customGames || []).find(cg => cg.name.toLowerCase() === finalName.toLowerCase());
@@ -10386,6 +10566,13 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       slot.price = finalPrice;
       slot.packNumber = realPackNumber;
       slot.packSize = packSize;
+      const resJur = pendingSetBoxJurisdiction || (parsed?.jurisdiction === 'SC' || (state.lotteryJurisdiction === 'SC') ? 'SC' : 'GA');
+      slot.jurisdiction = resJur;
+      if (resJur === 'SC' && parsed) {
+        slot.checkDigit = parsed.checkCode || parsed.checkDigit || '6';
+        slot.basePackNumber = parsed.basePackNumber || realPackNumber;
+        slot.packCombined = `${slot.basePackNumber}-${slot.checkDigit}`;
+      }
       // Store barcodePrefix for cross-game verification during scanning
       slot.barcodePrefix = (parsed && parsed.gameNumber) ? parsed.gameNumber : (matchedCustomGame && matchedCustomGame.barcodePrefix ? matchedCustomGame.barcodePrefix : (game && game.barcodePrefix ? game.barcodePrefix : ''));
       // Fresh roll activation starts at scanned ticket number (e.g. 300) so initial sales is 0
@@ -10484,7 +10671,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     bringBoxToVisibleRack(boxNum);
 
     const cleanName = cleanGameTitle(slot.gameName);
-    const formattedDisplay = formatLotteryBarcode(barcode, state.customGames, effectiveSecCode);
+    const formattedDisplay = formatLotteryBarcode(barcode, state.customGames, effectiveSecCode, state.lotteryJurisdiction);
     state.lastScanData = {
       barcode: formattedDisplay,
       boxNumber: boxNum,
@@ -10642,7 +10829,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       let ticketNum = 0;
 
       if (barcode) {
-        const parsed = parseLotteryBarcode(barcode, state.customGames);
+        const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
         cleanPack = (parsed && (parsed.packNumber || parsed.packCombined)) ? (parsed.packNumber || parsed.packCombined) : String(barcode).replace(/[^0-9]/g, '').slice(-6);
         gameNumber = (parsed && parsed.gameNumber) ? parsed.gameNumber : (pendingSetBoxGame ? pendingSetBoxGame.barcodePrefix : null);
         if (parsed && parsed.ticketNumber !== null && parsed.ticketNumber !== undefined) {
@@ -11108,7 +11295,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     boxGameNameInput?.addEventListener('input', () => {
       const val = boxGameNameInput.value.trim();
       // Guard: If hardware barcode scanner typed into the Game Name field
-      const parsed = parseLotteryBarcode(val, state.customGames);
+      const parsed = parseLotteryBarcode(val, state.customGames, state.lotteryJurisdiction);
       if (parsed && parsed.isValid && !parsed.isRetailProduct) {
         boxGameNameInput.value = pendingChosenName || (pendingSetBoxGame ? cleanGameTitle(pendingSetBoxGame.name) : 'Scratch-Off Game');
         openSetTicketDetailsModal(val);
@@ -11121,7 +11308,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         e.preventDefault();
         e.stopPropagation();
         const val = boxGameNameInput.value.trim();
-        const parsed = parseLotteryBarcode(val, state.customGames);
+        const parsed = parseLotteryBarcode(val, state.customGames, state.lotteryJurisdiction);
         if (parsed && parsed.isValid && !parsed.isRetailProduct) {
           boxGameNameInput.value = pendingChosenName || (pendingSetBoxGame ? cleanGameTitle(pendingSetBoxGame.name) : 'Scratch-Off Game');
           openSetTicketDetailsModal(val);
@@ -11779,7 +11966,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
   function processScannedBarcode(rawBarcode) {
     sfx.beep();
-    const parsedPreview = parseLotteryBarcode(rawBarcode, state.customGames);
+    const parsedPreview = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
     const effectivePreviewBarcode = (parsedPreview && parsedPreview.standardBarcode) ? parsedPreview.standardBarcode : rawBarcode;
     state.lastScannedBarcode = effectivePreviewBarcode;
 
@@ -11883,7 +12070,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       const tabBoxRemove = document.getElementById('tabBoxRemove');
       const rmPosInput = document.getElementById('rmPosInput');
       if (tabBoxRemove?.classList.contains('on') && rmPosInput) {
-        const parsed = parseLotteryBarcode(rawBarcode, state.customGames);
+        const parsed = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
         if (parsed && parsed.isValid && typeof parsed.ticketNumber === 'number') {
           rmPosInput.value = String(parsed.ticketNumber).padStart(3, '0');
           sfx.chime();
@@ -11935,7 +12122,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         confirmSetBoxForTicket(false);
         return;
       }
-      const parsedTix = parseLotteryBarcode(rawBarcode, state.customGames);
+      const parsedTix = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
       if (parsedTix && parsedTix.isValid) {
         openSetTicketDetailsModal(rawBarcode);
         showToast(`🏷️ Switched to scanned barcode [${rawBarcode}]`, 'info');
@@ -11951,7 +12138,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         confirmSetBoxForTicket(false);
         return;
       }
-      const parsedTix = parseLotteryBarcode(rawBarcode, state.customGames);
+      const parsedTix = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
       if (parsedTix && parsedTix.isValid) {
         isTransitioningSetBoxStep = true;
         try {
@@ -11976,8 +12163,8 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         return;
       } else {
         // Scanned another pack barcode: dynamically detect game & pack info
-        const parsed = parseLotteryBarcode(rawBarcode, state.customGames);
-        const matchedGame = findGameByBarcode(rawBarcode, state.customGames);
+        const parsed = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
+        const matchedGame = findGameByBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
         const gamePrice = matchedGame ? matchedGame.price : 20;
         const gameName = matchedGame ? cleanGameTitle(matchedGame.name) : 'Scratch-Off Game';
         const std = getStandardPackDetails(gamePrice);
@@ -12016,7 +12203,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     // Scenario 3: End Shift Scanning (Verify Active Boxes)
     if (state.shiftStatus === 'SCANNING_END_SHIFT') {
       const parsedBoxNum = parseBoxBarcode(rawBarcode);
-      const parsedTicket = parseLotteryBarcode(rawBarcode, state.customGames);
+      const parsedTicket = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
       const cleanDigits = rawBarcode.replace(/[^0-9]/g, '');
       let targetSlot = null;
 
@@ -12097,7 +12284,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         if (parsedTicket && parsedTicket.isValid && !parsedTicket.isRetailProduct && !parsedTicket.isNonLotteryBarcode) {
           const inStock = findInStockPack(parsedTicket, rawBarcode);
           const inStockItem = inStock?.item;
-          const matchedGame = findGameByBarcode(rawBarcode, state.customGames) ||
+          const matchedGame = findGameByBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction) ||
             SAMPLE_GAMES.find(g => g.id === parsedTicket.gameNumber) ||
             (state.customGames || []).find(g => g.id === parsedTicket.gameNumber) ||
             SAMPLE_GAMES.find(g => g.barcodePrefix === parsedTicket.gameNumber);
@@ -12341,7 +12528,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       return;
     } else if (state.shiftStatus === 'SHIFT_ENDED') {
       // If user scans a ticket to activate or put into in-stock after shift ended:
-      const parsedTicket = parseLotteryBarcode(rawBarcode, state.customGames);
+      const parsedTicket = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
       if (parsedTicket && parsedTicket.isValid && !parsedTicket.isRetailProduct && !parsedTicket.isNonLotteryBarcode) {
         const effectiveBarcode = (parsedTicket && parsedTicket.standardBarcode) ? parsedTicket.standardBarcode : rawBarcode;
         const inStock = findInStockPack(parsedTicket, rawBarcode);
@@ -12388,7 +12575,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       }
 
       // 2. Parse barcode as lottery ticket
-      const parsedTicket = parseLotteryBarcode(rawBarcode, state.customGames);
+      const parsedTicket = parseLotteryBarcode(rawBarcode, state.customGames, state.lotteryJurisdiction);
       const cleanNum = rawBarcode.replace(/[^0-9]/g, '');
 
       // Reject retail product barcodes, laptop serials, and non-lottery barcodes immediately
@@ -13640,7 +13827,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       const raw = String(rawBarcode).trim();
       if (!raw) return;
 
-      const parsed = parseLotteryBarcode(raw, state.customGames);
+      const parsed = parseLotteryBarcode(raw, state.customGames, state.lotteryJurisdiction);
       let gameNumber = parsed?.gameNumber;
       let packNumber = parsed?.packCombined || parsed?.packNumber;
       let ticketNumber = (parsed?.ticketNumber !== null && parsed?.ticketNumber !== undefined) ? parsed.ticketNumber : 0;
@@ -13655,7 +13842,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
         } else {
           const digits = raw.replace(/\D/g, '');
           if (digits.length >= 10) {
-            const p = parseLotteryBarcode(digits, state.customGames);
+            const p = parseLotteryBarcode(digits, state.customGames, state.lotteryJurisdiction);
             if (p && p.isValid) {
               gameNumber = p.gameNumber;
               packNumber = p.packNumber;
@@ -13676,8 +13863,8 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       }
 
       // Match game from catalog, SAMPLE_GAMES, or custom games
-      const matchedGame = findGameByBarcode(raw, state.customGames) ||
-        findGameByBarcode(gameNumber, state.customGames) ||
+      const matchedGame = findGameByBarcode(raw, state.customGames, state.lotteryJurisdiction) ||
+        findGameByBarcode(gameNumber, state.customGames, state.lotteryJurisdiction) ||
         SAMPLE_GAMES.find(g => g.barcodePrefix === gameNumber);
 
       const price = Number(matchedGame?.price || 10);
@@ -14267,7 +14454,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     // End Shift Confirm Modal buttons
     closeEndShiftConfirmBtn?.addEventListener('click', () => endShiftConfirmModal.close());
     confCancelBtn?.addEventListener('click', () => endShiftConfirmModal.close());
-    confConfirmBtn?.addEventListener('click', confirmEndShift);
+    confConfirmBtn?.addEventListener('click', executeEndShiftFinalReportWorkflow);
     endShiftConfirmModal?.addEventListener('close', () => {
       if (state.shiftStatus === 'SCANNING_END_SHIFT') {
         const toast = document.getElementById('endShiftScanningToast');
@@ -16820,7 +17007,7 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     if (!barcode) return;
 
     const parsedBox = parseBoxBarcode(barcode);
-    const parsed = parseLotteryBarcode(barcode, state.customGames);
+    const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
 
     let target = null;
     if (parsedBox) {
@@ -18514,8 +18701,8 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     const input = document.getElementById('rpPackBarcodeInput');
     if (input) input.value = barcode;
 
-    const parsed = parseLotteryBarcode(barcode, state.customGames);
-    const matched = findGameByBarcode(barcode, state.customGames);
+    const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
+    const matched = findGameByBarcode(barcode, state.customGames, state.lotteryJurisdiction);
 
     const banner = document.getElementById('rpDetectionBanner');
     const bannerTitle = document.getElementById('rpDetectionTitleText');
@@ -19443,9 +19630,15 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
     const barcode = String(rawBarcode || '').trim();
     if (!barcode) return;
 
-    const parsed = parseLotteryBarcode(barcode, state.customGames);
-    const matched = findGameByBarcode(barcode, state.customGames);
+    const parsed = parseLotteryBarcode(barcode, state.customGames, state.lotteryJurisdiction);
+    if (!parsed || !parsed.isValid || parsed.isRetailProduct || parsed.isNonLotteryBarcode) {
+      sfx.alert();
+      showToast(`❌ [${barcode}] is not a valid lottery ticket.`, 'error');
+      return;
+    }
+    const matched = findGameByBarcode(barcode, state.customGames, state.lotteryJurisdiction);
 
+    const isSC = state.lotteryJurisdiction === 'SC' || parsed?.jurisdiction === 'SC';
     let gameCode = parsed?.gameNumber || (matched ? matched.barcodePrefix : '1415');
     let packNumber = parsed?.packNumber || barcode.replace(/[^0-9]/g, '').slice(-6) || '560411';
     let ticketPos = parsed?.ticketString || '000';
@@ -19459,9 +19652,12 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
                 gameCode === '1770' ? '500X The Money' :
                   `Game #${gameCode}`
     );
-    const price = matched?.price || (gameCode === '1888' ? 50 : gameCode === '1417' ? 10 : gameCode === '1409' ? 2 : 1);
+    const price = (matched && matched.price) || (gameCode === '1888' ? 50 : gameCode === '1417' ? 10 : gameCode === '1409' ? 2 : 1);
     const std = getStandardPackDetails(price);
-    const packSize = (matched && matched.packSize) || std.packSize || (price >= 50 ? 18 : 100);
+    const packSizeNum = (matched && matched.packSize !== undefined)
+      ? matched.packSize
+      : (isSC ? null : (std.packSize || (price >= 50 ? 18 : 100)));
+    const packSize = (packSizeNum !== null && packSizeNum !== undefined) ? `${packSizeNum} tickets` : 'Unverified';
 
     if (!Array.isArray(state.inStockInventory)) {
       state.inStockInventory = (!state.dataCleared && (!state.storeId || state.storeId === 'store_amigo')) ? JSON.parse(JSON.stringify(REFERENCE_IN_STOCK_PACKS)) : [];
@@ -19475,12 +19671,16 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
 
     const newPack = {
       id: 'stock_' + Date.now(),
+      barcode: parsed?.standardBarcode || barcode,
+      originalBarcode: barcode,
+      standardBarcode: parsed?.standardBarcode || barcode,
+      barcodePrefix: gameCode,
       gameName: gameName,
       gameNumber: `Game ${gameCode}`,
       packNumber: packNumber,
       price: price,
-      packSize: `${packSize} tickets`,
-      packSizeNum: packSize,
+      packSize: packSize,
+      packSizeNum: packSizeNum,
       status: 'IN_STOCK',
       statusLabel: 'In stock',
       statusBadgeClass: 'badge-in-stock',

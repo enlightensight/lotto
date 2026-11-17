@@ -9,7 +9,7 @@ import https from 'https';
 import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import * as inventoryService from './inventoryService.js';
-import { normalizeLotteryJurisdiction } from './src/scel.js';
+import { normalizeLotteryJurisdiction, resolveJurisdictionUpdate } from './src/scel.js';
 
 dotenv.config();
 
@@ -417,6 +417,24 @@ async function migrateCleanData(db) {
         \`created_at\` VARCHAR(40) NOT NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS \`revoked_admin_tokens\` (
+        \`jti\` VARCHAR(80) PRIMARY KEY,
+        \`token_hash\` VARCHAR(64) NOT NULL,
+        \`expires_at\` TIMESTAMP NOT NULL,
+        \`revoked_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`idx_revoked_exp\` (\`expires_at\`),
+        INDEX \`idx_token_hash\` (\`token_hash\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Safe startup cleanup: Purge revoked records expired more than 1 hour ago (clock-skew safe)
+    try {
+      await db.query(`DELETE FROM revoked_admin_tokens WHERE expires_at < (NOW() - INTERVAL 1 HOUR)`);
+    } catch (cleanErr) {
+      console.warn('Notice cleaning expired revoked admin tokens on startup:', cleanErr.message);
+    }
 
     // Separated store subscription, document, retailer authorization, software access, suspension & token_version columns
     const storeMigrations = [
@@ -1696,6 +1714,7 @@ function generateJWT(payload, expiresInSeconds = 86400) {
   const now = Math.floor(Date.now() / 1000);
   const fullPayload = {
     ...payload,
+    jti: crypto.randomBytes(8).toString('hex'),
     iat: now,
     exp: now + expiresInSeconds
   };
@@ -1746,10 +1765,159 @@ function verifyJWT(token) {
 }
 
 const activeAdminSessions = new Map();
+const revokedAdminTokens = new Set();
+
+async function isTokenRevokedAsync(token, dbOverride = null) {
+  if (!token || typeof token !== 'string') return true;
+  const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+
+  // Fast L1 in-memory check
+  if (revokedAdminTokens.has(cleanToken)) return true;
+
+  const payload = verifyJWT(cleanToken);
+  if (payload && payload.jti && revokedAdminTokens.has(payload.jti)) {
+    return true;
+  }
+
+  const activePool = dbOverride || pool;
+  const dbReady = dbOverride ? true : (isDbConnected && pool);
+
+  // L2 persistent database check
+  if (dbReady && activePool) {
+    try {
+      const tokenHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+      const jti = payload?.jti || '';
+      const [rows] = await activePool.query(
+        'SELECT 1 FROM revoked_admin_tokens WHERE jti = ? OR token_hash = ? LIMIT 1',
+        [jti, tokenHash]
+      );
+      if (rows && rows.length > 0) {
+        revokedAdminTokens.add(cleanToken);
+        if (jti) revokedAdminTokens.add(jti);
+        return true;
+      }
+    } catch (err) {
+      // Fail closed: if revocation database check fails, treat as revoked
+      console.warn('Revocation DB check failed, failing closed:', err.message);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function revokeAdminTokenAsync(token, dbOverride = null) {
+  if (!token || typeof token !== 'string') return;
+  const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+
+  revokedAdminTokens.add(cleanToken);
+  activeAdminSessions.delete(cleanToken);
+
+  const payload = verifyJWT(cleanToken);
+  const tokenHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+  const jti = payload?.jti || `leg_${tokenHash.slice(0, 32)}`;
+  if (payload?.jti) revokedAdminTokens.add(payload.jti);
+
+  const activePool = dbOverride || pool;
+  const dbReady = dbOverride ? true : (isDbConnected && pool);
+
+  if (dbReady && activePool) {
+    const expSeconds = payload?.exp || (Math.floor(Date.now() / 1000) + 86400);
+    await activePool.query(
+      `INSERT INTO revoked_admin_tokens (jti, token_hash, expires_at)
+       VALUES (?, ?, FROM_UNIXTIME(?))
+       ON DUPLICATE KEY UPDATE revoked_at = CURRENT_TIMESTAMP`,
+      [jti, tokenHash, expSeconds]
+    );
+
+    // Clean up expired revocation records so table does not grow indefinitely (with 1-hour clock-skew safety margin)
+    try {
+      await activePool.query('DELETE FROM revoked_admin_tokens WHERE expires_at < (NOW() - INTERVAL 1 HOUR)');
+    } catch (_) { }
+  }
+}
+
+async function cleanExpiredRevokedTokensAsync(dbOverride = null) {
+  const activePool = dbOverride || pool;
+  const dbReady = dbOverride ? true : (isDbConnected && pool);
+  if (!dbReady || !activePool) return { affectedRows: 0 };
+  try {
+    const [result] = await activePool.query('DELETE FROM revoked_admin_tokens WHERE expires_at < (NOW() - INTERVAL 1 HOUR)');
+    return result || { affectedRows: 0 };
+  } catch (err) {
+    console.warn('Revocation cleanup warning:', err.message);
+    return { affectedRows: 0 };
+  }
+}
+
+async function getActiveAdminSessionAsync(token, dbOverride = null) {
+  if (!token || typeof token !== 'string') return null;
+  const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+
+  // 1. Check persistent revocation (fail-closed)
+  const isRevoked = await isTokenRevokedAsync(cleanToken, dbOverride);
+  if (isRevoked) {
+    activeAdminSessions.delete(cleanToken);
+    return null;
+  }
+
+  // 2. Check in-memory session cache
+  const cached = activeAdminSessions.get(cleanToken);
+  if (cached) {
+    if (new Date(cached.expiresAt) <= new Date()) {
+      activeAdminSessions.delete(cleanToken);
+      return null;
+    }
+    return cached;
+  }
+
+  // 3. Verify via cryptographic JWT verification
+  if (cleanToken.split('.').length === 3) {
+    const jwtPayload = verifyJWT(cleanToken);
+    // Admin requirement: require valid session identifier (jti)
+    if (!jwtPayload || !jwtPayload.jti) {
+      return null;
+    }
+    if (jwtPayload && (jwtPayload.isAdmin || jwtPayload.role === 'SUPER_ADMIN' || jwtPayload.mode === 'ADMIN')) {
+      const session = {
+        token: cleanToken,
+        jti: jwtPayload.jti,
+        username: jwtPayload.username || jwtPayload.sub,
+        fullName: jwtPayload.fullName || jwtPayload.username,
+        email: jwtPayload.email,
+        role: jwtPayload.role || 'SUPER_ADMIN',
+        createdAt: new Date((jwtPayload.iat || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        expiresAt: new Date((jwtPayload.exp || Math.floor(Date.now() / 1000) + 86400) * 1000).toISOString()
+      };
+      activeAdminSessions.set(cleanToken, session);
+      return session;
+    }
+  }
+
+  // 4. Legacy admin session store
+  const st = getAdminState();
+  const sessionRecord = (st.adminSessions || []).find(s => s.token === cleanToken);
+  if (sessionRecord) {
+    if (new Date(sessionRecord.expiresAt) > new Date()) {
+      activeAdminSessions.set(cleanToken, sessionRecord);
+      return sessionRecord;
+    } else {
+      st.adminSessions = (st.adminSessions || []).filter(s => s.token !== cleanToken);
+      saveAdminState(st);
+    }
+  }
+
+  return null;
+}
 
 function getActiveAdminSession(token) {
   if (!token || typeof token !== 'string') return null;
   const cleanToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+  if (revokedAdminTokens.has(cleanToken)) return null;
+
+  const payload = verifyJWT(cleanToken);
+  if (payload && payload.jti && revokedAdminTokens.has(payload.jti)) return null;
+
   const cached = activeAdminSessions.get(cleanToken);
   if (cached) {
     if (new Date(cached.expiresAt) <= new Date()) {
@@ -1761,16 +1929,17 @@ function getActiveAdminSession(token) {
 
   // 1. Verify via cryptographic JWT verification
   if (cleanToken.split('.').length === 3) {
-    const jwtPayload = verifyJWT(cleanToken);
-    if (jwtPayload && (jwtPayload.isAdmin || jwtPayload.role === 'SUPER_ADMIN' || jwtPayload.mode === 'ADMIN')) {
+    if (!payload || !payload.jti) return null;
+    if (payload && (payload.isAdmin || payload.role === 'SUPER_ADMIN' || payload.mode === 'ADMIN')) {
       const session = {
         token: cleanToken,
-        username: jwtPayload.username || jwtPayload.sub,
-        fullName: jwtPayload.fullName || jwtPayload.username,
-        email: jwtPayload.email,
-        role: jwtPayload.role || 'SUPER_ADMIN',
-        createdAt: new Date((jwtPayload.iat || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-        expiresAt: new Date((jwtPayload.exp || Math.floor(Date.now() / 1000) + 86400) * 1000).toISOString()
+        jti: payload.jti,
+        username: payload.username || payload.sub,
+        fullName: payload.fullName || payload.username,
+        email: payload.email,
+        role: payload.role || 'SUPER_ADMIN',
+        createdAt: new Date((payload.iat || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        expiresAt: new Date((payload.exp || Math.floor(Date.now() / 1000) + 86400) * 1000).toISOString()
       };
       activeAdminSessions.set(cleanToken, session);
       return session;
@@ -1864,12 +2033,31 @@ function applyStoreDbRow(target, row) {
   return normalizeStoreStatuses(out);
 }
 
-async function persistStoreComplianceToMySQL(store) {
-  if (!isDbConnected || !pool || !store || !store.storeId) return;
+async function persistStoreComplianceToMySQL(store, dbOverride = null) {
+  const activePool = dbOverride || pool;
+  const dbReady = dbOverride ? true : (isDbConnected && pool);
+  if (!dbReady || !activePool || !store || !store.storeId) return;
   normalizeStoreStatuses(store);
   try {
     const subJson = store.subscription ? JSON.stringify(store.subscription) : null;
-    await pool.query(
+
+    // Distinguish explicitly supplied valid jurisdictions from omitted/invalid updates
+    let updateJurisdiction = null;
+    const rawJurisdiction = store.lotteryJurisdiction;
+    if (typeof rawJurisdiction === 'string') {
+      const clean = rawJurisdiction.trim().toUpperCase();
+      if (clean === 'SC' || clean === 'SCEL') {
+        updateJurisdiction = 'SC';
+      } else if (clean === 'GA') {
+        updateJurisdiction = 'GA';
+      }
+      // Explicit invalid/unsupported strings (e.g. 'NC', 'FL', 'UNKNOWN') leave updateJurisdiction as null
+    }
+
+    // On initial creation of a brand new store, default to GA unless explicitly SC
+    const insertJurisdiction = updateJurisdiction || 'GA';
+
+    await activePool.query(
       `INSERT INTO stores (
         store_id, store_name, owner_username, owner_name, owner_email, retailer_number, tax_id, license_expiry,
         address, phone, total_boxes, authorization_status, operational_status,
@@ -1909,7 +2097,7 @@ async function persistStoreComplianceToMySQL(store) {
         reapproval_notes = VALUES(reapproval_notes),
         last_suspension_reason = VALUES(last_suspension_reason),
         subscription_json = VALUES(subscription_json),
-        lottery_jurisdiction = VALUES(lottery_jurisdiction),
+        lottery_jurisdiction = COALESCE(?, lottery_jurisdiction),
         updated_at = CURRENT_TIMESTAMP`,
       [
         store.storeId,
@@ -1944,9 +2132,21 @@ async function persistStoreComplianceToMySQL(store) {
         store.reapprovalNotes || null,
         store.lastSuspensionReason || null,
         subJson,
-        normalizeLotteryJurisdiction(store.lotteryJurisdiction)
+        insertJurisdiction,
+        updateJurisdiction
       ]
     );
+
+    // Keep memory cache synchronized safely without overwriting existing jurisdiction
+    const st = getAdminState();
+    const existingStore = (st.stores || []).find(s => s.storeId === store.storeId);
+    if (updateJurisdiction) {
+      store.lotteryJurisdiction = updateJurisdiction;
+    } else if (existingStore && existingStore.lotteryJurisdiction) {
+      store.lotteryJurisdiction = existingStore.lotteryJurisdiction;
+    } else if (!store.lotteryJurisdiction) {
+      store.lotteryJurisdiction = 'GA';
+    }
   } catch (dbErr) {
     console.warn('MySQL persistStoreCompliance error:', dbErr.message);
   }
@@ -2385,7 +2585,7 @@ function saveAdminState(st) {
 const PROVISION_KEY = process.env.ADMIN_PROVISION_KEY || 'lotto_admin_secret_key';
 
 // Security Middleware: Require Platform Administrator privileges
-function requireAdminRole(req, res, next) {
+async function requireAdminRole(req, res, next) {
   const rawToken = req.headers['x-admin-token'] || req.headers['authorization'] || '';
   const token = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken.trim();
 
@@ -2402,10 +2602,18 @@ function requireAdminRole(req, res, next) {
     return next();
   }
 
-  const session = getActiveAdminSession(token);
-  if (session) {
-    req.adminSession = session;
-    return next();
+  try {
+    const session = await getActiveAdminSessionAsync(token);
+    if (session) {
+      req.adminSession = session;
+      return next();
+    }
+  } catch (err) {
+    console.warn('Admin authorization verification failed closed:', err.message);
+    return res.status(403).json({
+      success: false,
+      message: 'Access Denied: Revocation verification error.'
+    });
   }
 
   return res.status(403).json({
@@ -2421,10 +2629,18 @@ async function requireStoreActive(req, res, next) {
   // Platform Administrator has root audit visibility over all stores
   const rawAdminToken = req.headers['x-admin-token'] || req.headers['authorization'] || '';
   const adminToken = rawAdminToken.startsWith('Bearer ') ? rawAdminToken.slice(7).trim() : rawAdminToken.trim();
-  if (adminToken && (adminToken === PROVISION_KEY || getActiveAdminSession(adminToken))) {
-    req.adminSession = getActiveAdminSession(adminToken) || { username: 'SUPER_ADMIN', role: 'SUPER_ADMIN' };
-    req.authorizedStoreId = explicitStoreId || 'store_admin';
-    return next();
+  if (adminToken) {
+    if (adminToken === PROVISION_KEY) {
+      req.adminSession = { username: 'SUPER_ADMIN', role: 'SUPER_ADMIN' };
+      req.authorizedStoreId = explicitStoreId || 'store_admin';
+      return next();
+    }
+    const adminSess = await getActiveAdminSessionAsync(adminToken);
+    if (adminSess) {
+      req.adminSession = adminSess;
+      req.authorizedStoreId = explicitStoreId || 'store_admin';
+      return next();
+    }
   }
 
   const rawToken = req.headers['x-store-token'] || req.headers['authorization'] || '';
@@ -2678,6 +2894,7 @@ if (isMatch && !adminCandidates.some(c => (c.username || '').toLowerCase() === (
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       };
 
+      revokedAdminTokens.delete(token);
       activeAdminSessions.set(token, session);
       if (!Array.isArray(st.adminSessions)) st.adminSessions = [];
       st.adminSessions = st.adminSessions.filter(s => new Date(s.expiresAt) > new Date()).slice(-49);
@@ -2925,6 +3142,7 @@ app.post('/api/admin/provision', async (req, res) => {
     }
     for (const [t, s] of activeAdminSessions.entries()) {
       if ((s.username || '').toLowerCase() === normUser) {
+        revokedAdminTokens.add(t);
         activeAdminSessions.delete(t);
       }
     }
@@ -3026,7 +3244,7 @@ app.post('/api/admin/change-password', requireAdminRole, async (req, res) => {
 });
 
 // 14b-3. Administrator & Store Logout Endpoint (Revokes Server Session Tokens)
-app.post(['/api/admin/logout', '/api/auth/logout'], (req, res) => {
+app.post(['/api/admin/logout', '/api/auth/logout'], async (req, res) => {
   try {
     const rawAuth = req.headers['authorization'] || req.body?.token || '';
     const bearer = rawAuth.startsWith('Bearer ') ? rawAuth.slice(7).trim() : rawAuth.trim();
@@ -3037,7 +3255,7 @@ app.post(['/api/admin/logout', '/api/auth/logout'], (req, res) => {
     const st = getAdminState();
 
     if (adminToken) {
-      activeAdminSessions.delete(adminToken);
+      await revokeAdminTokenAsync(adminToken);
       if (Array.isArray(st.adminSessions)) {
         const before = st.adminSessions.length;
         st.adminSessions = st.adminSessions.filter(s => s.token !== adminToken);
@@ -3058,6 +3276,7 @@ app.post(['/api/admin/logout', '/api/auth/logout'], (req, res) => {
     if (stateChanged) saveAdminState(st);
     return res.json({ success: true, message: 'Session revoked successfully.' });
   } catch (err) {
+    console.error('Logout error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -3504,6 +3723,8 @@ app.post('/api/subscriptions/checkout-and-register', async (req, res) => {
     const documentsUrl = String(b.documentsUrl || b.licenseUrl || '').trim();
     const applicantNotes = String(b.notes || b.applicantNotes || '').trim();
     const paymentMethodLabel = String(b.paymentMethodLabel || 'Card •••• 4242').trim();
+    // Public registration strictly defaults to GA; only authenticated Admin can assign SC via admin endpoint
+    const lotteryJurisdiction = 'GA';
 
     if (!storeName || !applicantName || !applicantEmail || !applicantPhone || !address) {
       return res.status(400).json({
@@ -3625,6 +3846,7 @@ app.post('/api/subscriptions/checkout-and-register', async (req, res) => {
       id: appId,
       storeId,
       storeName,
+      lotteryJurisdiction,
       applicantName,
       ownerUsername: ownerUser,
       applicantEmail,
@@ -4598,6 +4820,7 @@ app.post('/api/admin/stores/:storeId/verify-documents', requireAdminRole, async 
     }
     store.retailerAuthStatus = retailerAuthStatus;
   }
+
   store.updatedAt = nowIso;
   normalizeStoreStatuses(store);
 
@@ -4647,6 +4870,69 @@ app.post('/api/admin/stores/:storeId/verify-documents', requireAdminRole, async 
     } catch (dbErr) { console.warn('MySQL verify-documents app update warning:', dbErr.message); }
   }
   res.json({ success: true, store: sanitizeStoreForAdmin(store, st), message: 'Store verification statuses updated.' });
+});
+
+// 14e-1b. Admin: Update Store Lottery Jurisdiction (Dedicated Isolated Endpoint)
+app.post('/api/admin/stores/:storeId/jurisdiction', requireAdminRole, async (req, res) => {
+  const { storeId } = req.params;
+  const { lotteryJurisdiction } = req.body || {};
+
+  if (lotteryJurisdiction === undefined || lotteryJurisdiction === null) {
+    return res.status(400).json({ success: false, message: 'lotteryJurisdiction is required.' });
+  }
+  if (typeof lotteryJurisdiction !== 'string') {
+    return res.status(400).json({ success: false, message: 'lotteryJurisdiction must be a string.' });
+  }
+
+  const clean = lotteryJurisdiction.trim().toUpperCase();
+  if (clean !== 'GA' && clean !== 'SC' && clean !== 'SCEL') {
+    return res.status(400).json({ success: false, message: `Invalid lotteryJurisdiction: ${lotteryJurisdiction}. Supported values: GA, SC` });
+  }
+  const canonicalJur = (clean === 'SC' || clean === 'SCEL') ? 'SC' : 'GA';
+
+  const st = getAdminState();
+  const store = (st.stores || []).find(s => s.storeId === storeId);
+  if (!store) {
+    return res.status(404).json({ success: false, message: 'Store not found' });
+  }
+
+  const actor = req.adminSession?.username || req.body?.adminUsername || 'admin';
+  const nowIso = new Date().toISOString();
+  const oldJur = (store.lotteryJurisdiction && String(store.lotteryJurisdiction).toUpperCase() === 'SC') ? 'SC' : 'GA';
+  const changed = oldJur !== canonicalJur;
+
+  if (isDbConnected && pool) {
+    try {
+      await pool.query('UPDATE stores SET lottery_jurisdiction = ? WHERE store_id = ?', [canonicalJur, storeId]);
+    } catch (dbErr) {
+      console.error('MySQL update store jurisdiction error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Database error updating store jurisdiction: ' + dbErr.message });
+    }
+  }
+
+  store.lotteryJurisdiction = canonicalJur;
+  store.updatedAt = nowIso;
+  normalizeStoreStatuses(store);
+
+  if (changed) {
+    recordAuditEvent(st, {
+      adminUsername: actor,
+      actorRole: 'ADMIN',
+      actionType: 'LOTTERY_JURISDICTION_UPDATED',
+      targetEntity: 'stores',
+      targetId: storeId,
+      storeId,
+      details: { previousJurisdiction: oldJur, lotteryJurisdiction: canonicalJur }
+    });
+  }
+
+  saveAdminState(st);
+  res.json({
+    success: true,
+    lotteryJurisdiction: canonicalJur,
+    store: sanitizeStoreForAdmin(store, st),
+    message: `Store jurisdiction updated to ${canonicalJur === 'SC' ? 'South Carolina (SC)' : 'Georgia (GA)'}.`
+  });
 });
 
 // 14e-2. Admin: Suspend Store Immediately (Reason Required, Revokes Tokens, Preserves POS Data)
@@ -4932,6 +5218,8 @@ app.post(['/api/store-applications', '/api/applications'], async (req, res) => {
     const archivePassword = String(b.archivePassword || b.encryptionPassword || '').trim();
     const requestedPassword = String(b.requestedPassword || b.password || '');
     const username = b.username;
+    // Public store applications strictly default to GA; active jurisdiction is assigned by Admin
+    const lotteryJurisdiction = 'GA';
 
     if (!storeName || !applicantName) {
       return res.status(400).json({ success: false, message: 'Store Name and Applicant Name are required.' });
@@ -4976,6 +5264,7 @@ app.post(['/api/store-applications', '/api/applications'], async (req, res) => {
       id: appId,
       storeId,
       storeName,
+      lotteryJurisdiction,
       applicantName,
       ownerUsername: ownerUser,
       applicantEmail,
@@ -5123,15 +5412,17 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
   });
 
   let provisionedCredentials = null;
+  let createdStore = null;
+  let existingStore = null;
 
   const verifyRetailerValid = req.body?.retailerAuthStatus === 'VALID' || req.body?.confirmOfficialRetailerValid === true;
   if (decision === 'APPROVE') {
     const ownerUser = (appRec.ownerUsername || appRec.applicantName || 'owner').toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    const existingStore = st.stores.find(s => s.storeId === appRec.storeId);
+    existingStore = st.stores.find(s => s.storeId === appRec.storeId);
     appRec.documentStatus = 'APPROVED';
     if (verifyRetailerValid) appRec.retailerAuthStatus = 'VALID';
     if (!existingStore) {
-      const createdStore = {
+      createdStore = {
         storeId: appRec.storeId,
         storeName: appRec.storeName,
         ownerName: appRec.applicantName || '',
@@ -5149,7 +5440,7 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
         softwareAccessStatus: 'ACTIVE',
         authorizationStatus: 'APPROVED',
         operationalStatus: 'ACTIVE',
-        lotteryJurisdiction: normalizeLotteryJurisdiction(appRec.lotteryJurisdiction || 'GA'),
+        lotteryJurisdiction: 'GA',
         subscription: appRec.subscription || null,
         tokenVersion: 1,
         createdAt: nowIso,
@@ -5170,6 +5461,7 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
       existingStore.updatedAt = nowIso;
       normalizeStoreStatuses(existingStore);
     }
+    await persistStoreComplianceToMySQL(createdStore || existingStore);
 
     // Initialize clean POS state for the new store
     const cleanState = {
@@ -5281,7 +5573,12 @@ app.post('/api/admin/applications/:id/review', requireAdminRole, async (req, res
 
   saveAdminState(st);
   const { requestedPasswordHash: _h, ...safeApp } = appRec;
-  res.json({ success: true, application: safeApp, credentials: provisionedCredentials });
+  res.json({
+    success: true,
+    application: safeApp,
+    store: sanitizeStoreForAdmin(createdStore || existingStore, st),
+    credentials: provisionedCredentials
+  });
 });
 
 // 14h. Admin: Lottery Ticket Catalog
@@ -6493,17 +6790,21 @@ app.post('/api/inventory/configure-ticket', requireStoreActive, async (req, res)
 
 
 // Endpoint to verify cryptographic JWT validity
-app.all('/api/auth/verify-token', (req, res) => {
+app.all('/api/auth/verify-token', async (req, res) => {
   const raw = req.headers['authorization'] || req.headers['x-admin-token'] || req.headers['x-store-token'] || req.query.token || req.body?.token || '';
   const token = raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw.trim();
   if (!token) {
     return res.status(400).json({ valid: false, message: 'Missing token' });
   }
+  const isRevoked = await isTokenRevokedAsync(token);
+  if (isRevoked) {
+    return res.status(401).json({ valid: false, message: 'Token has been revoked' });
+  }
   const payload = verifyJWT(token);
   if (payload) {
     return res.json({ valid: true, payload });
   }
-  const adminSess = getActiveAdminSession(token);
+  const adminSess = await getActiveAdminSessionAsync(token);
   if (adminSess) {
     return res.json({ valid: true, payload: { ...adminSess, isAdmin: true, mode: 'ADMIN' } });
   }
@@ -6538,30 +6839,59 @@ app.get(/^\/(signin|signup|reset-password)(\/.*)?$/, (req, res, next) => {
 // Start listening and initialize DB
 const HOST = process.env.HOST || '0.0.0.0';
 
-const server = app.listen(PORT, HOST, () => {
-  console.log(`🚀 LottoTrack Backend API Server running at http://${HOST}:${PORT}`);
-  initDatabase().catch(err => {
-    console.warn('Database initialization warning on boot:', err.message);
+let server = null;
+if (process.env.NO_SERVER_LISTEN !== 'true') {
+  server = app.listen(PORT, HOST, () => {
+    console.log(`🚀 LottoTrack Backend API Server running at http://${HOST}:${PORT}`);
+    initDatabase().catch(err => {
+      console.warn('Database initialization warning on boot:', err.message);
+    });
   });
-});
+}
 
 // Graceful shutdown handling for cloud containers (Railway SIGTERM)
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Gracefully shutting down LottoTrack API server...');
-  server.close(async () => {
-    if (pool) {
-      try { await pool.end(); } catch (_) { }
-    }
+  if (server) {
+    server.close(async () => {
+      if (pool) {
+        try { await pool.end(); } catch (_) { }
+      }
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down...');
-  server.close(async () => {
-    if (pool) {
-      try { await pool.end(); } catch (_) { }
-    }
+  if (server) {
+    server.close(async () => {
+      if (pool) {
+        try { await pool.end(); } catch (_) { }
+      }
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 });
+
+export {
+  app,
+  server,
+  pool,
+  persistStoreComplianceToMySQL,
+  getActiveAdminSession,
+  getActiveAdminSessionAsync,
+  isTokenRevokedAsync,
+  revokeAdminTokenAsync,
+  cleanExpiredRevokedTokensAsync,
+  migrateCleanData,
+  generateJWT,
+  verifyJWT,
+  revokedAdminTokens,
+  activeAdminSessions,
+  requireAdminRole
+};

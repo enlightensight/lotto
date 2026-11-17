@@ -839,6 +839,15 @@ export async function fetchPaymentGatewayConfig() {
     return res.json();
   }
 
+  export async function updateStoreJurisdiction(storeId, lotteryJurisdiction) {
+    const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/jurisdiction`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify({ lotteryJurisdiction })
+    });
+    return res.json();
+  }
+
   export async function suspendStoreWithReason(storeId, reason, adminUsername = 'admin') {
     const res = await fetch(`/api/admin/stores/${encodeURIComponent(storeId)}/suspend`, {
       method: 'POST',

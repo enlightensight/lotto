@@ -3,8 +3,8 @@ import { syncPOSStateToDB, clearPOSStateOnDB } from './dbSync.js';
 
 const STORAGE_KEY = 'lotto_track_pos_data_v3';
 
-import { normalizeLotteryJurisdiction } from './scel.js';
-export { normalizeLotteryJurisdiction };
+import { normalizeLotteryJurisdiction, resolveJurisdictionUpdate, adaptScelToLotteryBarcode, findScelGame, isScelGameNumber, SCEL_GAMES } from './scel.js';
+export { normalizeLotteryJurisdiction, resolveJurisdictionUpdate, adaptScelToLotteryBarcode, isScelGameNumber };
 
 export const DEFAULT_STORES = [
   {
@@ -96,6 +96,26 @@ export function setCurrentStoreId(storeId) {
 export function getStoreStorageKey(storeId = null) {
   const sid = storeId || getCurrentStoreId();
   return `lotto_track_pos_data_v3_${sid}`;
+}
+
+export function getSavedPackJurisdiction(packNumber, gameNumber = null) {
+  if (!packNumber) return null;
+  try {
+    if (typeof window !== 'undefined' && window.state) {
+      const st = window.state;
+      const cleanP = String(packNumber).trim();
+      const slots = Array.isArray(st.slots) ? st.slots : [];
+      const foundSlot = slots.find(s => s && s.packNumber && isPackNumberMatch(s.packNumber, cleanP) && (!gameNumber || slotMatchesGameNumber(s, gameNumber)));
+      if (foundSlot && foundSlot.jurisdiction) return normalizeLotteryJurisdiction(foundSlot.jurisdiction);
+      const inStock = Array.isArray(st.inStockInventory) ? st.inStockInventory : [];
+      const foundStock = inStock.find(p => p && (p.packNumber || p.pack) && isPackNumberMatch(p.packNumber || p.pack, cleanP) && (!gameNumber || String(p.barcodePrefix || p.gameNumber || '').includes(String(gameNumber))));
+      if (foundStock && foundStock.jurisdiction) return normalizeLotteryJurisdiction(foundStock.jurisdiction);
+      const inv = Array.isArray(st.inventory) ? st.inventory : [];
+      const foundInv = inv.find(p => p && p.packNumber && isPackNumberMatch(p.packNumber, cleanP));
+      if (foundInv && foundInv.jurisdiction) return normalizeLotteryJurisdiction(foundInv.jurisdiction);
+    }
+  } catch (_) {}
+  return null;
 }
 
 export const SAMPLE_GAMES = [
@@ -345,8 +365,13 @@ export function inferPackDetailsFromCountdown(ticketNumber, securityCode) {
 // - 14-digit continuous barcode: "16480183788000" (tix 000), "16480183780001" (tix 001), "16720072520007" (tix 007)
 // - 17-digit barcode: "16480183788000029"
 // - 11-digit pack manifest: "16480183788"
-export function parseLotteryBarcode(raw, customGames = []) {
+export function parseLotteryBarcode(raw, customGames = [], jurisdiction = 'GA') {
   if (!raw) return null;
+  const targetJur = normalizeLotteryJurisdiction(jurisdiction);
+  if (targetJur === 'SC') {
+    return adaptScelToLotteryBarcode(raw, customGames);
+  }
+
   let s = String(raw).replace(/[\x00-\x1F\x7F]/g, '').trim();
   if (!s) return null;
   s = s.replace(/[;,.]$/, '').trim();
@@ -382,6 +407,52 @@ export function parseLotteryBarcode(raw, customGames = []) {
       isNonLotteryBarcode: true,
       raw
     };
+  }
+
+  // Distinct South Carolina Education Lottery (SCEL) 4-segment printed ticket format:
+  // GGGG-PPPPPP-C-TTT (SSS) (e.g. "1714-045114-6-002 (027)", "1705-002921-5-069 (080)", "1684-345553-4-004 (025)")
+  const scFourMatch = s.match(/^(\d{4})[-_\s]+(\d{6})[-_\s]+(\d{1})[-_\s]+(\d{3})(?:\s*([([{]\d+[)\]}]))?$/);
+  if (scFourMatch) {
+    const scGameNum = scFourMatch[1];
+    const scGame = findScelGame(scGameNum) || (customGames || []).find(g => (g.barcodePrefix === scGameNum || g.gameNumber === scGameNum) && g.jurisdiction === 'SCEL');
+    const rawSuffix = scFourMatch[5] || null;
+    if (scGame && (rawSuffix || targetJur === 'SC' || scGameNum === '1714')) {
+      const packNumber = scFourMatch[2];
+      const checkDigit = scFourMatch[3];
+      const ticketString = scFourMatch[4];
+      const ticketNum = parseInt(ticketString, 10);
+      const cleanSuffix = rawSuffix ? rawSuffix.replace(/[()[\]\s]/g, '') : null;
+      const formattedSuffix = cleanSuffix ? `(${cleanSuffix})` : (scGame.packSize ? `(${String((scGame.packSize - 1) - ticketNum).padStart(3, '0')})` : null);
+      const displayBarcode = formattedSuffix ? `${scGameNum}-${packNumber}-${checkDigit}-${ticketString} ${formattedSuffix}` : `${scGameNum}-${packNumber}-${checkDigit}-${ticketString}`;
+
+      return {
+        isValid: true,
+        jurisdiction: 'SC',
+        isPackBarcode: false,
+        gameNumber: scGameNum,
+        basePackNumber: packNumber,
+        packNumber: packNumber,
+        packClean: packNumber,
+        packCombined: `${packNumber}-${checkDigit}`,
+        ticketNumber: ticketNum,
+        ticketString: ticketString,
+        checkCode: checkDigit,
+        checkDigit: checkDigit,
+        securityCode: null,
+        hasExplicitSecurityCode: false,
+        rawSuffix: formattedSuffix,
+        standardBarcode: `${scGameNum}-${packNumber}-${checkDigit}-${ticketString}`,
+        canonicalId: `${scGameNum}-${packNumber}-${checkDigit}-${ticketString}`,
+        fullId: formattedSuffix ? `${scGameNum}-${packNumber}-${checkDigit}-${ticketString}${formattedSuffix}` : `${scGameNum}-${packNumber}-${checkDigit}-${ticketString}`,
+        displayBarcode: displayBarcode,
+        raw: raw,
+        game: scGame,
+        price: scGame.price,
+        packSize: scGame.packSize,
+        bookValue: scGame.bookValue,
+        gameName: scGame.name
+      };
+    }
   }
 
   // Pattern 0: 4-segment format: Game - Pack - Check - Ticket (Security)
@@ -502,6 +573,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
       securityCode = parenStr;
     }
 
+    const rawPackNumber = delimitedMatch[2];
     if (packNumber.length === 7 && checkCode === null) {
       checkCode = packNumber.slice(6, 7);
       packNumber = packNumber.slice(0, 6);
@@ -526,6 +598,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
     return {
       isValid: true,
       gameNumber,
+      rawPackNumber,
       basePackNumber: packNumber,
       packNumber: packNumber,
       packClean,
@@ -538,7 +611,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
       standardBarcode: `${gameNumber}${packNumber}${checkCode || '0'}${ticketString}`,
       canonicalId: checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString}` : `${gameNumber}-${packNumber}-${ticketString}`,
       fullId: `${gameNumber}-${packNumber}${checkCode ? '-' + checkCode : ''}-${ticketString}(${sec})`,
-      displayBarcode: (checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString} (${sec})` : `${gameNumber}-${packNumber}-${ticketString} (${sec})`),
+      displayBarcode: (rawPackNumber && rawPackNumber.length === 7)
+        ? `${gameNumber}-${rawPackNumber}-${ticketString} (${sec})`
+        : (checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString} (${sec})` : `${gameNumber}-${packNumber}-${ticketString} (${sec})`),
       inferredDetails,
       raw
     };
@@ -737,6 +812,28 @@ export function parseLotteryBarcode(raw, customGames = []) {
   // Layout B (e.g. Scientific Games): [4 Game][6 Pack][3 Ticket][1 Trailer]
   if (digits.length === 14) {
     const gameNumber = digits.slice(0, 4);
+    const packNumber = digits.slice(4, 10); // 6-digit pack (019869, 018378, 045114)
+    const isSC = isScelGameNumber(gameNumber);
+    const isGA = SAMPLE_GAMES.some(g => g.barcodePrefix === gameNumber) || (customGames || []).some(g => g.barcodePrefix === gameNumber);
+
+    // 1. Unambiguous SCEL game (e.g. 1705, 1684)
+    if (isSC && !isGA && targetJur === 'SC') {
+      return adaptScelToLotteryBarcode(raw, customGames);
+    }
+
+    // 2. Overlapping game present in both GA & SC catalogues (e.g. Game 1714)
+    if (isSC && isGA) {
+      const savedJur = getSavedPackJurisdiction(packNumber, gameNumber);
+      if (savedJur === 'SC') {
+        return adaptScelToLotteryBarcode(raw, customGames);
+      }
+      if (savedJur === 'GA') {
+        // Fall through to GA parsing below
+      } else if (targetJur === 'SC') {
+        return adaptScelToLotteryBarcode(raw, customGames);
+      }
+    }
+
     const gNum = parseInt(gameNumber, 10);
     const isLotteryGame = isKnownGamePrefix(gameNumber, customGames) || (gNum >= 100 && gNum <= 9999);
     if (!isLotteryGame) {
@@ -747,8 +844,6 @@ export function parseLotteryBarcode(raw, customGames = []) {
         raw
       };
     }
-
-    const packNumber = digits.slice(4, 10); // 6-digit pack (019869, 018378)
 
     // Layout A: [Game 4][Pack 6][Check 1][Ticket 3]
     const checkA = digits.slice(10, 11);
@@ -821,6 +916,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
         fullId: `${gameNumber}-${packNumber}${checkCode ? '-' + checkCode : ''}-${ticketString}(${sec})`,
         displayBarcode: (checkCode ? `${gameNumber}-${packNumber}-${checkCode}-${ticketString} (${sec})` : `${gameNumber}-${packNumber}-${ticketString} (${sec})`),
         inferredDetails,
+        isCollision: Boolean(isSC && isGA && !getSavedPackJurisdiction(packNumber, gameNumber)),
+        collisionGame: (isSC && isGA && !getSavedPackJurisdiction(packNumber, gameNumber)) ? gameNumber : null,
+        candidateJurisdictions: (isSC && isGA && !getSavedPackJurisdiction(packNumber, gameNumber)) ? ['SC', 'GA'] : null,
         raw
       };
     }
@@ -1132,14 +1230,18 @@ export function parseLotteryBarcode(raw, customGames = []) {
       };
     }
 
-    export function formatTicketDisplayBarcode(rawOrParsed, customGames = [], overrideSecurityCode = null) {
+    export function formatTicketDisplayBarcode(rawOrParsed, customGames = [], overrideSecurityCode = null, jurisdiction = 'GA') {
       if (!rawOrParsed) return '---';
       const parsed = (rawOrParsed && typeof rawOrParsed === 'object' && rawOrParsed.isValid !== undefined)
         ? rawOrParsed
-        : parseLotteryBarcode(rawOrParsed, customGames);
+        : parseLotteryBarcode(rawOrParsed, customGames, jurisdiction);
 
       if (!parsed || !parsed.isValid) {
         return String(rawOrParsed || '');
+      }
+
+      if (parsed.jurisdiction === 'SC' && parsed.displayBarcode) {
+        return parsed.displayBarcode;
       }
 
       // Pack barcode manifest (no individual ticket number)
@@ -1161,6 +1263,10 @@ export function parseLotteryBarcode(raw, customGames = []) {
         ? String(overrideSecurityCode).trim()
         : (parsed.securityCode || computeLotterySeriesCode(game, parsed.ticketNumber, customGames, parsed.inferredDetails?.packSize));
 
+      if (parsed.rawPackNumber && parsed.rawPackNumber.length === 7) {
+        return `${game}-${parsed.rawPackNumber}-${ticket} (${sec})`;
+      }
+
       if (check) {
         return `${game}-${pack}-${check}-${ticket} (${sec})`;
       }
@@ -1168,8 +1274,8 @@ export function parseLotteryBarcode(raw, customGames = []) {
       return `${game}-${pack}-${ticket} (${sec})`;
     }
 
-    export function formatLotteryBarcode(rawCode, customGames = [], overrideSecurityCode = null) {
-      return formatTicketDisplayBarcode(rawCode, customGames, overrideSecurityCode);
+    export function formatLotteryBarcode(rawCode, customGames = [], overrideSecurityCode = null, jurisdiction = 'GA') {
+      return formatTicketDisplayBarcode(rawCode, customGames, overrideSecurityCode, jurisdiction);
     }
 
     /**
@@ -1255,11 +1361,35 @@ export function parseLotteryBarcode(raw, customGames = []) {
       return false;
     }
 
-    export function findGameByBarcode(rawCode, customGames = []) {
+    export function findGameByBarcode(rawCode, customGames = [], jurisdiction = 'GA') {
       if (!rawCode) return null;
       const s = String(rawCode).trim();
       const digits = s.replace(/[^0-9]/g, '');
-      const parsed = parseLotteryBarcode(rawCode, customGames);
+      const cleanJur = normalizeLotteryJurisdiction(jurisdiction);
+      const parsed = parseLotteryBarcode(rawCode, customGames, cleanJur);
+
+      if (cleanJur === 'SC') {
+        if (parsed && parsed.gameNumber) {
+          const matchScel = findScelGame(parsed.gameNumber);
+          if (matchScel) return matchScel;
+        }
+        if (customGames && customGames.length > 0) {
+          for (const g of customGames) {
+            if (g.barcodePrefix && (s.startsWith(g.barcodePrefix) || digits.startsWith(g.barcodePrefix))) {
+              return g;
+            }
+          }
+        }
+        for (const g of SCEL_GAMES) {
+          if (g.barcodePrefix && (s.startsWith(g.barcodePrefix) || digits.startsWith(g.barcodePrefix))) {
+            return g;
+          }
+          if (g.name && s.toLowerCase().includes(g.name.toLowerCase())) {
+            return g;
+          }
+        }
+        if (cleanJur === 'SC') return null;
+      }
 
       // 1. Check if parsed gameNumber matches custom games
       if (parsed && parsed.gameNumber && customGames && customGames.length > 0) {
@@ -1339,7 +1469,9 @@ export function parseLotteryBarcode(raw, customGames = []) {
           }
 
           // Auto-sanitize and repair slots from original scannedBarcodes records
-          const targetTotal = parsed.totalSlots || 65;
+          const targetStoreMeta = (getStoresList() || []).find(s => s.id === storeId) || DEFAULT_STORES.find(s => s.id === storeId);
+          const configuredTotal = targetStoreMeta?.totalBoxes || 65;
+          const targetTotal = Math.max(configuredTotal, parsed.totalSlots || configuredTotal);
           if (!Array.isArray(parsed.slots)) {
             parsed.slots = [];
           }
@@ -1392,12 +1524,12 @@ export function parseLotteryBarcode(raw, customGames = []) {
               if (Array.isArray(s.scannedBarcodes) && s.scannedBarcodes.length > 0) {
                 const firstValid = s.scannedBarcodes.find(b => {
                   const bStr = typeof b === 'string' ? b : b?.barcode;
-                  const p = parseLotteryBarcode(bStr, parsed.customGames);
+                  const p = parseLotteryBarcode(bStr, parsed.customGames, parsed.lotteryJurisdiction || 'GA');
                   return p && p.isValid && p.packNumber;
                 });
                 if (firstValid) {
                   const bStr = typeof firstValid === 'string' ? firstValid : firstValid.barcode;
-                  const p = parseLotteryBarcode(bStr, parsed.customGames);
+                  const p = parseLotteryBarcode(bStr, parsed.customGames, parsed.lotteryJurisdiction || 'GA');
                   if (p && p.isValid) {
                     if (!s.packNumber || !isPackNumberMatch(s.packNumber, p.packNumber)) {
                       const accuratePack = p.packNumber || p.packCombined;
@@ -1508,8 +1640,7 @@ export function parseLotteryBarcode(raw, customGames = []) {
             if (parsed.cashierName === 'master') parsed.cashierName = 'Platform Administrator';
           }
 
-          const storeMeta = (getStoresList() || []).find(s => s.id === storeId);
-          parsed.lotteryJurisdiction = normalizeLotteryJurisdiction(storeMeta?.lotteryJurisdiction || parsed.lotteryJurisdiction);
+          parsed.lotteryJurisdiction = normalizeLotteryJurisdiction(targetStoreMeta?.lotteryJurisdiction || parsed.lotteryJurisdiction);
 
           return parsed;
         }
@@ -1567,7 +1698,10 @@ export function parseLotteryBarcode(raw, customGames = []) {
 
     export function getCleanEmptyState(existingState = null) {
       const slots = [];
-      const TOTAL_SLOTS = (existingState && existingState.totalSlots) ? existingState.totalSlots : 65;
+      const storeId = (typeof existingState === 'string' ? existingState : existingState?.storeId) || 'store_amigo';
+      const storeMeta = (getStoresList() || []).find(s => s.id === storeId) || DEFAULT_STORES.find(s => s.id === storeId);
+      const configuredTotal = storeMeta?.totalBoxes || 65;
+      const TOTAL_SLOTS = Math.max(configuredTotal, (existingState && existingState.totalSlots) ? existingState.totalSlots : configuredTotal);
 
       for (let i = 1; i <= TOTAL_SLOTS; i++) {
         slots.push({
@@ -1589,7 +1723,6 @@ export function parseLotteryBarcode(raw, customGames = []) {
         });
       }
 
-      const storeId = (typeof existingState === 'string' ? existingState : existingState?.storeId) || 'store_amigo';
       const cleanId = String(storeId).replace(/^store_/, '').replace(/[^a-zA-Z0-9_]/g, '_');
       const dispName = cleanId.charAt(0).toUpperCase() + cleanId.slice(1);
       const storeName = existingState?.storeName || ((storeId === 'store_amigo') ? 'AMIGO FOOD MART' : `${dispName.toUpperCase()} STORE`);

@@ -28,9 +28,11 @@ import {
   resubmitStoreDocuments,
   fetchStoreAdminDetails,
   verifyStoreDocumentsAndRetailer,
+  updateStoreJurisdiction,
   suspendStoreWithReason,
   reapproveSuspendedStore
 } from './adminStoreSync.js';
+import { normalizeLotteryJurisdiction } from './scel.js';
 
 // ----------------------------------------------------------------------------
 // 1. STORE-SIDE: Manage Lottery Tickets View Controller
@@ -1744,7 +1746,7 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
         : '<div style="color:var(--admin-text-muted); font-size:0.78rem;">No audit entries recorded yet.</div>';
 
       bodyEl.innerHTML = `
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px;">
         <div style="padding:8px 10px; border-radius:8px; background:rgba(148,163,184,0.08);">
           <div style="font-size:0.72rem; color:var(--admin-text-muted);">Subscription</div>
           <span class="badge-status ${s.subscriptionStatus === 'ACTIVE' ? 'approved' : 'suspended'}">${escapeHtml(s.subscriptionStatus)}</span>
@@ -1760,6 +1762,10 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
         <div style="padding:8px 10px; border-radius:8px; background:rgba(148,163,184,0.08);">
           <div style="font-size:0.72rem; color:var(--admin-text-muted);">Software Access</div>
           <span class="badge-status ${isSuspended ? 'suspended' : 'active'}">${escapeHtml(s.softwareAccessStatus)}</span>
+        </div>
+        <div style="padding:8px 10px; border-radius:8px; background:rgba(148,163,184,0.08);">
+          <div style="font-size:0.72rem; color:var(--admin-text-muted);">Jurisdiction</div>
+          <span class="badge-status ${normalizeLotteryJurisdiction(s.lotteryJurisdiction) === 'SC' ? 'info' : 'active'}">${escapeHtml(normalizeLotteryJurisdiction(s.lotteryJurisdiction))}</span>
         </div>
       </div>
 
@@ -1810,6 +1816,20 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
         </div>
       </div>
 
+      <div class="admin-review-section" style="margin:0;">
+        <div class="admin-review-section-title">Lottery Jurisdiction Configuration</div>
+        <div style="display:flex; gap:12px; align-items:flex-end;">
+          <div style="flex:1;">
+            <label class="admin-form-label" for="ctrlSelectJurisdiction">Active State Lottery Jurisdiction</label>
+            <select id="ctrlSelectJurisdiction" class="admin-form-select">
+              <option value="GA" ${normalizeLotteryJurisdiction(s.lotteryJurisdiction) === 'GA' ? 'selected' : ''}>Georgia (GA)</option>
+              <option value="SC" ${normalizeLotteryJurisdiction(s.lotteryJurisdiction) === 'SC' ? 'selected' : ''}>South Carolina (SC)</option>
+            </select>
+          </div>
+          <button type="button" id="btnCtrlSaveJurisdiction" class="btn-action-sm btn-approve" style="white-space:nowrap;">Save Jurisdiction</button>
+        </div>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="admin-review-section" style="margin:0; border-color:rgba(239,68,68,0.35);">
           <div class="admin-review-section-title" style="color:#ef4444;">Suspend Store &amp; Revoke Access</div>
@@ -1843,7 +1863,11 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
         const docSt = document.getElementById('ctrlSelectDocStatus')?.value;
         const retSt = document.getElementById('ctrlSelectRetailerAuth')?.value;
         const notes = document.getElementById('ctrlVerifyNotesInput')?.value?.trim() || '';
-        const res = await verifyStoreDocumentsAndRetailer(storeId, { documentStatus: docSt, retailerAuthStatus: retSt, adminNotes: notes });
+        const res = await verifyStoreDocumentsAndRetailer(storeId, {
+          documentStatus: docSt,
+          retailerAuthStatus: retSt,
+          adminNotes: notes
+        });
         if (res.success) {
           sfx.win?.();
           showToast('✓ Store document & retailer authorization statuses updated.', 'success');
@@ -1852,6 +1876,23 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
           openStoreControlModal(storeId);
         } else {
           showToast(res.message || 'Verification update failed.', 'error');
+        }
+      });
+
+      document.getElementById('btnCtrlSaveJurisdiction')?.addEventListener('click', async () => {
+        const jurSt = document.getElementById('ctrlSelectJurisdiction')?.value;
+        const previousJur = normalizeLotteryJurisdiction(s.lotteryJurisdiction);
+        const res = await updateStoreJurisdiction(storeId, jurSt);
+        if (res.success) {
+          sfx.win?.();
+          showToast('✓ Store lottery jurisdiction updated.', 'success');
+          await syncAdminStateFromServer();
+          renderActiveAdminPane();
+          openStoreControlModal(storeId);
+        } else {
+          const selectEl = document.getElementById('ctrlSelectJurisdiction');
+          if (selectEl) selectEl.value = previousJur;
+          showToast(res.message || 'Failed to update store jurisdiction.', 'error');
         }
       });
 
@@ -1904,6 +1945,8 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
         const docBadge = `<span class="badge-status ${docSt === 'APPROVED' ? 'approved' : (docSt === 'ACTION_REQUIRED' || docSt === 'REJECTED' ? 'rejected' : 'pending')}">${escapeHtml(docSt)}</span>`;
         const retBadge = `<span class="badge-status ${retSt === 'VALID' ? 'approved' : (retSt === 'INVALID' || retSt === 'SUSPENDED' ? 'rejected' : 'pending')}">${escapeHtml(retSt)}</span>`;
         const accBadge = `<span class="badge-status ${isSuspended ? 'suspended' : 'active'}">${escapeHtml(accSt)}</span>`;
+        const jur = normalizeLotteryJurisdiction(s.lotteryJurisdiction);
+        const jurBadge = `<span class="badge-status ${jur === 'SC' ? 'info' : 'active'}" style="font-size:0.68rem; margin-left:4px;" title="Lottery Jurisdiction: ${jur === 'SC' ? 'South Carolina (SC)' : 'Georgia (GA)'}">${escapeHtml(jur)}</span>`;
 
         const planLabel = s.subscription ? `${s.subscription.planName} ($${s.subscription.amountPaid || 0})` : 'Standard';
         const docsLabel = s.licenseFilesCount ? `${s.licenseFilesCount} file(s)` : '';
@@ -1913,7 +1956,7 @@ export function initAdminDashboardScreen({ showToast, sfx, showSellCounterView }
         return `
         <tr>
           <td>
-            <strong style="color:var(--admin-heading-color);">${escapeHtml(s.storeName)}</strong>
+            <strong style="color:var(--admin-heading-color);">${escapeHtml(s.storeName)}</strong>${jurBadge}
             <div style="font-family:var(--mono); font-size:0.72rem; color:#94a3b8;">${escapeHtml(s.storeId)} · ${escapeHtml(planLabel)}</div>
           </td>
           <td>
