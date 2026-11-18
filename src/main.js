@@ -8941,8 +8941,10 @@ function openSetTicketDetailsModal(barcode, standardCode = null) {
     if (btnAddStock) btnAddStock.style.display = 'none';
   }
 
-  // Populate metadata line (clean 6-digit pack number for display, check digit shown separately)
-  const displayPack = (parsed && (parsed.basePackNumber || parsed.packNumber)) ? (parsed.basePackNumber || parsed.packNumber) : ((parsed && parsed.packCombined) ? parsed.packCombined : '—');
+  // Populate metadata line: Georgia shows the full 7-digit book number (e.g. 0018902); SC keeps its 6-digit pack
+  const displayPack = parsed?.jurisdiction === 'SC'
+    ? (parsed.basePackNumber || parsed.packNumber || parsed.packCombined || '—')
+    : (parsed?.packNumber || parsed?.basePackNumber || parsed?.packCombined || '—');
   const displayTicketNum = (parsed && parsed.ticketString)
     ? parsed.ticketString
     : (parsed && parsed.ticketNumber !== null

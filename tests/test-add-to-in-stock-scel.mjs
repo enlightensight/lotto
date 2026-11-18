@@ -151,7 +151,7 @@ runTest('3.1: Georgia ticket 1886-003594-0-029 (000) continues to parse with che
   const gaParsed = parseLotteryBarcode('1886-003594-0-029 (000)', [], 'GA');
   assert.strictEqual(gaParsed.isValid, true);
   assert.strictEqual(gaParsed.gameNumber, '1886');
-  assert.strictEqual(gaParsed.packNumber, '003594');
+  assert.strictEqual(gaParsed.packNumber, '0035940');
   assert.strictEqual(gaParsed.checkCode, '0');
   assert.strictEqual(gaParsed.ticketNumber, 29);
   assert.strictEqual(gaParsed.securityCode, '000');
@@ -457,7 +457,7 @@ runTest('4.7: Functional: Georgia 1886 Add to In-Stock preserves standard GA pac
   assert.strictEqual(testState.inStockInventory.length, 1);
   const item = testState.inStockInventory[0];
   assert.strictEqual(item.gameNumber, 'Game 1886');
-  assert.strictEqual(item.packNumber, '003594');
+  assert.strictEqual(item.packNumber, '0035940');
   assert.strictEqual(item.price, 10);
   assert.strictEqual(item.position, '029');
   assert.strictEqual(item.packSize, '30 tickets');

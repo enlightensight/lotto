@@ -366,6 +366,25 @@ export function inferPackDetailsFromCountdown(ticketNumber, securityCode) {
 // - 17-digit barcode: "16480183788000029"
 // - 11-digit pack manifest: "16480183788"
 export function parseLotteryBarcode(raw, customGames = [], jurisdiction = 'GA') {
+  return withFullGaPackNumber(parseLotteryBarcodeCore(raw, customGames, jurisdiction));
+}
+
+// Georgia books are identified by 7 digits: the digit after the 6-digit pack is part of the book number
+// (consecutive books like 0018902 / 0018903 of one game sit in different boxes), so it must not be dropped.
+// basePackNumber keeps the 6-digit form; South Carolina keeps its own pack + check digit format.
+function withFullGaPackNumber(r) {
+  if (!r || !r.isValid || r.jurisdiction === 'SC') return r;
+  const base = String(r.basePackNumber || '');
+  const check = r.checkCode === null || r.checkCode === undefined ? '' : String(r.checkCode);
+  if (!/^\d{6}$/.test(base) || !/^\d$/.test(check)) return r;
+  // packClean must carry the 7th digit too: the selling code ORs packNumber/packCombined/packClean matches,
+  // so a 6-digit packClean would let a ticket from book …2 match the box holding book …3.
+  // Boxes saved before this change (6 digits) still match through packNumber's 6-digit fallback.
+  const full = base + check;
+  return { ...r, packNumber: full, packClean: full.replace(/^0+/, '') || full };
+}
+
+function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
   if (!raw) return null;
   const targetJur = normalizeLotteryJurisdiction(jurisdiction);
   if (targetJur === 'SC') {
@@ -1347,11 +1366,39 @@ export function parseLotteryBarcode(raw, customGames = [], jurisdiction = 'GA') 
     }
 
     /**
-     * High-precision pack number matching across tickets of the same physical pack.
-     * Matches exact normalized pack strings or identical physical base packs (excluding position check digits).
+     * Full 7-digit Georgia book number (6-digit pack + following digit), leading zeros stripped,
+     * or '' when the input doesn't carry that 7th digit (e.g. a hand-typed 6-digit pack or 10/13/16-digit codes).
+     * "19080018902040" / "1908-001890-2-040" / "001890-2" / "0018902" -> "18902"
+     */
+    export function getFullPackNumber(pack) {
+      if (!pack) return '';
+      const s = String(pack).replace(/[\r\n\t]/g, '').replace(/^\][a-zA-Z0-9]{2,3}/, '').trim();
+      const strip = v => v.replace(/^0+/, '') || v;
+      const four = s.match(/^(\d{3,5})[-_/\s.:]+(\d{6})[-_/\s.:]+(\d)[-_/\s.:]+\d{1,4}/);
+      if (four) return strip(four[2] + four[3]);
+      const parts = s.split(/[-_\s]+/);
+      if (parts.length === 2 && /^\d{6}$/.test(parts[0]) && /^\d$/.test(parts[1])) return strip(parts[0] + parts[1]);
+      if (parts.length === 3 && /^\d{3,5}$/.test(parts[0]) && /^\d{6}$/.test(parts[1]) && /^\d$/.test(parts[2])) return strip(parts[1] + parts[2]);
+      if (!/^\d+$/.test(s)) return '';
+      if (s.length === 7) return strip(s);
+      // Full barcodes: let the parser decide where the book digits are (layouts differ by game and length)
+      if (s.length >= 10) {
+        const p = parseLotteryBarcode(s);
+        return p && p.isValid && /^\d{7}$/.test(String(p.packNumber || '')) ? strip(p.packNumber) : '';
+      }
+      return '';
+    }
+
+    /**
+     * Same physical book? When both sides carry the full 7-digit book number they must match exactly,
+     * so neighbouring books (0018902 / 0018903) stay separate. Otherwise fall back to the 6-digit pack
+     * (older boxes saved with 6 digits, hand-typed numbers).
      */
     export function isPackNumberMatch(packA, packB) {
       if (!packA || !packB) return false;
+      const fullA = getFullPackNumber(packA);
+      const fullB = getFullPackNumber(packB);
+      if (fullA && fullB) return fullA === fullB;
       const normA = normalizePackNumber(packA);
       const normB = normalizePackNumber(packB);
       if (normA && normB && normA === normB) return true;
