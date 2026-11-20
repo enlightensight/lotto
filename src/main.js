@@ -2,7 +2,7 @@
 import './style.css';
 import './design-system.css';
 import './responsive.css';
-import { loadState, saveState, resetToDefaults, resetToCleanState, getCleanEmptyState, SAMPLE_GAMES, findGameByBarcode, getStandardPackDetails, parseLotteryBarcode, normalizePackNumber, isPackNumberMatch, formatLotteryBarcode, computeLotterySeriesCode, DEFAULT_STORES, getStoresList, saveStoresList, getCurrentStoreId, setCurrentStoreId, getStoreStorageKey, normalizeLotteryJurisdiction, getStoreJurisdiction } from './data.js';
+import { loadState, saveState, shouldUseServerState, resetToDefaults, resetToCleanState, getCleanEmptyState, SAMPLE_GAMES, findGameByBarcode, getStandardPackDetails, parseLotteryBarcode, normalizePackNumber, isPackNumberMatch, formatLotteryBarcode, computeLotterySeriesCode, DEFAULT_STORES, getStoresList, saveStoresList, getCurrentStoreId, setCurrentStoreId, getStoreStorageKey, normalizeLotteryJurisdiction, getStoreJurisdiction } from './data.js';
 import { sfx, voice } from './audio.js';
 import { setupDayReportHandlers, openDayReportModal, printDayReport, populateDayReportDOM } from './dayReportRenderer.js';
 import { getDayReportData, getScreenDayReportData } from './dayReportData.js';
@@ -1714,14 +1714,10 @@ function initPOS() {
           serverState.retailerNumber = 'GA-ADM01';
           if (serverState.cashierName === 'master') serverState.cashierName = 'Platform Administrator';
         }
-        const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
-        const localTime = state.lastSavedAt ? new Date(state.lastSavedAt).getTime() : 0;
-        const isServerNewer = serverTime >= localTime;
-        const isDifferent = JSON.stringify(serverState.slots) !== JSON.stringify(state.slots) ||
-          (serverState.shiftNumber || 1) !== (state.shiftNumber || 1) ||
-          (serverState.soldBarcodes || []).length !== (state.soldBarcodes || []).length ||
-          (serverState.inStockInventory || []).length !== (state.inStockInventory || []).length;
-        if (isServerNewer || isDifferent) {
+        if (!shouldUseServerState(serverState, state)) {
+          // This device holds newer work the server never received: keep it and push it up now
+          saveState(state, currentSid);
+        } else {
           Object.assign(state, serverState);
           state.storeId = currentSid;
           state.dataCleared = Boolean(serverState.dataCleared);
@@ -15992,12 +15988,8 @@ function handleSetBoxForTicket(boxNumber, barcode, detectedGame, restorePack = n
       } catch (_) { }
 
       const localState = loadState(targetStoreId);
-      const serverActive = (loadedServerState?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
-      const localActive = (localState?.slots || []).filter(s => s && s.status === 'ACTIVE' && s.packNumber).length;
-      const serverTime = loadedServerState?.lastSavedAt ? new Date(loadedServerState.lastSavedAt).getTime() : 0;
-      const localTime = localState?.lastSavedAt ? new Date(localState.lastSavedAt).getTime() : 0;
 
-      if (loadedServerState && Array.isArray(loadedServerState.slots) && (serverTime >= localTime || serverActive >= localActive)) {
+      if (shouldUseServerState(loadedServerState, localState)) {
         state = loadedServerState;
       } else {
         state = localState;

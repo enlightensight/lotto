@@ -1723,6 +1723,18 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
       return fresh;
     }
 
+    /**
+     * On sign-in / page load, decide whether the server copy should replace this device's copy.
+     * Only a server copy saved at the same time or later wins: a newer local copy (e.g. a shift whose
+     * saves never reached the server) must never be overwritten just because the two differ.
+     */
+    export function shouldUseServerState(serverState, localState) {
+      if (!serverState || !Array.isArray(serverState.slots)) return false;
+      const serverTime = serverState.lastSavedAt ? new Date(serverState.lastSavedAt).getTime() : 0;
+      const localTime = localState?.lastSavedAt ? new Date(localState.lastSavedAt).getTime() : 0;
+      return serverTime >= localTime;
+    }
+
     export function saveState(state, targetStoreId = null) {
       const storeId = targetStoreId || (state && state.storeId) || getCurrentStoreId();
       if (state) {
