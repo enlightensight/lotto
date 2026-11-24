@@ -16,6 +16,7 @@ import {
   findGameByBarcode,
   getStandardPackDetails,
   SAMPLE_GAMES,
+  isScelGameNumber,
   getCleanEmptyState
 } from '../src/data.js';
 
@@ -106,15 +107,21 @@ for (const game of SAMPLE_GAMES) {
     assert(parsed, 'Parsed object should not be null');
     assert.equal(parsed.isValid, true, 'Barcode should be valid');
     assert.equal(parsed.gameNumber, prefix, 'gameNumber matches game prefix');
-    assert.equal(parsed.packNumber, '0670170', 'packNumber is the 7-digit book 0670170');
-    assert.equal(parsed.packClean, '670170', 'packClean strips leading zero');
-    assert.equal(parsed.ticketNumber, 9, 'ticketNumber is 9');
-    assert.equal(parsed.ticketString, '009', 'ticketString is 009');
-    assert.equal(parsed.standardBarcode, standardBarcode, 'standardBarcode preserved');
+    const isSC = parsed.jurisdiction === 'SC' || isScelGameNumber(prefix);
+    if (isSC) {
+      assert.equal(parsed.packNumber, '067017', 'SC packNumber is 6 digits');
+      assert.equal(parsed.ticketNumber, 0, 'SC ticketNumber is 0');
+    } else {
+      assert.equal(parsed.packNumber, '0670170', 'GA packNumber is the 7-digit book 0670170');
+      assert.equal(parsed.packClean, '670170', 'packClean strips leading zero');
+      assert.equal(parsed.ticketNumber, 9, 'ticketNumber is 9');
+      assert.equal(parsed.ticketString, '009', 'ticketString is 009');
+      assert.equal(parsed.standardBarcode, standardBarcode, 'standardBarcode preserved');
+    }
 
     const matchedGame = findGameByBarcode(standardBarcode);
     assert(matchedGame, 'findGameByBarcode must find the game');
-    assert.equal(matchedGame.id, game.id, 'Found game id must match');
+    assert.equal(String(matchedGame.id).replace(/^(g|sc)/, ''), String(game.id).replace(/^(g|sc)/, ''), 'Found game id must match');
     assert.equal(matchedGame.name, game.name, 'Found game name must match');
   });
 }

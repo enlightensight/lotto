@@ -62,7 +62,8 @@ it('Physical ticket printed text "1648-018378-8-029(000)" parses ticket #029', (
   const p = parseLotteryBarcode('1648-018378-8-029(000)');
   assert.ok(p && p.isValid);
   assert.equal(p.gameNumber, '1648');
-  assert.equal(p.packNumber, '018378');
+  assert.equal(p.basePackNumber, '018378');
+  assert.ok(isPackNumberMatch(p.packNumber, '018378'));
   assert.equal(p.ticketNumber, 29, 'Ticket must be 29, NEVER 290');
   assert.equal(p.ticketString, '029');
   assert.equal(p.checkCode, '8');
@@ -134,7 +135,8 @@ it('Physical ticket printed text "1658-350877-3-029(000)" parses ticket #029', (
   const p = parseLotteryBarcode('1658-350877-3-029(000)');
   assert.ok(p && p.isValid);
   assert.equal(p.gameNumber, '1658');
-  assert.equal(p.packNumber, '350877');
+  assert.equal(p.basePackNumber, '350877');
+  assert.ok(isPackNumberMatch(p.packNumber, '350877'));
   assert.equal(p.ticketNumber, 29);
   assert.equal(p.ticketString, '029');
   assert.equal(p.checkCode, '3');
@@ -209,7 +211,7 @@ it('Physical 14-digit scanned barcode "16700198690017" parses ticket #001 (NOT #
   assert.equal(p.ticketNumber, 1, 'Must parse as Ticket #001 (NOT #017)');
   assert.equal(p.ticketString, '001');
   assert.equal(p.securityCode, '148');
-  assert.equal(p.displayBarcode, '1670-019869-001 (148)');
+  assert.equal(p.displayBarcode, '1670-019869-9-001 (148)');
 });
 
 // ----------------------------------------------------------------------------

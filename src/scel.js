@@ -97,6 +97,66 @@ export const SCEL_GAMES = [
     packSize: 60,
     bookValue: 300,
     jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1670',
+    gameNumber: '1670',
+    barcodePrefix: '1670',
+    name: 'HIT $100',
+    price: 2,
+    packSize: 150,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1678',
+    gameNumber: '1678',
+    barcodePrefix: '1678',
+    name: '7-11-21 TRIPLER',
+    price: 2,
+    packSize: 150,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1690',
+    gameNumber: '1690',
+    barcodePrefix: '1690',
+    name: '$200,000 PAYDAY',
+    price: 5,
+    packSize: 60,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1691',
+    gameNumber: '1691',
+    barcodePrefix: '1691',
+    name: 'BIG MATCH BONUS',
+    price: 5,
+    packSize: 60,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1665',
+    gameNumber: '1665',
+    barcodePrefix: '1665',
+    name: '200X',
+    price: 10,
+    packSize: 30,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1683',
+    gameNumber: '1683',
+    barcodePrefix: '1683',
+    name: 'MAGNIFICENT JUMBO BUCKS',
+    price: 10,
+    packSize: 30,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
   }
 ];
 
@@ -127,7 +187,8 @@ export function computeScCheckDigit(packNumber) {
 export function findScelGame(gameNumber) {
   if (!gameNumber) return null;
   const str = String(gameNumber).trim();
-  return SCEL_GAMES.find(g => g.gameNumber === str || g.barcodePrefix === str) || null;
+  const cleanNum = str.replace(/^scel_|^sc_?/, '');
+  return SCEL_GAMES.find(g => g.gameNumber === str || g.barcodePrefix === str || g.id === str || g.gameNumber === cleanNum || g.barcodePrefix === cleanNum) || null;
 }
 
 /**
@@ -409,7 +470,8 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
     finalSuffix = `(${String(countdown).padStart(3, '0')})`;
   }
 
-  const canonicalId = `${gameNumber}-${packNumber}-${checkDigit}-${ticketString}`;
+  const sec = finalSuffix ? finalSuffix.replace(/[^0-9]/g, '') : null;
+  const canonicalId = checkDigit ? `${gameNumber}-${packNumber}-${checkDigit}-${ticketString}` : `${gameNumber}-${packNumber}-${ticketString}`;
   const standardBarcode = canonicalId;
   const fullId = finalSuffix ? `${canonicalId}${finalSuffix.replace(/\s+/g, '')}` : canonicalId;
   const displayBarcode = finalSuffix ? `${canonicalId} ${finalSuffix}` : canonicalId;
@@ -422,13 +484,13 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
     basePackNumber: packNumber,
     packNumber,
     packClean: packNumber,
-    packCombined: `${packNumber}-${checkDigit}`,
+    packCombined: checkDigit ? `${packNumber}-${checkDigit}` : packNumber,
     ticketNumber: ticketNum,
     ticketString,
     checkCode: checkDigit,
     checkDigit: checkDigit,
-    securityCode: null,
-    hasExplicitSecurityCode: false,
+    securityCode: sec,
+    hasExplicitSecurityCode: Boolean(rawSuffix),
     rawSuffix: finalSuffix,
     standardBarcode,
     canonicalId,

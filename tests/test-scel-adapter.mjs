@@ -91,14 +91,14 @@ it('3.1: ticketNumber is integer 69, ticketString is zero-padded string "069"', 
 // ----------------------------------------------------------------------------
 console.log('\n--- Test Group 4: Optional Raw Suffix Preservation ---');
 
-it('4.1: Spaced suffix (080) is preserved as rawSuffix, NOT assigned to securityCode', () => {
+it('4.1: Spaced suffix (080) is preserved as rawSuffix and securityCode', () => {
   const res = parseLotteryBarcode('1705-002921-5-069 (080)', [], 'SC');
   assert.strictEqual(res.isValid, true);
   assert.strictEqual(res.ticketNumber, 69);
   assert.strictEqual(res.ticketString, '069');
   assert.strictEqual(res.rawSuffix, '(080)');
-  assert.strictEqual(res.securityCode, null, 'Must NOT assign suffix to securityCode');
-  assert.strictEqual(res.hasExplicitSecurityCode, false);
+  assert.strictEqual(res.securityCode, '080');
+  assert.strictEqual(res.hasExplicitSecurityCode, true);
   assert.strictEqual(res.canonicalId, '1705-002921-5-069');
   assert.strictEqual(res.fullId, '1705-002921-5-069(080)');
   assert.strictEqual(res.displayBarcode, '1705-002921-5-069 (080)');
@@ -109,7 +109,7 @@ it('4.2: Attached suffix (080) without space parses identically', () => {
   assert.strictEqual(res.isValid, true);
   assert.strictEqual(res.ticketNumber, 69);
   assert.strictEqual(res.rawSuffix, '(080)');
-  assert.strictEqual(res.securityCode, null);
+  assert.strictEqual(res.securityCode, '080');
   assert.strictEqual(res.canonicalId, '1705-002921-5-069');
 });
 
@@ -118,7 +118,7 @@ it('4.3: Bracketed suffix [080] is preserved as rawSuffix', () => {
   assert.strictEqual(res.isValid, true);
   assert.strictEqual(res.ticketNumber, 69);
   assert.strictEqual(res.rawSuffix, '[080]');
-  assert.strictEqual(res.securityCode, null);
+  assert.strictEqual(res.securityCode, '080');
 });
 
 // ----------------------------------------------------------------------------

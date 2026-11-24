@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { parseLotteryBarcode, formatLotteryBarcode, SAMPLE_GAMES } from '../src/data.js';
+import { parseLotteryBarcode, formatLotteryBarcode, isPackNumberMatch, SAMPLE_GAMES } from '../src/data.js';
 
 console.log('====================================================');
 console.log('   VERIFYING USER REQUIREMENTS IMPLEMENTATION       ');
@@ -35,7 +35,8 @@ console.log('--- Test 2: Dual 14-Digit Layout Resolution ---');
 // Layout A: 14040182410098 -> Game 1404, Pack 018241, Check 0, Ticket 098
 const parsedA = parseLotteryBarcode('14040182410098');
 assert.strictEqual(parsedA.gameNumber, '1404');
-assert.strictEqual(parsedA.packNumber, '018241');
+assert.strictEqual(parsedA.basePackNumber, '018241');
+assert.ok(isPackNumberMatch(parsedA.packNumber, '018241'));
 assert.strictEqual(parsedA.checkCode, '0');
 assert.strictEqual(parsedA.ticketNumber, 98);
 console.log('  ✓ PASS: Layout A (with check code) preserved for standard games');

@@ -243,28 +243,25 @@ export default function Landing() {
         {/* 5. Benefits */}
         <section id="benefits" className="section" aria-labelledby="benefits-heading">
           <div className="container">
-            <h2 id="benefits-heading" className="section-h2">Less paperwork for you. Complete clarity for your staff.</h2>
-            
-            <div className="perspectives-grid">
-              <div className="perspective-block">
-                <h3 className="perspective-role-title">For Store Owners:</h3>
+            <h2 id="benefits-heading" className="section-h2">Balance your lottery drawer in 3 minutes. Stop cash loss forever.</h2>
+            <p className="section-lead">No paper notebooks, no midnight calculator math, and zero cash discrepancies. LottoTrack tracks every scratch-off ticket automatically &mdash; so your cash drawer balances down to the penny on every shift.</p>
+
+            <div className="benefits-user-layout">
+              <div className="benefits-user-content">
                 <ul className="perspective-features-list">
-                  <li><strong>Stop cash loss &amp; theft:</strong> Automatically compare counted cash against actual ticket sales and player payouts to see if the drawer is Balanced, Over, or Short.</li>
-                  <li><strong>Save 45+ minutes every day:</strong> Eliminate tedious notebook logging and midnight calculator math across all 65 dispenser boxes.</li>
-                  <li><strong>Daily reports sent to your email:</strong> Shift and Day Reports are auto-emailed to your phone the moment a shift closes so you stay informed anywhere.</li>
-                  <li><strong>Safe &amp; counter inventory control:</strong> Monitor active packs on the counter, spare rolls in the safe, and vendor return credits from one screen.</li>
+                  <li><strong>Stop cash drawer shortages:</strong> Automatically compares counted cash against actual ticket sales and player payouts, so you instantly see if the drawer is Balanced down to the penny.</li>
+                  <li><strong>Save 45+ minutes every shift:</strong> Eliminates tedious handwritten notebooks and midnight calculator math across all 65 dispenser boxes.</li>
+                  <li><strong>Live 65-box rack tracking:</strong> Your screen mirrors your physical acrylic counter rack box-for-box. See active packs, ticket numbers, and safe backup rolls at a glance.</li>
+                  <li><strong>Fast touch-friendly register:</strong> Designed for busy retail checkout counters with large touch buttons, barcode scanner support, and audio confirmations for fast checkout.</li>
+                  <li><strong>Instant 2-second typo fix:</strong> Entered the wrong number? Click &quot;Fix Position&quot; to correct any ticket immediately without restarting the shift or losing data.</li>
+                  <li><strong>Daily reports sent to your phone:</strong> Detailed Shift and Day Reports are auto-generated and emailed to you the second a shift closes, keeping you informed anywhere.</li>
                 </ul>
-                <div className="perspective-visuals-stack"><Shot file="rack.png" alt="Lottery inventory status dashboard" /></div>
               </div>
-              <div className="perspective-block">
-                <h3 className="perspective-role-title">For Cashiers &amp; Counter Staff:</h3>
-                <ul className="perspective-features-list">
-                  <li><strong>Large, touch-friendly controls:</strong> Designed for fast-paced retail checkout counters with clear numbers and responsive touch keys.</li>
-                  <li><strong>Audio &amp; voice confirmations:</strong> Audible beeps and spoken ticket confirmations prevent missed scans and accidental double-scans.</li>
-                  <li><strong>Stress-free 3-minute shift handoff:</strong> Hand over the register to the next clerk in minutes with automated sales calculations.</li>
-                  <li><strong>Instant error correction:</strong> Entered the wrong number? Use &quot;Fix Position&quot; to correct any ticket in 2 seconds without restarting.</li>
-                </ul>
-                <div className="perspective-visuals-stack"><Shot file="cashier-screen.png" alt="LottoTrack Pro counter screen with large +1 sell buttons and live totals" /></div>
+              <div className="benefits-user-visual">
+                <Shot file="cashier-screen.png" alt="LottoTrack POS counter screen with active dispenser boxes, quick sell buttons, ticket positions, and live day settlement totals" />
+                <p className="showcase-caption">
+                  <strong>Live Counter Register Interface</strong> &mdash; Quick sell buttons, active pack tracking, and real-time sales settlement.
+                </p>
               </div>
             </div>
           </div>

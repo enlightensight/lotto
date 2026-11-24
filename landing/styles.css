@@ -675,6 +675,33 @@ button, input, select, textarea {
   margin-top: 2rem;
 }
 
+.benefits-user-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.benefits-user-visual {
+  display: flex;
+  flex-direction: column;
+}
+
+.showcase-caption {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.showcase-caption strong {
+  color: var(--ink);
+}
+
 .perspective-block {
   background-color: transparent;
   border: none;
@@ -1310,6 +1337,7 @@ button, input, select, textarea {
   .how-steps-grid,
   .workflow-step-row,
   .perspectives-grid,
+  .benefits-user-layout,
   .reconciliation-outcomes-grid,
   .cta-form-wrapper {
     grid-template-columns: 1fr;
