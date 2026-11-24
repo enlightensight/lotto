@@ -726,7 +726,7 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
   // 17 digits: 4 game + 6 pack + 1 check + 3 ticket + 3 security (e.g. 16700198693000149, 16480183788029000, 17140451146002027)
   if (digits.length === 17) {
     const gameNumber = digits.slice(0, 4);
-    const isSC = isScelGameNumber(gameNumber) || (customGames || []).some(g => (g.barcodePrefix === gameNumber || g.gameNumber === gameNumber) && g.jurisdiction === 'SCEL');
+    const isSC = isScelGameNumber(gameNumber) || (customGames || []).some(g => (g.barcodePrefix === gameNumber || g.gameNumber === gameNumber) && g.jurisdiction === 'SCEL') || targetJur === 'SC';
     if (isSC) {
       return adaptScelToLotteryBarcode(digits, customGames);
     }
@@ -819,7 +819,7 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
   // Layout B (e.g. Scientific Games): [4 Game][6 Pack][3 Ticket][1 Trailer]
   if (digits.length === 14) {
     const gameNumber = digits.slice(0, 4);
-    const isSC = isScelGameNumber(gameNumber) || (customGames || []).some(g => (g.barcodePrefix === gameNumber || g.gameNumber === gameNumber) && g.jurisdiction === 'SCEL');
+    const isSC = isScelGameNumber(gameNumber) || (customGames || []).some(g => (g.barcodePrefix === gameNumber || g.gameNumber === gameNumber) && g.jurisdiction === 'SCEL') || targetJur === 'SC';
     if (isSC) {
       return adaptScelToLotteryBarcode(digits, customGames);
     }

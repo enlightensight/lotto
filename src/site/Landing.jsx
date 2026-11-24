@@ -5,31 +5,36 @@ import { Wordmark } from './Logo.jsx';
 const IMG = '/landing';
 
 const WORKFLOW = [
-  ['A pack arrives.', 'Scan or type the incoming pack barcode into Fast Pack Intake. LottoTrack identifies the game and activates the pack directly into your dispenser inventory.', '01-scan-pack.png', 'LottoTrack Update Inventory and Store Audit showing active packs, empty slots, and ticket counts across dispenser boxes'],
-  ['LottoTrack audits your stock.', 'The store audit keeps complete count of active packs, empty slots, and reserve packs stored off-counter in your safe, keeping counter and safe inventory in sync.', '02-pack-identified.png', 'Update Inventory and Store Audit showing active packs, empty slots, and off-counter safe storage inventory'],
-  ['Put it in a box.', 'Box details show the active game, pack number, starting ticket #00, tickets sold, and remaining count, with quick actions to switch boxes or adjust ticket positions.', '03-choose-box.png', 'Dispenser box details showing a pack with ticket counts and management actions'],
-  ['Inventory updates.', 'The real-time inventory dashboard displays active pack counts, shift sales, remaining tickets, and total retail value on display.', '05-inventory-updates.png', 'Lottery inventory status dashboard showing active packs, tickets sold, remaining tickets and rack value'],
-  ['The shift closes.', 'During shift closing or game changes, choose whether to return unsold tickets to the lottery for vendor credit or safely transfer them into your store safe.', '06-close-shift.png', 'Pack removal options showing Return to Lottery and Move to Storage'],
-  ['The report is ready.', 'LottoTrack compiles the Day Report showing itemized opening and closing ticket numbers, prices, and total sales per box, ready to print or save to PDF.', '07-report.png', 'Day Report print preview showing itemized box numbers, open and close ticket counts and total sales']
+  ['1. A pack arrives at your store.', 'Scan or type the barcode on any incoming scratch-off roll. LottoTrack automatically identifies the game title, ticket price ($1 to $50), and pack size without manual typing.', '01-scan-pack.png', 'LottoTrack Update Inventory and Store Audit showing active packs, empty slots, and ticket counts across dispenser boxes'],
+  ['2. Put it in an active box.', 'Assign the pack to any counter box (Box 1 to Box 65). The on-screen grid mirrors your physical acrylic counter rack box-for-box so cashiers always know what is in each slot.', '03-choose-box.png', 'Dispenser box details showing a pack with ticket counts and management actions'],
+  ['3. Sell tickets with 1 scan or click.', 'As customers buy tickets, cashiers scan the barcode or tap +1 on the box. Real-time audio and voice feedback confirms every sale so no ticket is missed.', '04-sell-ticket.png', 'Cashier selling a ticket with large controls and instant position tracking'],
+  ['4. Live inventory updates automatically.', 'The live inventory dashboard displays active pack counts, tickets remaining in the rack, tickets sold today, and total retail dollar value on display.', '05-inventory-updates.png', 'Lottery inventory status dashboard showing active packs, tickets sold, remaining tickets and rack value'],
+  ['5. Safe storage & vendor returns.', 'Keep counter inventory and back safe storage in perfect sync. If a game ends or needs to be returned to the state lottery for credit, remove it safely with 1 click.', '06-close-shift.png', 'Pack removal options showing Return to Lottery and Move to Storage'],
+  ['6. Close the shift in under 3 minutes.', 'At shift change or store closing, cashiers quickly scan or enter closing tickets. LottoTrack does all the math automatically—no paper logs or midnight calculators.', '02-pack-identified.png', 'Two-phase end shift reconciliation calculating ticket counts and sales totals'],
+  ['7. The report is ready & emailed to you.', 'LottoTrack generates an itemized Day Report showing starting/closing ticket numbers and revenue per box. It prints cleanly, exports to PDF, and auto-emails to the owner.', '07-report.png', 'Day Report print preview showing itemized box numbers, open and close ticket counts and total sales']
 ];
 
 const FAQ = [
-  ['Do I need to install anything?', 'No installation is required. LottoTrack Pro runs in your web browser. You can also install it as a standalone app on your computer or tablet for a full-screen experience.'],
-  ['How much does it cost?', 'One payment of $179. That buys a lifetime license for your store: no monthly fee and no renewal.'],
-  ['How soon can I start?', 'Right away. Your license is created the moment your payment goes through, and you are signed straight into the software.'],
-  ['How do I sell a ticket?', 'Scan the ticket barcode, or press +1 on that box.'],
-  ['What if I enter the wrong ticket number?', 'Open the box and use Fix Position to correct it.'],
-  ['Can more than one person use it?', 'Yes. You can switch the active cashier, and each shift report records who worked that shift.'],
-  ['Will it work with my state\'s lottery?', 'The current day report follows the Georgia Lottery layout. Contact us to ask about your state.']
+  ['I have zero lottery experience. Is LottoTrack easy to learn?', 'Yes, absolutely! If you can scan a grocery barcode, you can use LottoTrack. We designed it for busy store clerks with large buttons, high-contrast text, spoken voice prompts, and zero confusing jargon.'],
+  ['What is a "pack" and a "dispenser box"?', 'In retail stores, scratch-off lottery tickets come from the state lottery in connected rolls called "packs" (or books), with numbered tickets (e.g. #000 to #029). These rolls sit on your checkout counter in clear acrylic containers called "dispenser boxes" (Box 1 to Box 65). LottoTrack displays a visual on-screen copy of your counter rack.'],
+  ['Do I need to buy expensive equipment or computers?', 'No expensive hardware required! LottoTrack Pro runs in any web browser (Chrome, Edge, Safari) on your existing computer, tablet, iPad, laptop, or POS touch screen. It also installs with 1 click as a desktop app and works offline.'],
+  ['Does it work with standard barcode scanners?', 'Yes! Any standard USB or wireless Bluetooth barcode scanner that plugs into your computer or tablet works out-of-the-box. Just scan the ticket barcode, and LottoTrack reads it instantly.'],
+  ['Which lottery states and ticket formats are supported?', 'LottoTrack provides 100% accurate native barcode parsing for Georgia Lottery (GA), South Carolina Education Lottery (SCEL), and all standard US lottery scratch-off formats ($1, $2, $3, $5, $10, $20, $25, $30, $50 games with 14-digit, 17-digit, and delimited barcodes).'],
+  ['How does cash drawer reconciliation work?', 'LottoTrack calculates: [Starting Bank Float] + [Scratch-Off Ticket Sales] + [Online Lottery Sales] - [Player Payouts] = Expected Cash. When your cashier counts the money in the drawer, the system immediately tells you if it is Balanced, Over, or Short.'],
+  ['Can I receive daily sales reports when I am away from the store?', 'Yes! Enter your email address in Settings. Every time a cashier closes a shift or day, an itemized sales and reconciliation report is automatically sent directly to your phone or inbox.'],
+  ['Can multiple cashiers use it and can I manage multiple stores?', 'Yes. Cashiers can switch shifts in seconds with individual names and PINs. Store owners can also manage multiple store locations from a single dashboard.'],
+  ['What if a cashier enters the wrong ticket number?', 'No problem! Use "Fix Position" to correct any ticket number in seconds. You never have to restart a shift or recount your whole store because of one typo.']
 ];
 
 const PRICE_FEATURES = [
-  'Up to 250 dispenser boxes',
-  'Shift and day reports, print, export and email',
-  'Cash reconciliation: balanced, over or short',
-  'Pack inventory, storage and returns',
-  'Works in any browser, installs as an app',
-  'All future updates included'
+  'Up to 65+ modular dispenser boxes',
+  'Fast barcode scanning (Georgia, South Carolina & Universal)',
+  'Cash drawer reconciliation (Balanced, Over, or Short)',
+  'Itemized Shift & Day Reports (Print, Export & PDF)',
+  'Automatic daily report emails to store owners',
+  'Safe inventory, storage reserves & vendor returns',
+  'Works in any browser, tablet, or touch POS screen',
+  'Role-based cashier & store manager logins'
 ];
 
 function Shot({ file, alt, eager }) {
@@ -100,30 +105,58 @@ export default function Landing() {
           <div className="container">
             <div className="hero-grid">
               <div className="hero-content">
-                <span className="eyebrow">Retail lottery POS and shift tracking</span>
-                <h1 id="hero-heading" className="hero-h1">Stop <span className="hero-highlight">handwriting</span> your lottery logs.</h1>
+                <span className="eyebrow">Smart Retail Lottery POS &amp; Inventory System</span>
+                <h1 id="hero-heading" className="hero-h1">Stop <span className="hero-highlight">handwriting</span> lottery logs. Start tracking in seconds.</h1>
                 <p className="hero-text">
-                  LottoTrack Pro tracks every scratch-off pack, keeps your inventory and sales up to date, and helps balance your cash drawer at the end of the shift.
+                  LottoTrack Pro is the all-in-one digital lottery register for convenience stores and gas stations. Track every scratch-off ticket, audit your counter rack in real time, and balance your cash drawer at shift close without pencil math, missing tickets, or cash shortages.
                 </p>
                 <div className="hero-cta-group">
                   <Link to="/signup" className="btn btn-primary">Get LottoTrack Pro, $179</Link>
                   <Link to="/signin" className="btn btn-secondary">Sign in</Link>
                 </div>
                 <div className="hero-small-line">
-                  <span>One-time payment. Works in any browser and installs as an app on your device.</span>
+                  <span>One-time lifetime payment. Zero monthly fees. Works on any computer, tablet, iPad, or touch POS.</span>
                 </div>
               </div>
               <div className="hero-rack-clean">
                 <div className="hero-visual-pair">
                   <figure>
-                    <img src={`${IMG}/dispenser-rack.jpg`} alt="Retail lottery scratch-off dispenser rack" className="hero-rack-img hero-visual-photo" loading="eager" />
-                    <figcaption className="rack-caption">Physical dispenser rack</figcaption>
+                    <img src={`${IMG}/dispenser-rack.jpg`} alt="Physical acrylic scratch-off dispenser rack on store checkout counter" className="hero-rack-img hero-visual-photo" loading="eager" />
+                    <figcaption className="rack-caption">Physical counter rack (acrylic dispenser boxes)</figcaption>
                   </figure>
                   <figure>
-                    <img src={`${IMG}/screenshots/cashier-screen.png`} alt="LottoTrack Pro counter screen with active dispenser boxes, live ticket counts and day settlement" className="hero-rack-img hero-visual-screen" loading="eager" />
-                    <figcaption className="rack-caption">LottoTrack Pro at the counter</figcaption>
+                    <img src={`${IMG}/screenshots/cashier-screen.png`} alt="LottoTrack Pro digital counter screen showing active dispenser boxes with prices, tickets remaining and live settlement" className="hero-rack-img hero-visual-screen" loading="eager" />
+                    <figcaption className="rack-caption">LottoTrack Pro on your screen (mirrors your rack)</figcaption>
                   </figure>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 1b. Beginner Explainer: For visitors with zero lottery knowledge */}
+        <section className="section" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }} aria-labelledby="beginner-heading">
+          <div className="container">
+            <div style={{ textAlign: 'center', maxWidth: '760px', margin: '0 auto 2.5rem' }}>
+              <span className="eyebrow">New to Retail Lottery?</span>
+              <h2 id="beginner-heading" className="section-h2">Here is how scratch-off lottery works in stores &mdash; and why LottoTrack is essential.</h2>
+              <p className="section-lead">If you have never run a lottery register before, the paperwork can be overwhelming. Here is how it works in 3 simple steps:</p>
+            </div>
+            <div className="how-steps-grid">
+              <div className="how-step-card" style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
+                <span className="how-step-badge" style={{ background: '#1d4ed8', color: '#fff' }}>1</span>
+                <h3 className="how-step-title">The Counter Rack (Boxes)</h3>
+                <p className="how-step-desc">Stores keep scratch-off tickets in clear acrylic boxes on the checkout counter (Box 1 to Box 65). Each numbered box holds a different game ($1, $2, $5, $10, $20, up to $50 tickets).</p>
+              </div>
+              <div className="how-step-card" style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
+                <span className="how-step-badge" style={{ background: '#1d4ed8', color: '#fff' }}>2</span>
+                <h3 className="how-step-title">The Ticket Rolls (Packs)</h3>
+                <p className="how-step-desc">Tickets arrive in connected rolls called &quot;packs&quot; with numbers printed on them (like #000 to #029). When a customer buys a ticket, the cashier tears it off the roll.</p>
+              </div>
+              <div className="how-step-card" style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
+                <span className="how-step-badge" style={{ background: '#1d4ed8', color: '#fff' }}>3</span>
+                <h3 className="how-step-title">The Closing Math &amp; Cash</h3>
+                <p className="how-step-desc">At shift end, stores must calculate: <em>How many tickets were sold? How much cash should be in the drawer?</em> Doing this with paper notebooks leads to math errors and cash shortages. LottoTrack automates all of it.</p>
               </div>
             </div>
           </div>
@@ -134,17 +167,17 @@ export default function Landing() {
           <div className="container">
             <div className="problem-layout-open">
               <div className="problem-header">
-                <span className="eyebrow">The Challenge</span>
-                <h2 id="problem-heading" className="section-h2">Lottery paperwork is slow. Mistakes make it worse.</h2>
-                <p className="section-lead">At the end of a busy shift, you shouldn't have to rebuild what happened from handwritten notes and a calculator.</p>
+                <span className="eyebrow">The Cost of Paper Logs</span>
+                <h2 id="problem-heading" className="section-h2">Handwritten lottery notebooks cost stores thousands in errors and shortages.</h2>
+                <p className="section-lead">At the end of a busy shift, cashiers shouldn&apos;t be forced to do midnight calculator math across 65 different boxes.</p>
               </div>
               <div className="problem-points-col">
                 <ul className="problem-points-list">
                   {[
-                    'Writing ticket numbers by hand takes time and gives mistakes another place to start.',
-                    'One wrong number can throw off your sales and your reconciliation.',
-                    "The drawer doesn't match, and now you have to work out where the difference came from.",
-                    "Inventory isn't clear. You shouldn't have to check every box just to know what's left."
+                    'Writing down 65 ticket numbers by hand takes 45+ minutes every shift.',
+                    'One misread number throws off your entire shift sales calculation.',
+                    "When the cash drawer is short, you cannot tell whether money was stolen or miscounted.",
+                    'Stored reserve packs in the safe are forgotten or lost without real-time inventory tracking.'
                   ].map((t, i) => (
                     <li key={i} className="problem-point-item">
                       <span className="problem-marker" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
@@ -168,12 +201,12 @@ export default function Landing() {
         {/* 3. How it works */}
         <section id="how" className="section" aria-labelledby="how-heading">
           <div className="container">
-            <h2 id="how-heading" className="section-h2">Three things happen. You do the scanning.</h2>
+            <h2 id="how-heading" className="section-h2">Three simple steps. No lottery math required.</h2>
             <div className="how-steps-grid">
               {[
-                ['Scan it.', 'Scan a pack when it arrives. Scan a ticket when you sell it. No typing long ticket numbers.'],
-                ['LottoTrack keeps up.', 'Inventory, ticket positions, sales and sold-out packs update as you work.'],
-                ['Get the report.', 'When the shift is finished, your reports are ready to print, export or email.']
+                ['1. Scan the barcode.', 'Scan incoming packs or sold tickets with any USB or Bluetooth barcode scanner. The game, price, and pack number are detected automatically.'],
+                ['2. LottoTrack tracks live.', 'Ticket positions, remaining inventory, tickets sold, and sales dollars update in real time across your 65+ box rack.'],
+                ['3. Reconcile in 3 minutes.', 'At shift close, scan or enter closing tickets. LottoTrack checks your cash drawer (Balanced / Over / Short) and emails the Day Report to the owner.']
               ].map(([title, desc], i) => (
                 <div key={title} className="how-step-card">
                   <span className="how-step-badge">{i + 1}</span>
@@ -182,7 +215,7 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-            <p className="closing-statement">You scan. LottoTrack keeps the record.</p>
+            <p className="closing-statement">You scan. LottoTrack calculates the math, audits the rack, and protects your cash.</p>
           </div>
         </section>
 
@@ -210,25 +243,26 @@ export default function Landing() {
         {/* 5. Benefits */}
         <section id="benefits" className="section" aria-labelledby="benefits-heading">
           <div className="container">
-            <h2 id="benefits-heading" className="section-h2">Less paperwork for you. Less guesswork for them.</h2>
+            <h2 id="benefits-heading" className="section-h2">Less paperwork for you. Complete clarity for your staff.</h2>
+            
             <div className="perspectives-grid">
               <div className="perspective-block">
-                <h3 className="perspective-role-title">For the store owner:</h3>
+                <h3 className="perspective-role-title">For Store Owners:</h3>
                 <ul className="perspective-features-list">
-                  <li>Save time at the end of the shift. Sales are calculated from the ticket positions recorded during the shift.</li>
-                  <li>Catch problems early. See whether the drawer is balanced, over or short.</li>
-                  <li>Know what's in your rack. See active packs, tickets remaining, sold-out packs and stored inventory.</li>
-                  <li>Check in without being there. Add an email in Settings and receive the shift report when the shift closes.</li>
+                  <li><strong>Stop cash loss &amp; theft:</strong> Automatically compare counted cash against actual ticket sales and player payouts to see if the drawer is Balanced, Over, or Short.</li>
+                  <li><strong>Save 45+ minutes every day:</strong> Eliminate tedious notebook logging and midnight calculator math across all 65 dispenser boxes.</li>
+                  <li><strong>Daily reports sent to your email:</strong> Shift and Day Reports are auto-emailed to your phone the moment a shift closes so you stay informed anywhere.</li>
+                  <li><strong>Safe &amp; counter inventory control:</strong> Monitor active packs on the counter, spare rolls in the safe, and vendor return credits from one screen.</li>
                 </ul>
                 <div className="perspective-visuals-stack"><Shot file="rack.png" alt="Lottery inventory status dashboard" /></div>
               </div>
               <div className="perspective-block">
-                <h3 className="perspective-role-title">For the person behind the counter:</h3>
+                <h3 className="perspective-role-title">For Cashiers &amp; Counter Staff:</h3>
                 <ul className="perspective-features-list">
-                  <li>Large controls. Clear buttons and number pads make common actions easy.</li>
-                  <li>Spoken prompts. Audio feedback guides scanning and workflow steps.</li>
-                  <li>Built-in quick guide. The basic workflow is explained inside the system.</li>
-                  <li>Easy shift handoff. Switch the active cashier and continue with the next shift.</li>
+                  <li><strong>Large, touch-friendly controls:</strong> Designed for fast-paced retail checkout counters with clear numbers and responsive touch keys.</li>
+                  <li><strong>Audio &amp; voice confirmations:</strong> Audible beeps and spoken ticket confirmations prevent missed scans and accidental double-scans.</li>
+                  <li><strong>Stress-free 3-minute shift handoff:</strong> Hand over the register to the next clerk in minutes with automated sales calculations.</li>
+                  <li><strong>Instant error correction:</strong> Entered the wrong number? Use &quot;Fix Position&quot; to correct any ticket in 2 seconds without restarting.</li>
                 </ul>
                 <div className="perspective-visuals-stack"><Shot file="cashier-screen.png" alt="LottoTrack Pro counter screen with large +1 sell buttons and live totals" /></div>
               </div>
@@ -239,8 +273,8 @@ export default function Landing() {
         {/* 6. Reconciliation */}
         <section className="section" aria-labelledby="reconciliation-heading">
           <div className="container">
-            <h2 id="reconciliation-heading" className="section-h2">Know what the drawer should contain.</h2>
-            <p className="section-lead">Ticket sales, payouts and your starting float come together to calculate the cash you should have. Online sales and cashouts can be entered too.</p>
+            <h2 id="reconciliation-heading" className="section-h2">Know exactly what your cash drawer should contain.</h2>
+            <p className="section-lead">LottoTrack combines starting cash float, scratch-off ticket sales, online lottery terminal sales, and player winning payouts to calculate expected cash down to the exact penny.</p>
             <div className="reconciliation-panel">
               <div className="reconciliation-flow-bar" role="region" aria-label="Reconciliation formula example">
                 {[
@@ -253,11 +287,11 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <p className="reconciliation-outcomes-header">If the numbers don't match, you'll see Over or Short.</p>
+              <p className="reconciliation-outcomes-header">If counted cash differs from expected cash, you instantly see whether you are Over or Short.</p>
               <div className="reconciliation-outcomes-grid">
-                <div className="outcome-card is-balanced"><div className="outcome-status">Balanced</div><div className="outcome-detail">($466 counted against expected $466)</div></div>
-                <div className="outcome-card is-over"><div className="outcome-status">Over</div><div className="outcome-detail">($480 counted against expected $466)</div></div>
-                <div className="outcome-card is-short"><div className="outcome-status">Short</div><div className="outcome-detail">($450 counted against expected $466)</div></div>
+                <div className="outcome-card is-balanced"><div className="outcome-status">Balanced</div><div className="outcome-detail">($466 counted against expected $466) &mdash; Perfect match</div></div>
+                <div className="outcome-card is-over"><div className="outcome-status">Over</div><div className="outcome-detail">($480 counted against expected $466) &mdash; Extra cash in drawer</div></div>
+                <div className="outcome-card is-short"><div className="outcome-status">Short</div><div className="outcome-detail">($450 counted against expected $466) &mdash; Cash or ticket discrepancy</div></div>
               </div>
               <span className="illustration-notice">Example figures shown for illustration.</span>
             </div>
@@ -267,7 +301,7 @@ export default function Landing() {
         {/* 7. Fix mistakes */}
         <section className="section" aria-labelledby="mistakes-heading">
           <div className="container">
-            <h2 id="mistakes-heading" className="section-h2">Made a mistake? Fix it.</h2>
+            <h2 id="mistakes-heading" className="section-h2">Made a mistake? Fix it in seconds.</h2>
             <div className="fix-mistakes-panel">
               <div className="workflow-correction-strip" role="region" aria-label="Example workflow demonstrating position correction">
                 <span className="correction-badge-wrong">ticket entered 0187</span>
@@ -277,31 +311,31 @@ export default function Landing() {
                 <span className="correction-badge-fixed">correct position 0186</span>
               </div>
               <ul className="fix-mistakes-list">
-                <li>Wrong ticket number? Use Fix Position.</li>
-                <li>Wrong box? Switch boxes or change the box number.</li>
-                <li>Pack finished? Mark it sold out.</li>
-                <li>Taking a pack off the counter? Return it to the Lottery or move it to storage for later.</li>
+                <li><strong>Wrong ticket number?</strong> Tap &quot;Fix Position&quot; to adjust the current ticket number.</li>
+                <li><strong>Wrong box?</strong> Move a game between boxes or update the box number instantly.</li>
+                <li><strong>Pack finished?</strong> Mark it sold out and load the next roll in 1 tap.</li>
+                <li><strong>Removing a pack from the counter?</strong> Return it to the lottery vendor for credit or move it to the safe for later.</li>
               </ul>
-              <span className="illustration-notice">Example workflow.</span>
+              <span className="illustration-notice">Simple 1-click corrections &mdash; you never have to restart a shift.</span>
             </div>
-            <p className="closing-statement">You don't have to start over because one number was wrong.</p>
+            <p className="closing-statement">Human errors happen at busy counters. LottoTrack makes fixing them effortless.</p>
           </div>
         </section>
 
-        {/* 8. Pricing (replaces the demo request) */}
+        {/* 8. Pricing */}
         <section id="pricing" className="section" aria-labelledby="pricing-heading">
           <div className="container">
             <div className="pricing-wrapper">
               <div className="pricing-pitch">
-                <span className="eyebrow">Pricing</span>
-                <h2 id="pricing-heading" className="section-h2">One price. Yours for good.</h2>
+                <span className="eyebrow">Lifetime Value</span>
+                <h2 id="pricing-heading" className="section-h2">One simple price. Yours forever.</h2>
                 <p className="section-lead">
-                  Pay once and LottoTrack Pro is licensed to your store. Your license key is created the moment payment goes through, so you can sign in and start your first shift right away.
+                  Pay once and LottoTrack Pro is fully licensed to your store. No recurring monthly subscriptions, no per-ticket fees, and no surprise charges.
                 </p>
                 <ul className="compact-feature-list">
-                  <li className="compact-feature-item"><strong>Dispenser rack:</strong> the game, ticket position and tickets left for every box.</li>
-                  <li className="compact-feature-item"><strong>Reports:</strong> shift, day, receipt, email and export.</li>
-                  <li className="compact-feature-item"><strong>Shift tracking:</strong> shift mode or daily mode.</li>
+                  <li className="compact-feature-item"><strong>65+ Box Rack:</strong> Live on-screen counter display matching your store&apos;s physical rack.</li>
+                  <li className="compact-feature-item"><strong>Automated Reports:</strong> Itemized shift reports, day reports, and automatic email delivery to owners.</li>
+                  <li className="compact-feature-item"><strong>Cash Reconciliation:</strong> Real-time tracking of ticket sales, terminal payouts, and cash balance.</li>
                 </ul>
               </div>
               <div className="price-card">
