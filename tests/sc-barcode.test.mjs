@@ -188,7 +188,8 @@ test('Georgia parseLotteryBarcode continues to parse Georgia ticket 1648-018378-
   const gaRes = parseLotteryBarcode('1648-018378-8-000 (029)');
   assert.equal(gaRes.isValid, true, 'Georgia parser must parse GA Game 1648');
   assert.equal(gaRes.gameNumber, '1648');
-  assert.equal(gaRes.packNumber, '018378');
+  assert.equal(gaRes.basePackNumber, '018378');
+  assert.equal(gaRes.packNumber, '0183788');
   assert.equal(gaRes.checkCode, '8');
 });
 
