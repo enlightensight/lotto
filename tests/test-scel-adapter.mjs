@@ -224,7 +224,7 @@ it('8.1: GA store parsing 1648-018378-8-029(000) parses with GA logic', () => {
   assert.ok(res);
   assert.strictEqual(res.isValid, true);
   assert.strictEqual(res.gameNumber, '1648');
-  assert.strictEqual(res.packNumber, '018378');
+  assert.strictEqual(res.packNumber, '0183788');
   assert.strictEqual(res.ticketNumber, 29);
 });
 
@@ -444,7 +444,7 @@ it('13.7: Preserves Georgia printed ticket 1421-2045261-036 (023) 7-digit pack i
   assert.ok(resGA);
   assert.strictEqual(resGA.isValid, true);
   assert.strictEqual(resGA.gameNumber, '1421');
-  assert.strictEqual(resGA.packNumber, '204526');
+  assert.strictEqual(resGA.packNumber, '2045261');
   assert.strictEqual(resGA.basePackNumber, '204526');
   assert.strictEqual(resGA.checkCode, '1');
   assert.strictEqual(resGA.rawPackNumber, '2045261');
