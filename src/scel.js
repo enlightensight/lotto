@@ -37,8 +37,36 @@ export const SCEL_GAMES = [
     packSize: 30,
     bookValue: 600,
     jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1689',
+    gameNumber: '1689',
+    barcodePrefix: '1689',
+    name: 'CASH MONEY',
+    price: 10,
+    packSize: 30,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
   }
 ];
+
+/**
+ * Computes the official SCEL pack check digit from 6-digit pack number.
+ * Verified across all SCEL games (1714, 1705, 1684, 1689).
+ *
+ * @param {string|number} packNumber
+ * @returns {string} 1-digit check code
+ */
+export function computeScCheckDigit(packNumber) {
+  if (!packNumber) return null;
+  const p = String(packNumber).padStart(6, '0').slice(-6);
+  const w = [0, 2, 3, 1, 4, 2];
+  let sum = 0;
+  for (let i = 0; i < 6; i++) {
+    sum += parseInt(p[i], 10) * w[i];
+  }
+  return String(sum % 10);
+}
 
 /**
  * Look up a game in the isolated SCEL catalog by game number or prefix.
@@ -191,14 +219,40 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
     ticketString = parsed.ticketNumber;
     rawSuffix = parsed.rawSuffix;
   } else {
-    // 14 or 17-digit continuous barcode: GGGG (4) + PPPPPP (6) + C (1) + TTT (3) + optional suffix (3)
-    const matchCont = s.match(/^(\d{4})(\d{6})(\d{1})(\d{3})(?:(\d{3})|(?:\s*([([{]\d+[)\]}])))?$/);
-    if (matchCont) {
-      gameNumber = matchCont[1];
-      packNumber = matchCont[2];
-      checkDigit = matchCont[3];
-      ticketString = matchCont[4];
-      rawSuffix = matchCont[5] ? `(${matchCont[5]})` : (matchCont[6] || null);
+    // 14 or 17-digit continuous barcode (Dual standards: Layout A [4G][6P][1C][3T] vs Layout B [4G][6P][3T][1Trailer])
+    const digitsOnly = s.replace(/[^0-9]/g, '');
+    const parenSuffix = s.match(/[([{](\d{1,4})[)\]}]/)?.[1] || null;
+    if (digitsOnly.length === 14 || digitsOnly.length === 17) {
+      gameNumber = digitsOnly.slice(0, 4);
+      packNumber = digitsOnly.slice(4, 10);
+      const tempGame = findScelGame(gameNumber) || (customGames || []).find(g => g.barcodePrefix === gameNumber || g.gameNumber === gameNumber);
+      const knownPackSize = tempGame?.packSize;
+
+      const tixA = parseInt(digitsOnly.slice(11, 14), 10);
+      const tixB = parseInt(digitsOnly.slice(10, 13), 10);
+
+      let isLayoutB = false;
+      if (knownPackSize && tixA >= knownPackSize && tixB < knownPackSize) {
+        isLayoutB = true;
+      } else if (knownPackSize && tixB >= knownPackSize && tixA < knownPackSize) {
+        isLayoutB = false;
+      } else if (digitsOnly[10] === '0' && tixB < 150 && tixA >= 100) {
+        isLayoutB = true;
+      }
+
+      if (isLayoutB) {
+        ticketString = digitsOnly.slice(10, 13);
+        checkDigit = computeScCheckDigit(packNumber);
+      } else {
+        checkDigit = digitsOnly.slice(10, 11);
+        ticketString = digitsOnly.slice(11, 14);
+      }
+
+      if (parenSuffix) {
+        rawSuffix = `(${parenSuffix})`;
+      } else if (digitsOnly.length === 17) {
+        rawSuffix = `(${digitsOnly.slice(14, 17)})`;
+      }
     } else {
       return {
         isValid: false,
