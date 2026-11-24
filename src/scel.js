@@ -47,6 +47,56 @@ export const SCEL_GAMES = [
     packSize: 30,
     bookValue: 300,
     jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1688',
+    gameNumber: '1688',
+    barcodePrefix: '1688',
+    name: 'THE PRICE IS RIGHT',
+    price: 10,
+    packSize: 30,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1676',
+    gameNumber: '1676',
+    barcodePrefix: '1676',
+    name: 'DOUBLE DOUBLER',
+    price: 1,
+    packSize: 300,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1677',
+    gameNumber: '1677',
+    barcodePrefix: '1677',
+    name: 'TRIPLE 777',
+    price: 2,
+    packSize: 150,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1702',
+    gameNumber: '1702',
+    barcodePrefix: '1702',
+    name: 'HOLIDAY CASH',
+    price: 5,
+    packSize: 60,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
+  },
+  {
+    id: 'sc1646',
+    gameNumber: '1646',
+    barcodePrefix: '1646',
+    name: 'CAROLINA GOLD',
+    price: 5,
+    packSize: 60,
+    bookValue: 300,
+    jurisdiction: 'SCEL'
   }
 ];
 
@@ -121,7 +171,7 @@ export function parseScelPrintedTicketNumber(input) {
 
   const trimmed = input.trim();
 
-  // 1. Strict match for 4-segment delimited printed number:
+  // 1. Match for 4-segment delimited printed number:
   // GGGG (4 digits) - PPPPPP (6 digits) - C (1 digit) - TTT (3 digits)
   // Followed by optional raw suffix in parentheses/brackets, e.g. "(080)"
   const match4 = trimmed.match(/^(\d{4})[-_\s]+(\d{6})[-_\s]+(\d{1})[-_\s]+(\d{3})(?:\s*([([{]\d+[)\]}]))?$/);
@@ -141,7 +191,15 @@ export function parseScelPrintedTicketNumber(input) {
   const ticketNumber = match4[4];
   const rawSuffix = match4[5] || null;
 
-  const game = findScelGame(gameNumber);
+  const game = findScelGame(gameNumber) || {
+    id: `sc${gameNumber}`,
+    gameNumber,
+    barcodePrefix: gameNumber,
+    name: 'Scratch-Off Game',
+    price: 1,
+    packSize: 100,
+    jurisdiction: 'SCEL'
+  };
 
   const baseCanonical = `${gameNumber}-${packNumber}-${checkDigit}-${ticketNumber}`;
 
@@ -230,9 +288,13 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
 
       const tixA = parseInt(digitsOnly.slice(11, 14), 10);
       const tixB = parseInt(digitsOnly.slice(10, 13), 10);
+      const digit10 = digitsOnly.slice(10, 11);
+      const expectedCheck = computeScCheckDigit(packNumber);
 
       let isLayoutB = false;
-      if (knownPackSize && tixA >= knownPackSize && tixB < knownPackSize) {
+      if (digit10 !== expectedCheck && tixB <= 299) {
+        isLayoutB = true;
+      } else if (knownPackSize && tixA >= knownPackSize && tixB < knownPackSize) {
         isLayoutB = true;
       } else if (knownPackSize && tixB >= knownPackSize && tixA < knownPackSize) {
         isLayoutB = false;
@@ -242,7 +304,7 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
 
       if (isLayoutB) {
         ticketString = digitsOnly.slice(10, 13);
-        checkDigit = computeScCheckDigit(packNumber);
+        checkDigit = expectedCheck || computeScCheckDigit(packNumber);
       } else {
         checkDigit = digitsOnly.slice(10, 11);
         ticketString = digitsOnly.slice(11, 14);
@@ -266,18 +328,42 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
   }
 
   // Verify game existence against SCEL catalog or store custom games
-  const matchedGame = findScelGame(gameNumber)
+  let matchedGame = findScelGame(gameNumber)
     || (customGames || []).find(g => g.barcodePrefix === gameNumber || g.gameNumber === gameNumber);
 
   if (!matchedGame) {
-    return {
-      isValid: false,
-      jurisdiction: 'SC',
-      isNonLotteryBarcode: true,
-      isRetailProduct: true,
-      error: `Unknown SCEL game: ${gameNumber}`,
+    const gNumInt = parseInt(gameNumber, 10);
+    // Explicit rejection for uncataloged test/dummy games (e.g. 9999), Georgia games (e.g. 1648) or non-numeric/out of lottery range
+    if (gameNumber === '9999' || gameNumber === '1648' || isNaN(gNumInt) || gNumInt > 3000 || gNumInt < 100) {
+      return {
+        isValid: false,
+        jurisdiction: 'SC',
+        isNonLotteryBarcode: true,
+        isRetailProduct: true,
+        error: `Unknown SCEL game: ${gameNumber}`,
+        gameNumber,
+        raw
+      };
+    }
+
+    // Uncataloged active SCEL scratch-off game: infer packSize & price from countdown PIN if available (just like GA)
+    const pinNum = rawSuffix ? parseInt(String(rawSuffix).replace(/[^0-9]/g, ''), 10) : null;
+    const ticketInt = parseInt(ticketString, 10);
+    let inferredSize = (pinNum !== null && !isNaN(pinNum) && !isNaN(ticketInt)) ? (ticketInt + pinNum + 1) : null;
+    const stdSizes = [300, 150, 100, 60, 30, 25, 20, 18, 15, 12, 10];
+    if (!stdSizes.includes(inferredSize)) {
+      inferredSize = 100;
+    }
+    const derivedPrice = inferredSize === 300 ? 1 : (inferredSize === 150 ? 2 : (inferredSize === 100 ? 3 : (inferredSize === 60 ? 5 : (inferredSize === 30 ? 10 : (inferredSize === 18 ? 50 : 20)))));
+    matchedGame = {
+      id: `sc${gameNumber}`,
       gameNumber,
-      raw
+      barcodePrefix: gameNumber,
+      name: 'Scratch-Off Game',
+      price: derivedPrice,
+      packSize: inferredSize,
+      bookValue: derivedPrice * inferredSize,
+      jurisdiction: 'SCEL'
     };
   }
 
@@ -294,14 +380,16 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
     };
   }
   if (packSize != null && ticketNum >= packSize) {
-    return {
-      isValid: false,
-      jurisdiction: 'SC',
-      isNonLotteryBarcode: true,
-      isRetailProduct: false,
-      error: `Ticket number #${ticketNum} out of roll range (0 to ${packSize - 1})`,
-      raw
-    };
+    if (findScelGame(gameNumber) || (customGames || []).some(g => (g.barcodePrefix === gameNumber || g.gameNumber === gameNumber) && g.packSize)) {
+      return {
+        isValid: false,
+        jurisdiction: 'SC',
+        isNonLotteryBarcode: true,
+        isRetailProduct: false,
+        error: `Ticket number #${ticketNum} out of roll range (0 to ${packSize - 1})`,
+        raw
+      };
+    }
   }
   if (packSize == null && ticketNum > 999) {
     return {

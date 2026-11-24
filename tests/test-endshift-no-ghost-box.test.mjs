@@ -23,7 +23,10 @@ const testCases = [
   { raw: '16891495820231', game: '1689', pack: '149582', check: '6', tix: 23, display: '1689-149582-6-023 (006)', packSize: 30 },
   { raw: '1689-149582-6-023(006)', game: '1689', pack: '149582', check: '6', tix: 23, display: '1689-149582-6-023 (006)', packSize: 30 },
   { raw: '1689-149582-6-023 (006)', game: '1689', pack: '149582', check: '6', tix: 23, display: '1689-149582-6-023 (006)', packSize: 30 },
-  { raw: '1689-149582-6-023', game: '1689', pack: '149582', check: '6', tix: 23, display: '1689-149582-6-023 (006)', packSize: 30 }
+  { raw: '1689-149582-6-023', game: '1689', pack: '149582', check: '6', tix: 23, display: '1689-149582-6-023 (006)', packSize: 30 },
+  { raw: '16891495820021', game: '1689', pack: '149582', check: '6', tix: 2, display: '1689-149582-6-002 (027)', packSize: 30 },
+  { raw: '1689-149582-6-002 (027)', game: '1689', pack: '149582', check: '6', tix: 2, display: '1689-149582-6-002 (027)', packSize: 30 },
+  { raw: '16891495820001', game: '1689', pack: '149582', check: '6', tix: 0, display: '1689-149582-6-000 (029)', packSize: 30 }
 ];
 
 testCases.forEach(({ raw, game, pack, check, tix, display, packSize }) => {

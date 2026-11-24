@@ -3,8 +3,8 @@ import { syncPOSStateToDB, clearPOSStateOnDB } from './dbSync.js';
 
 const STORAGE_KEY = 'lotto_track_pos_data_v3';
 
-import { normalizeLotteryJurisdiction, resolveJurisdictionUpdate, adaptScelToLotteryBarcode, findScelGame, isScelGameNumber, SCEL_GAMES } from './scel.js';
-export { normalizeLotteryJurisdiction, resolveJurisdictionUpdate, adaptScelToLotteryBarcode, isScelGameNumber };
+import { normalizeLotteryJurisdiction, resolveJurisdictionUpdate, adaptScelToLotteryBarcode, findScelGame, isScelGameNumber, computeScCheckDigit, SCEL_GAMES } from './scel.js';
+export { normalizeLotteryJurisdiction, resolveJurisdictionUpdate, adaptScelToLotteryBarcode, isScelGameNumber, computeScCheckDigit };
 
 export const DEFAULT_STORES = [
   {
@@ -325,6 +325,7 @@ export function computeLotterySeriesCode(gamePrefixOrNumber, ticketNumber, custo
   let packSize = customPackSize;
   if (!packSize) {
     const matched = SAMPLE_GAMES.find(g => g.barcodePrefix === pStr || String(g.id).replace(/[^0-9]/g, '') === pStr)
+      || findScelGame(pStr)
       || (customGames || []).find(g => g.barcodePrefix === pStr || String(g.id).replace(/[^0-9]/g, '') === pStr);
     if (matched && matched.packSize) {
       packSize = matched.packSize;
@@ -386,7 +387,7 @@ export function parseLotteryBarcode(raw, customGames = [], jurisdiction = 'GA') 
 // (consecutive books like 0018902 / 0018903 of one game sit in different boxes), so it must not be dropped.
 // basePackNumber keeps the 6-digit form; South Carolina keeps its own pack + check digit format.
 function withFullGaPackNumber(r) {
-  if (!r || !r.isValid || r.jurisdiction === 'SC') return r;
+  if (!r || !r.isValid || r.jurisdiction === 'SC' || isScelGameNumber(r.gameNumber) || (r.checkCode && r.basePackNumber && r.checkCode === computeScCheckDigit(r.basePackNumber))) return r;
   const base = String(r.basePackNumber || '');
   const check = r.checkCode === null || r.checkCode === undefined ? '' : String(r.checkCode);
   if (!/^\d{6}$/.test(base) || !/^\d$/.test(check)) return r;
@@ -443,10 +444,15 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
 
   // Distinct South Carolina Education Lottery (SCEL) 4-segment printed ticket format:
   // GGGG-PPPPPP-C-TTT (SSS) (e.g. "1714-045114-6-002 (027)", "1705-002921-5-069 (080)", "1684-345553-4-004 (025)")
-  const scFourMatch = s.match(/^(\d{4})[-_\s]+(\d{6})[-_\s]+(\d{1})[-_\s]+(\d{3})(?:\s*([([{]\d+[)\]}]))?$/);
+  const scFourMatch = s.match(/^(\d{4})[-_/\s.:]+(\d{6})[-_/\s.:]+(\d{1})[-_/\s.:]+(\d{3})(?:[-_/\s.:]*[([{]?(\d{1,4})[)\]}]?)?$/);
   if (scFourMatch) {
     const scGameNum = scFourMatch[1];
-    const isSC = isScelGameNumber(scGameNum) || (customGames || []).some(g => (g.barcodePrefix === scGameNum || g.gameNumber === scGameNum) && g.jurisdiction === 'SCEL');
+    const scPack = scFourMatch[2];
+    const scCheck = scFourMatch[3];
+    const isSC = isScelGameNumber(scGameNum) ||
+      (customGames || []).some(g => (g.barcodePrefix === scGameNum || g.gameNumber === scGameNum) && g.jurisdiction === 'SCEL') ||
+      targetJur === 'SC' ||
+      (scCheck === computeScCheckDigit(scPack) && !SAMPLE_GAMES.some(g => g.barcodePrefix === scGameNum));
     if (isSC) {
       return adaptScelToLotteryBarcode(raw, customGames);
     }
@@ -844,7 +850,7 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
       || (customGames || []).find(g => g.barcodePrefix === gameNumber || String(g.id).replace(/[^0-9]/g, '') === gameNumber);
     const knownPackSize = matched?.packSize || (matched?.price ? getStandardPackDetails(matched.price).packSize : null);
 
-    const isSCELGame = gameNumber.startsWith('16') || (matched && matched.id && String(matched.id).startsWith('g16')) || (matched && matched.jurisdiction === 'SCEL');
+    const isSCELGame = isScelGameNumber(gameNumber) || (matched && matched.jurisdiction === 'SCEL') || targetJur === 'SC';
 
     let isLayoutB = false;
     if (tixNumB > 299) {
@@ -855,7 +861,7 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
       isLayoutB = true;
     } else if (knownPackSize && tixNumB >= knownPackSize && tixNumA < knownPackSize) {
       isLayoutB = false;
-    } else if (isSCELGame && digits[10] === '0' && tixNumB > 0 && tixNumB <= 299) {
+    } else if (isSCELGame && digits[10] === '0' && tixNumB >= 0 && tixNumB <= 299) {
       // Continuous 14-digit SCEL barcodes with leading-zero ticket index (e.g. 16700198690017 -> ticket 1, trailer 7;
       // 16480183780290 -> ticket 29, trailer 0; 16920919050292 -> ticket 29, trailer 2)
       isLayoutB = true;
@@ -865,7 +871,7 @@ function parseLotteryBarcodeCore(raw, customGames = [], jurisdiction = 'GA') {
 
     const ticketNumber = isLayoutB ? tixNumB : tixNumA;
     const ticketString = isLayoutB ? tixStrB : tixStrA;
-    const checkCode = isLayoutB ? null : checkA;
+    const checkCode = isLayoutB ? (isSCELGame ? computeScCheckDigit(packNumber) : null) : checkA;
 
       if (isNaN(ticketNumber) || ticketNumber < 0 || ticketNumber > 299) {
         return {
