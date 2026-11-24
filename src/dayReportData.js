@@ -413,7 +413,7 @@ export const AMIGO_SCREENSHOT_DAY_REPORT = {
  * Supports toggling empty boxes visibility.
  */
 export function getScreenDayReportData(state, options = {}) {
-  const { showEmptyBoxes = false, forceSample = false, date: targetDate = null } = options;
+  const { showEmptyBoxes = true, forceSample = false, date: targetDate = null } = options;
 
   if (!state || forceSample) {
     // Return sample matching user screenshot exactly
