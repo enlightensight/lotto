@@ -16,6 +16,14 @@ check('parser keeps the 7th digit in the book number', () => {
   assert.equal(parseLotteryBarcode(book3).ticketNumber, 48);
 });
 
+check('Georgia books whose 7th digit happens to equal the SC check-digit formula keep 7 digits', () => {
+  // Real scans, game 1835: books 0477937 and 0477938 (the 8 matches the SC formula by chance)
+  assert.equal(parseLotteryBarcode('18350477938017').packNumber, '0477938');
+  assert.equal(parseLotteryBarcode('18350477937016').packNumber, '0477937');
+  assert.equal(isPackNumberMatch('0477937', '18350477938017'), false);
+  assert.equal(parseLotteryBarcode('19150005913019').packNumber, '0005913');
+});
+
 check('neighbouring books never match each other', () => {
   assert.equal(isPackNumberMatch('0018902', book3), false);
   assert.equal(isPackNumberMatch('0018903', book2), false);

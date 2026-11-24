@@ -99,7 +99,8 @@ it('Physical ticket printed text "1692-091905-0-029(000)" parses ticket #029', (
   const p = parseLotteryBarcode('1692-091905-0-029(000)');
   assert.ok(p && p.isValid);
   assert.equal(p.gameNumber, '1692');
-  assert.equal(p.packNumber, '091905');
+  assert.equal(p.basePackNumber, '091905');
+  assert.ok(isPackNumberMatch(p.packNumber, '091905'));
   assert.equal(p.ticketNumber, 29, 'Ticket must be 29, NEVER 292');
   assert.equal(p.ticketString, '029');
   assert.equal(p.checkCode, '0');

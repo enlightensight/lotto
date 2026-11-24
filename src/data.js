@@ -387,7 +387,9 @@ export function parseLotteryBarcode(raw, customGames = [], jurisdiction = 'GA') 
 // (consecutive books like 0018902 / 0018903 of one game sit in different boxes), so it must not be dropped.
 // basePackNumber keeps the 6-digit form; South Carolina keeps its own pack + check digit format.
 function withFullGaPackNumber(r) {
-  if (!r || !r.isValid || r.jurisdiction === 'SC' || isScelGameNumber(r.gameNumber) || (r.checkCode && r.basePackNumber && r.checkCode === computeScCheckDigit(r.basePackNumber))) return r;
+  // SC is recognised by store jurisdiction or known SC game number only. Matching the SC check-digit formula
+  // is not evidence: about 1 in 10 Georgia books' 7th digit equals it by chance (e.g. 1835 0477938).
+  if (!r || !r.isValid || r.jurisdiction === 'SC' || isScelGameNumber(r.gameNumber)) return r;
   const base = String(r.basePackNumber || '');
   const check = r.checkCode === null || r.checkCode === undefined ? '' : String(r.checkCode);
   if (!/^\d{6}$/.test(base) || !/^\d$/.test(check)) return r;
