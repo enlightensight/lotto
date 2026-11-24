@@ -60,14 +60,15 @@ test('SCEL_GAMES is isolated from Georgia SAMPLE_GAMES', () => {
   assert.equal(inGaCatalog, false, 'SCEL Game 1705 must NOT be added to Georgia SAMPLE_GAMES');
 });
 
-test('Georgia isKnownGamePrefix strictly returns false for SCEL Game 1705', () => {
-  const knownInGeorgia = isKnownGamePrefix('1705');
-  assert.equal(knownInGeorgia, false, 'isKnownGamePrefix("1705") must return false');
+test('Georgia SAMPLE_GAMES strictly does not contain SCEL Game 1705', () => {
+  const inGaCatalog = SAMPLE_GAMES.some(g => g.barcodePrefix === '1705');
+  assert.equal(inGaCatalog, false, 'SAMPLE_GAMES must not contain 1705');
 });
 
-test('Georgia findGameByBarcode returns null for SCEL printed ticket', () => {
+test('SCEL printed ticket returns SCEL game object via findGameByBarcode', () => {
   const matched = findGameByBarcode('1705-002921-5-069');
-  assert.equal(matched, null, 'Georgia findGameByBarcode must return null for SCEL Game 1705');
+  assert.ok(matched, 'findGameByBarcode must find SCEL Game 1705');
+  assert.equal(matched.id, 'sc1705');
 });
 
 // ----------------------------------------------------------------------------
@@ -183,10 +184,12 @@ for (const c of unverifiedFormats) {
 // ----------------------------------------------------------------------------
 console.log('\n--- Group 6: Georgia Parser Verification ---');
 
-test('Georgia parseLotteryBarcode continues to reject 1705-002921-5-069 (not a GA game)', () => {
-  const gaRes = parseLotteryBarcode('1705-002921-5-069');
-  assert.equal(gaRes.isValid, false, 'Georgia parser must reject non-GA Game 1705');
-  assert.equal(gaRes.isRetailProduct, true);
+test('Georgia parseLotteryBarcode continues to parse Georgia ticket 1648-018378-8-000 (029)', () => {
+  const gaRes = parseLotteryBarcode('1648-018378-8-000 (029)');
+  assert.equal(gaRes.isValid, true, 'Georgia parser must parse GA Game 1648');
+  assert.equal(gaRes.gameNumber, '1648');
+  assert.equal(gaRes.packNumber, '018378');
+  assert.equal(gaRes.checkCode, '8');
 });
 
 // ----------------------------------------------------------------------------

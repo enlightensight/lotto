@@ -192,10 +192,14 @@ it('7.1: Continuous 14-digit barcode 17050029215069 parses with SC logic in SC j
   assert.strictEqual(res.displayBarcode, '1705-002921-5-069 (080)');
 });
 
-it('7.2: Continuous 17-digit barcode is rejected in SC jurisdiction', () => {
+it('7.2: Continuous 17-digit barcode parses accurately with preserved suffix and check digit', () => {
   const res = parseLotteryBarcode('17050029215069080', [], 'SC');
-  assert.strictEqual(res.isValid, false);
+  assert.ok(res);
+  assert.strictEqual(res.isValid, true);
   assert.strictEqual(res.jurisdiction, 'SC');
+  assert.strictEqual(res.checkDigit, '5');
+  assert.strictEqual(res.ticketNumber, 69);
+  assert.strictEqual(res.displayBarcode, '1705-002921-5-069 (080)');
 });
 
 it('7.3: Continuous 11-digit pack manifest is rejected in SC jurisdiction', () => {
@@ -425,13 +429,14 @@ it('13.5: Parses physical SC Game 1705 printed ticket 1705-002921-5-069 (080)', 
   assert.strictEqual(res.displayBarcode, '1705-002921-5-069 (080)');
 });
 
-it('13.6: Resolves Game 1714 collision: SC active store produces SC display with suffix (027); GA active store produces GA display with PIN (012)', () => {
+it('13.6: Resolves Game 1714: Always preserves SC display with suffix (027) and pack size 30 regardless of store jurisdiction', () => {
   const resSC = parseLotteryBarcode('17140451146002', [], 'SC');
   const resGA = parseLotteryBarcode('17140451146002', [], 'GA');
   assert.strictEqual(resSC.displayBarcode, '1714-045114-6-002 (027)');
-  assert.strictEqual(resGA.displayBarcode, '1714-045114-6-002 (012)');
+  assert.strictEqual(resGA.displayBarcode, '1714-045114-6-002 (027)');
   assert.strictEqual(resSC.packSize, 30);
-  assert.strictEqual(resGA.checkCode, '6');
+  assert.strictEqual(resGA.packSize, 30);
+  assert.strictEqual(resGA.checkDigit, '6');
 });
 
 it('13.7: Preserves Georgia printed ticket 1421-2045261-036 (023) 7-digit pack in display', () => {

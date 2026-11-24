@@ -191,14 +191,14 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
     ticketString = parsed.ticketNumber;
     rawSuffix = parsed.rawSuffix;
   } else {
-    // 14-digit continuous barcode: GGGG (4) + PPPPPP (6) + C (1) + TTT (3) + optional suffix
-    const match14 = s.match(/^(\d{4})(\d{6})(\d{1})(\d{3})(?:\s*([([{]\d+[)\]}]))?$/);
-    if (match14) {
-      gameNumber = match14[1];
-      packNumber = match14[2];
-      checkDigit = match14[3];
-      ticketString = match14[4];
-      rawSuffix = match14[5] || null;
+    // 14 or 17-digit continuous barcode: GGGG (4) + PPPPPP (6) + C (1) + TTT (3) + optional suffix (3)
+    const matchCont = s.match(/^(\d{4})(\d{6})(\d{1})(\d{3})(?:(\d{3})|(?:\s*([([{]\d+[)\]}])))?$/);
+    if (matchCont) {
+      gameNumber = matchCont[1];
+      packNumber = matchCont[2];
+      checkDigit = matchCont[3];
+      ticketString = matchCont[4];
+      rawSuffix = matchCont[5] ? `(${matchCont[5]})` : (matchCont[6] || null);
     } else {
       return {
         isValid: false,
@@ -284,6 +284,7 @@ export function adaptScelToLotteryBarcode(raw, customGames = []) {
     ticketNumber: ticketNum,
     ticketString,
     checkCode: checkDigit,
+    checkDigit: checkDigit,
     securityCode: null,
     hasExplicitSecurityCode: false,
     rawSuffix: finalSuffix,
